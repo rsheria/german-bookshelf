@@ -9,8 +9,10 @@ export interface Book {
   description: string;
   cover_url: string;
   type: BookType;
-  download_url: string;
+  download_url?: string;
+  file_url?: string;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface Profile {
