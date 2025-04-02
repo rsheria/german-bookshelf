@@ -157,12 +157,10 @@ export const useBooks = ({
     
     try {
       // Only proceed if Supabase is configured
-      if (!supabaseAvailable) {
-        throw new Error('Supabase client is not initialized');
-      }
-      
-      // Get the Supabase client safely
       const supabase = getSupabaseClient();
+      if (!supabase) {
+        throw new Error('Supabase not available, using mock data');
+      }
       
       let query = supabase
         .from('books')
@@ -237,12 +235,13 @@ export const useBook = (id: string) => {
     }
     
     try {
-      // Check if supabase is null
-      if (!getSupabaseClient()) {
-        throw new Error('Supabase client is not initialized');
+      // Check if supabase is available
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        throw new Error('Supabase not available, using mock data');
       }
       
-      const { data, error } = await getSupabaseClient()
+      const { data, error } = await supabase
         .from('books')
         .select('*')
         .eq('id', id)

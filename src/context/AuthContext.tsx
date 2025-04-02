@@ -33,17 +33,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (data.session?.user) {
           // Fetch user profile
           const supabaseClient = getSupabaseClient();
-          const { data: profileData, error } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('id', data.session.user.id)
-            .single();
+          
+          // Only try to fetch profile if Supabase is configured
+          if (supabaseClient) {
+            const { data: profileData, error } = await supabaseClient
+              .from('profiles')
+              .select('*')
+              .eq('id', data.session.user.id)
+              .single();
 
-          if (error) {
-            console.error('Error fetching profile:', error);
-          } else {
-            setProfile(profileData);
-            setIsAdmin(profileData.is_admin);
+            if (error) {
+              console.error('Error fetching profile:', error);
+            } else {
+              setProfile(profileData);
+              setIsAdmin(profileData.is_admin);
+            }
           }
         }
       } catch (error) {
@@ -57,34 +61,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Listen for auth changes
     const supabaseClient = getSupabaseClient();
-    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
-      async (_, newSession) => {
-        setSession(newSession);
-        setUser(newSession?.user || null);
+    
+    // Only set up auth listener if Supabase is configured
+    let subscription: { unsubscribe: () => void } | null = null;
+    
+    if (supabaseClient) {
+      const { data } = supabaseClient.auth.onAuthStateChange(
+        async (_, newSession) => {
+          setSession(newSession);
+          setUser(newSession?.user || null);
 
-        if (newSession?.user) {
-          // Fetch user profile on auth change
-          const { data: profileData, error } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('id', newSession.user.id)
-            .single();
+          if (newSession?.user) {
+            // Fetch user profile on auth change
+            const { data: profileData, error } = await supabaseClient
+              .from('profiles')
+              .select('*')
+              .eq('id', newSession.user.id)
+              .single();
 
-          if (error) {
-            console.error('Error fetching profile:', error);
+            if (error) {
+              console.error('Error fetching profile:', error);
+            } else {
+              setProfile(profileData);
+              setIsAdmin(profileData.is_admin);
+            }
           } else {
-            setProfile(profileData);
-            setIsAdmin(profileData.is_admin);
+            setProfile(null);
+            setIsAdmin(false);
           }
-        } else {
-          setProfile(null);
-          setIsAdmin(false);
         }
-      }
-    );
+      );
+      
+      subscription = data.subscription;
+    }
 
+    // Cleanup subscription on unmount
     return () => {
-      subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
