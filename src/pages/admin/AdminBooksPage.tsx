@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiBook, FiEdit, FiTrash2, FiPlus, FiSearch, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import { getSupabaseClient } from '../../utils/supabaseHelpers';
+import { supabase } from '../../services/supabase';
 import { Book } from '../../types/supabase';
 
 const Container = styled.div`
@@ -312,7 +312,11 @@ const AdminBooksPage: React.FC = () => {
     setError(null);
     
     try {
-      let query = getSupabaseClient()
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+      
+      let query = supabase
         .from('books')
         .select('*', { count: 'exact' });
       
@@ -360,7 +364,11 @@ const AdminBooksPage: React.FC = () => {
     if (!bookToDelete) return;
     
     try {
-      const { error: deleteError } = await getSupabaseClient()
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+      
+      const { error: deleteError } = await supabase
         .from('books')
         .delete()
         .eq('id', bookToDelete.id);

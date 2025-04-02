@@ -28,6 +28,10 @@ export const useDownloads = (): UseDownloadsResult => {
       const todayISOString = today.toISOString();
 
       // Count downloads made today
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+      
       const { count, error } = await supabase
         .from('download_logs')
         .select('*', { count: 'exact' })
@@ -68,6 +72,10 @@ export const useDownloads = (): UseDownloadsResult => {
       }
 
       // Log the download
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+      
       const { error: logError } = await supabase
         .from('download_logs')
         .insert({

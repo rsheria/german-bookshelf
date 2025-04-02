@@ -9,6 +9,7 @@ interface AuthContextType {
   profile: Profile | null;
   isLoading: boolean;
   error: Error | null;
+  isAdmin: boolean;
   refreshSession: () => Promise<void>;
 }
 
@@ -32,6 +33,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const refreshSession = async () => {
     try {
@@ -58,6 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSession(result.data.session);
           setUser(result.data.session.user);
           setProfile(profileData || null);
+          setIsAdmin(profileData?.is_admin || false);
         } else {
           console.warn('Supabase client not initialized, cannot fetch profile');
           setSession(result.data.session);
@@ -112,6 +115,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
 
             setProfile(profileData || null);
+            setIsAdmin(profileData?.is_admin || false);
           } catch (err) {
             console.error('Error fetching profile on auth change:', err);
           }
@@ -142,7 +146,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, isLoading, error, refreshSession }}>
+    <AuthContext.Provider value={{ session, user, profile, isLoading, error, isAdmin, refreshSession }}>
       {children}
     </AuthContext.Provider>
   );

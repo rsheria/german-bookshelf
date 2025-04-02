@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiUsers, FiEdit, FiCheck, FiX, FiSearch } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import { getSupabaseClient } from '../../utils/supabaseHelpers';
+import { supabase } from '../../services/supabase';
 import { Profile } from '../../types/supabase';
 
 const Container = styled.div`
@@ -264,7 +264,11 @@ const AdminUsersPage: React.FC = () => {
     setError(null);
     
     try {
-      let query = getSupabaseClient()
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+      
+      let query = supabase
         .from('profiles')
         .select('*', { count: 'exact' });
       
@@ -291,7 +295,11 @@ const AdminUsersPage: React.FC = () => {
       if (profilesData) {
         for (const profile of profilesData) {
           // Get user email from auth.users
-          const { data: userData, error: userError } = await getSupabaseClient().auth.admin.getUserById(
+          if (!supabase) {
+            throw new Error('Supabase client is not initialized');
+          }
+          
+          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
             profile.id
           );
           
@@ -322,7 +330,11 @@ const AdminUsersPage: React.FC = () => {
 
   const handleToggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
     try {
-      const { error: updateError } = await getSupabaseClient()
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+      
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ is_admin: !currentIsAdmin })
         .eq('id', userId);
@@ -363,7 +375,11 @@ const AdminUsersPage: React.FC = () => {
     if (!editingUser) return;
     
     try {
-      const { error: updateError } = await getSupabaseClient()
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+      
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ daily_quota: editingUser.daily_quota })
         .eq('id', editingUser.id);

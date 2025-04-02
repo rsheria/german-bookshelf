@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiSave, FiX, FiUpload, FiAlertCircle } from 'react-icons/fi';
-import { Book } from '../../types/supabase';
-import { getSupabaseClient } from '../../utils/supabaseHelpers';
+import { supabase } from '../../services/supabase';
+import { Book, BookType } from '../../types/supabase';
 
 interface BookFormProps {
   book?: Book;
@@ -224,9 +224,9 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
     }
   };
   
-  const uploadCover = async (): Promise<string> => {
+  const uploadCover = async () => {
     if (!coverFile) {
-      return coverUrl;
+      throw new Error('No cover file to upload');
     }
     
     // Generate a unique file name
@@ -235,7 +235,10 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
     const filePath = `covers/${fileName}`;
     
     // Upload to Supabase Storage
-    const supabase = getSupabaseClient();
+    if (!supabase) {
+      throw new Error('Supabase client is not initialized');
+    }
+    
     const { error: uploadError } = await supabase.storage
       .from('book-covers')
       .upload(filePath, coverFile);
@@ -271,7 +274,10 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
       
       if (isEdit && book) {
         // Update existing book
-        const supabase = getSupabaseClient();
+        if (!supabase) {
+          throw new Error('Supabase client is not initialized');
+        }
+        
         const { error: updateError } = await supabase
           .from('books')
           .update({
@@ -293,7 +299,10 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
         navigate('/admin/books');
       } else {
         // Create new book
-        const supabase = getSupabaseClient();
+        if (!supabase) {
+          throw new Error('Supabase client is not initialized');
+        }
+        
         const { error: insertError } = await supabase
           .from('books')
           .insert({

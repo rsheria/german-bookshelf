@@ -182,6 +182,10 @@ const ProfilePage: React.FC = () => {
         await checkRemainingQuota();
         
         // Fetch download history with book details
+        if (!supabase) {
+          throw new Error('Supabase client is not initialized');
+        }
+        
         const { data: downloads, error: downloadsError } = await supabase
           .from('download_logs')
           .select(`
