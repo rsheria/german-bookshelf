@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiSave, FiX, FiUpload, FiAlertCircle } from 'react-icons/fi';
-import { supabase } from '../../services/supabase';
-import { Book, BookType } from '../../types/supabase';
+import { Book } from '../../types/supabase';
+import { getSupabaseClient } from '../../utils/supabaseHelpers';
 
 interface BookFormProps {
   book?: Book;
@@ -203,7 +203,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const [genre, setGenre] = useState(book?.genre || '');
   const [language, setLanguage] = useState(book?.language || 'German');
   const [description, setDescription] = useState(book?.description || '');
-  const [type, setType] = useState<BookType>(book?.type || 'audiobook');
+  const [type, setType] = useState(book?.type || 'audiobook');
   const [downloadUrl, setDownloadUrl] = useState(book?.download_url || '');
   const [coverUrl, setCoverUrl] = useState(book?.cover_url || '');
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -235,6 +235,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
     const filePath = `covers/${fileName}`;
     
     // Upload to Supabase Storage
+    const supabase = getSupabaseClient();
     const { error: uploadError } = await supabase.storage
       .from('book-covers')
       .upload(filePath, coverFile);
@@ -270,6 +271,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
       
       if (isEdit && book) {
         // Update existing book
+        const supabase = getSupabaseClient();
         const { error: updateError } = await supabase
           .from('books')
           .update({
@@ -291,6 +293,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
         navigate('/admin/books');
       } else {
         // Create new book
+        const supabase = getSupabaseClient();
         const { error: insertError } = await supabase
           .from('books')
           .insert({
@@ -399,7 +402,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
             <Select
               id="type"
               value={type}
-              onChange={(e) => setType(e.target.value as BookType)}
+              onChange={(e) => setType(e.target.value as any)}
               required
             >
               <option value="audiobook">{t('books.audiobook')}</option>

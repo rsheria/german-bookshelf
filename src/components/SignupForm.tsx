@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiMail, FiLock, FiUser, FiAlertCircle } from 'react-icons/fi';
-import { signUp, supabase } from '../services/supabase';
+import { signUp } from '../services/supabase';
+import { getSupabaseClient } from '../utils/supabaseHelpers';
 
 const FormContainer = styled.div`
   max-width: 400px;
@@ -159,7 +160,8 @@ const SignupForm: React.FC = () => {
 
       if (data.user) {
         // Create a profile for the user with default quota
-        const { error: profileError } = await supabase
+        const supabaseClient = getSupabaseClient();
+        const { error: profileError } = await supabaseClient
           .from('profiles')
           .insert({
             id: data.user.id,

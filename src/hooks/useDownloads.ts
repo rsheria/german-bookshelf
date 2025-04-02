@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getSupabaseClient } from '../utils/supabaseHelpers';
 import { useAuth } from '../context/AuthContext';
 

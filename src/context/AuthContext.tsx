@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase, getSession } from '../services/supabase';
+import { getSession } from '../services/supabase';
+import { getSupabaseClient } from '../utils/supabaseHelpers';
 import { Profile } from '../types/supabase';
 
 interface AuthContextType {
@@ -31,7 +32,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         if (data.session?.user) {
           // Fetch user profile
-          const { data: profileData, error } = await supabase
+          const supabaseClient = getSupabaseClient();
+          const { data: profileData, error } = await supabaseClient
             .from('profiles')
             .select('*')
             .eq('id', data.session.user.id)
@@ -54,14 +56,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initializeAuth();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const supabaseClient = getSupabaseClient();
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
       async (_, newSession) => {
         setSession(newSession);
         setUser(newSession?.user || null);
 
         if (newSession?.user) {
           // Fetch user profile on auth change
-          const { data: profileData, error } = await supabase
+          const { data: profileData, error } = await supabaseClient
             .from('profiles')
             .select('*')
             .eq('id', newSession.user.id)
