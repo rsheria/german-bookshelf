@@ -1,0 +1,103 @@
+{
+  "app": {
+    "title": "German Bookshelf",
+    "tagline": "Your digital library for German audiobooks and ebooks"
+  },
+  "nav": {
+    "home": "Home",
+    "audiobooks": "Audiobooks",
+    "ebooks": "Ebooks",
+    "profile": "Profile",
+    "admin": "Admin",
+    "login": "Login",
+    "signup": "Sign Up",
+    "logout": "Logout",
+    "search": "Search..."
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "username": "Username",
+    "loginTitle": "Login to your account",
+    "signupTitle": "Create a new account",
+    "loginButton": "Login",
+    "signupButton": "Sign Up",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "signupSuccess": "Account created successfully!",
+    "loginSuccess": "Logged in successfully!",
+    "logoutSuccess": "Logged out successfully!"
+  },
+  "books": {
+    "title": "Title",
+    "author": "Author",
+    "genre": "Genre",
+    "language": "Language",
+    "description": "Description",
+    "type": "Type",
+    "audiobook": "Audiobook",
+    "ebook": "Ebook",
+    "download": "Download",
+    "downloadLimit": "You have reached your daily download limit",
+    "downloadSuccess": "Download started",
+    "downloadError": "Download failed",
+    "noBooks": "No books found",
+    "searchResults": "Search Results",
+    "filter": "Filter",
+    "sort": "Sort",
+    "sortBy": {
+      "title": "Title",
+      "author": "Author",
+      "newest": "Newest"
+    }
+  },
+  "profile": {
+    "title": "Your Profile",
+    "quota": "Daily Download Quota",
+    "quotaRemaining": "Downloads Remaining Today",
+    "downloadHistory": "Download History",
+    "settings": "Settings",
+    "updateProfile": "Update Profile",
+    "updateSuccess": "Profile updated successfully!"
+  },
+  "admin": {
+    "dashboard": "Admin Dashboard",
+    "books": "Manage Books",
+    "users": "Manage Users",
+    "addBook": "Add New Book",
+    "editBook": "Edit Book",
+    "deleteBook": "Delete Book",
+    "editUser": "Edit User",
+    "userList": "User List",
+    "bookList": "Book List",
+    "downloadLogs": "Download Logs",
+    "setQuota": "Set Quota",
+    "makeAdmin": "Make Admin",
+    "removeAdmin": "Remove Admin",
+    "confirmDelete": "Are you sure you want to delete this book?",
+    "uploadCover": "Upload Cover Image",
+    "externalUrl": "External Download URL",
+    "addSuccess": "Book added successfully!",
+    "updateSuccess": "Book updated successfully!",
+    "deleteSuccess": "Book deleted successfully!",
+    "userUpdateSuccess": "User updated successfully!"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success!",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "yes": "Yes",
+    "no": "No"
+  }
+}

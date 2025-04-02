@@ -1,0 +1,103 @@
+{
+  "app": {
+    "title": "Deutsche Bücherei",
+    "tagline": "Ihre digitale Bibliothek für deutsche Hörbücher und E-Books"
+  },
+  "nav": {
+    "home": "Startseite",
+    "audiobooks": "Hörbücher",
+    "ebooks": "E-Books",
+    "profile": "Profil",
+    "admin": "Administration",
+    "login": "Anmelden",
+    "signup": "Registrieren",
+    "logout": "Abmelden",
+    "search": "Suchen..."
+  },
+  "auth": {
+    "email": "E-Mail",
+    "password": "Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "username": "Benutzername",
+    "loginTitle": "Bei Ihrem Konto anmelden",
+    "signupTitle": "Neues Konto erstellen",
+    "loginButton": "Anmelden",
+    "signupButton": "Registrieren",
+    "forgotPassword": "Passwort vergessen?",
+    "noAccount": "Noch kein Konto?",
+    "haveAccount": "Bereits ein Konto?",
+    "signupSuccess": "Konto erfolgreich erstellt!",
+    "loginSuccess": "Erfolgreich angemeldet!",
+    "logoutSuccess": "Erfolgreich abgemeldet!"
+  },
+  "books": {
+    "title": "Titel",
+    "author": "Autor",
+    "genre": "Genre",
+    "language": "Sprache",
+    "description": "Beschreibung",
+    "type": "Typ",
+    "audiobook": "Hörbuch",
+    "ebook": "E-Book",
+    "download": "Herunterladen",
+    "downloadLimit": "Sie haben Ihr tägliches Download-Limit erreicht",
+    "downloadSuccess": "Download gestartet",
+    "downloadError": "Download fehlgeschlagen",
+    "noBooks": "Keine Bücher gefunden",
+    "searchResults": "Suchergebnisse",
+    "filter": "Filter",
+    "sort": "Sortieren",
+    "sortBy": {
+      "title": "Titel",
+      "author": "Autor",
+      "newest": "Neueste"
+    }
+  },
+  "profile": {
+    "title": "Ihr Profil",
+    "quota": "Tägliches Download-Kontingent",
+    "quotaRemaining": "Verbleibende Downloads heute",
+    "downloadHistory": "Download-Verlauf",
+    "settings": "Einstellungen",
+    "updateProfile": "Profil aktualisieren",
+    "updateSuccess": "Profil erfolgreich aktualisiert!"
+  },
+  "admin": {
+    "dashboard": "Admin-Dashboard",
+    "books": "Bücher verwalten",
+    "users": "Benutzer verwalten",
+    "addBook": "Neues Buch hinzufügen",
+    "editBook": "Buch bearbeiten",
+    "deleteBook": "Buch löschen",
+    "editUser": "Benutzer bearbeiten",
+    "userList": "Benutzerliste",
+    "bookList": "Bücherliste",
+    "downloadLogs": "Download-Protokolle",
+    "setQuota": "Kontingent festlegen",
+    "makeAdmin": "Zum Admin ernennen",
+    "removeAdmin": "Admin-Rechte entziehen",
+    "confirmDelete": "Sind Sie sicher, dass Sie dieses Buch löschen möchten?",
+    "uploadCover": "Titelbild hochladen",
+    "externalUrl": "Externe Download-URL",
+    "addSuccess": "Buch erfolgreich hinzugefügt!",
+    "updateSuccess": "Buch erfolgreich aktualisiert!",
+    "deleteSuccess": "Buch erfolgreich gelöscht!",
+    "userUpdateSuccess": "Benutzer erfolgreich aktualisiert!"
+  },
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "add": "Hinzufügen",
+    "search": "Suchen",
+    "loading": "Wird geladen...",
+    "error": "Ein Fehler ist aufgetreten",
+    "success": "Erfolg!",
+    "confirm": "Bestätigen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "yes": "Ja",
+    "no": "Nein"
+  }
+}
