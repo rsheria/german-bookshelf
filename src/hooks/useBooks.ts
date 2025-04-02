@@ -85,7 +85,7 @@ const mockBooks: Book[] = [
 ];
 
 // Check if Supabase is configured
-const isSupabaseConfigured = !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
+const isSupabaseConfigured = !!supabase;
 
 interface UseBooksProps {
   type?: BookType;
@@ -156,6 +156,11 @@ export const useBooks = ({
     }
     
     try {
+      // Check if supabase is null
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+      
       let query = supabase
         .from('books')
         .select('*', { count: 'exact' });
@@ -229,6 +234,11 @@ export const useBook = (id: string) => {
     }
     
     try {
+      // Check if supabase is null
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+      
       const { data, error } = await supabase
         .from('books')
         .select('*')

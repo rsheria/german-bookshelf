@@ -1,20 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '../types/supabase';
 
-// Get environment variables with fallbacks for development
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string || 'https://placeholder-url.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string || 'placeholder-key';
+// Get environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-// Log warning instead of crashing the app
-if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+// Check if Supabase is configured
+const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey;
+
+// Log warning if environment variables are missing
+if (!isSupabaseConfigured) {
   console.warn('⚠️ Missing Supabase environment variables. App will run with limited functionality.');
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// Create Supabase client only if properly configured
+export const supabase = isSupabaseConfigured 
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
+  : null;
 
 // Helper functions for authentication
 export const signUp = async (email: string, password: string) => {
-  if (!import.meta.env.VITE_SUPABASE_URL) {
+  if (!isSupabaseConfigured || !supabase) {
     console.warn('Cannot sign up: Supabase not configured');
     return { data: { user: null }, error: { message: 'Supabase not configured' } };
   }
@@ -22,7 +28,7 @@ export const signUp = async (email: string, password: string) => {
 };
 
 export const signIn = async (email: string, password: string) => {
-  if (!import.meta.env.VITE_SUPABASE_URL) {
+  if (!isSupabaseConfigured || !supabase) {
     console.warn('Cannot sign in: Supabase not configured');
     return { data: { user: null, session: null }, error: { message: 'Supabase not configured' } };
   }
@@ -30,7 +36,7 @@ export const signIn = async (email: string, password: string) => {
 };
 
 export const signOut = async () => {
-  if (!import.meta.env.VITE_SUPABASE_URL) {
+  if (!isSupabaseConfigured || !supabase) {
     console.warn('Cannot sign out: Supabase not configured');
     return { error: null };
   }
@@ -38,14 +44,14 @@ export const signOut = async () => {
 };
 
 export const getCurrentUser = async () => {
-  if (!import.meta.env.VITE_SUPABASE_URL) {
+  if (!isSupabaseConfigured || !supabase) {
     return { data: { user: null } };
   }
   return await supabase.auth.getUser();
 };
 
 export const getSession = async () => {
-  if (!import.meta.env.VITE_SUPABASE_URL) {
+  if (!isSupabaseConfigured || !supabase) {
     return { data: { session: null } };
   }
   return await supabase.auth.getSession();
