@@ -130,6 +130,21 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const AppRoutes: React.FC = () => {
   const { i18n } = useTranslation();
   const [appLoaded, setAppLoaded] = useState(false);
+  const { refreshSession } = useAuth();
+  
+  // Periodically refresh the session to prevent timeouts
+  useEffect(() => {
+    // Initial session refresh
+    refreshSession();
+    
+    // Set up interval to refresh session every 5 minutes
+    const refreshInterval = setInterval(() => {
+      refreshSession();
+      console.log("Session refreshed");
+    }, 5 * 60 * 1000); // 5 minutes in milliseconds
+    
+    return () => clearInterval(refreshInterval);
+  }, [refreshSession]);
   
   useEffect(() => {
     // Add a delay to ensure auth context is fully initialized
