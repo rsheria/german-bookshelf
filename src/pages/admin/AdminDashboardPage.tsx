@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiUsers, FiBook, FiDownload } from 'react-icons/fi';
+import { FiHome, FiBook, FiUsers, FiDownload, FiBarChart2 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../services/supabase';
+import { getSupabaseClient } from '../../utils/supabaseHelpers';
 
 const Container = styled.div`
   max-width: 1200px;
@@ -160,6 +160,7 @@ const AdminDashboardPage: React.FC = () => {
       
       try {
         // Fetch total books count
+        const supabase = getSupabaseClient();
         const { count: totalBooks } = await supabase
           .from('books')
           .select('*', { count: 'exact', head: true });

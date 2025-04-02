@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiUsers, FiSearch, FiEdit, FiCheck, FiX, FiAlertCircle } from 'react-icons/fi';
+import { FiUsers, FiEdit, FiTrash2, FiCheck, FiX, FiSearch } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../services/supabase';
+import { getSupabaseClient } from '../../utils/supabaseHelpers';
 import { Profile } from '../../types/supabase';
 
 const Container = styled.div`
@@ -204,7 +204,7 @@ const EmptyState = styled.div`
   border-radius: 8px;
 `;
 
-const Alert = styled.div`
+const StatusMessage = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -264,7 +264,7 @@ const AdminUsersPage: React.FC = () => {
     setError(null);
     
     try {
-      let query = supabase
+      let query = getSupabaseClient()
         .from('profiles')
         .select('*', { count: 'exact' });
       
@@ -291,7 +291,7 @@ const AdminUsersPage: React.FC = () => {
       if (profilesData) {
         for (const profile of profilesData) {
           // Get user email from auth.users
-          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
+          const { data: userData, error: userError } = await getSupabaseClient().auth.admin.getUserById(
             profile.id
           );
           
@@ -322,7 +322,7 @@ const AdminUsersPage: React.FC = () => {
 
   const handleToggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
     try {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await getSupabaseClient()
         .from('profiles')
         .update({ is_admin: !currentIsAdmin })
         .eq('id', userId);
@@ -363,7 +363,7 @@ const AdminUsersPage: React.FC = () => {
     if (!editingUser) return;
     
     try {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await getSupabaseClient()
         .from('profiles')
         .update({ daily_quota: editingUser.daily_quota })
         .eq('id', editingUser.id);
@@ -473,10 +473,9 @@ const AdminUsersPage: React.FC = () => {
       </Header>
       
       {error && (
-        <Alert>
-          <FiAlertCircle />
-          {error}
-        </Alert>
+        <StatusMessage>
+          <FiX /> {error}
+        </StatusMessage>
       )}
       
       {success && (

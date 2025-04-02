@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../services/supabase';
+import { isSupabaseConfigured, getSupabaseClient } from '../utils/supabaseHelpers';
 import { Book, BookType } from '../types/supabase';
 
 // Mock data to use when Supabase is not configured
@@ -85,7 +85,7 @@ const mockBooks: Book[] = [
 ];
 
 // Check if Supabase is configured
-const isSupabaseConfigured = !!supabase;
+const supabaseAvailable = isSupabaseConfigured();
 
 interface UseBooksProps {
   type?: BookType;
@@ -120,7 +120,7 @@ export const useBooks = ({
     setError(null);
     
     // If Supabase is not configured, use mock data
-    if (!isSupabaseConfigured) {
+    if (!supabaseAvailable) {
       setTimeout(() => {
         let filteredBooks = [...mockBooks];
         
@@ -156,10 +156,13 @@ export const useBooks = ({
     }
     
     try {
-      // Check if supabase is null
-      if (!supabase) {
+      // Only proceed if Supabase is configured
+      if (!supabaseAvailable) {
         throw new Error('Supabase client is not initialized');
       }
+      
+      // Get the Supabase client safely
+      const supabase = getSupabaseClient();
       
       let query = supabase
         .from('books')
@@ -217,7 +220,7 @@ export const useBook = (id: string) => {
     setError(null);
     
     // If Supabase is not configured, use mock data
-    if (!isSupabaseConfigured) {
+    if (!supabaseAvailable) {
       setTimeout(() => {
         const foundBook = mockBooks.find(book => book.id === id);
         
@@ -235,11 +238,11 @@ export const useBook = (id: string) => {
     
     try {
       // Check if supabase is null
-      if (!supabase) {
+      if (!getSupabaseClient()) {
         throw new Error('Supabase client is not initialized');
       }
       
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('books')
         .select('*')
         .eq('id', id)
