@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ChakraProvider } from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
@@ -26,12 +26,46 @@ import EditBookPage from './pages/admin/EditBookPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './i18n/i18n';
 
+// Error boundary component
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("React Error Boundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', color: 'red', backgroundColor: '#ffeeee', border: '1px solid red', borderRadius: '5px', margin: '20px' }}>
+          <h2>Something went wrong</h2>
+          <p>Error: {this.state.error?.message}</p>
+          <p>Check the console for more details</p>
+          <button onClick={() => this.setState({ hasError: false })}>Try again</button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const AppContainer = styled.div`
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background-color: #f8f9fa;
 `;
 
 const MainContent = styled.main`
+  flex: 1;
   padding-bottom: 3rem;
 `;
 
@@ -41,6 +75,27 @@ const Footer = styled.footer`
   padding: 2rem;
   text-align: center;
 `;
+
+// Debug component to show environment variables
+const DebugInfo = () => {
+  const [showDebug, setShowDebug] = useState(false);
+  
+  return (
+    <div style={{ position: 'fixed', bottom: '10px', right: '10px', zIndex: 9999 }}>
+      <button onClick={() => setShowDebug(!showDebug)} style={{ padding: '5px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '3px' }}>
+        Debug
+      </button>
+      {showDebug && (
+        <div style={{ backgroundColor: 'rgba(0,0,0,0.8)', color: 'white', padding: '10px', borderRadius: '5px', marginTop: '5px', maxWidth: '500px', overflow: 'auto' }}>
+          <p>VITE_SUPABASE_URL: {import.meta.env.VITE_SUPABASE_URL || 'Not set'}</p>
+          <p>VITE_SUPABASE_ANON_KEY set: {import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Yes' : 'No'}</p>
+          <p>NODE_ENV: {import.meta.env.MODE}</p>
+          <p>Base URL: {import.meta.env.BASE_URL}</p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -74,6 +129,19 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const AppRoutes: React.FC = () => {
   const { i18n } = useTranslation();
+  const [appLoaded, setAppLoaded] = useState(false);
+  
+  useEffect(() => {
+    // Add a delay to ensure auth context is fully initialized
+    const timer = setTimeout(() => {
+      setAppLoaded(true);
+      console.log("App fully loaded");
+      console.log("Environment:", import.meta.env.MODE);
+      console.log("Supabase URL available:", !!import.meta.env.VITE_SUPABASE_URL);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   // Set language from localStorage on app load
   useEffect(() => {
@@ -83,8 +151,12 @@ const AppRoutes: React.FC = () => {
     }
   }, [i18n]);
   
+  if (!appLoaded) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
+  }
+
   return (
-    <Router>
+    <ErrorBoundary>
       <AppContainer>
         <Navbar />
         <MainContent>
@@ -157,8 +229,9 @@ const AppRoutes: React.FC = () => {
         <Footer>
           &copy; {new Date().getFullYear()} German Bookshelf - All rights reserved
         </Footer>
+        <DebugInfo />
       </AppContainer>
-    </Router>
+    </ErrorBoundary>
   );
 };
 
@@ -166,7 +239,9 @@ const App: React.FC = () => {
   return (
     <ChakraProvider>
       <AuthProvider>
-        <AppRoutes />
+        <Router>
+          <AppRoutes />
+        </Router>
       </AuthProvider>
     </ChakraProvider>
   );
