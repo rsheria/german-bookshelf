@@ -167,7 +167,9 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
       await checkRemainingQuota();
     }
     
-    const success = await downloadBook(book.id, book.download_url);
+    // Make sure download_url exists before passing it
+    const downloadUrl = book.download_url || '';
+    const success = await downloadBook(book.id, downloadUrl);
     if (!success) {
       setShowError(true);
     }
