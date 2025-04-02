@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiUser, FiDownload, FiAlertCircle, FiCheck } from 'react-icons/fi';
+import { FiUser, FiDownload, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import { useDownloads } from '../hooks/useDownloads';
@@ -140,17 +140,6 @@ const Alert = styled.div`
   margin-bottom: 1.5rem;
 `;
 
-const Success = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: #d4edda;
-  color: #155724;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
-`;
-
 const LoadingState = styled.div`
   text-align: center;
   padding: 3rem;
@@ -171,7 +160,6 @@ const ProfilePage: React.FC = () => {
   const [downloadHistory, setDownloadHistory] = useState<DownloadHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     // Redirect if not logged in
@@ -210,7 +198,7 @@ const ProfilePage: React.FC = () => {
         if (downloads) {
           const formattedDownloads = downloads.map(item => ({
             id: item.id,
-            book: item.books as Book,
+            book: item.books as unknown as Book,
             downloaded_at: item.downloaded_at
           }));
           
@@ -267,13 +255,6 @@ const ProfilePage: React.FC = () => {
           <FiAlertCircle />
           {error}
         </Alert>
-      )}
-      
-      {success && (
-        <Success>
-          <FiCheck />
-          {success}
-        </Success>
       )}
       
       <Card>

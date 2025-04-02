@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiHeadphones, FiFilter, FiSearch } from 'react-icons/fi';
+import { FiHeadphones, FiSearch } from 'react-icons/fi';
 import BookGrid from '../components/BookGrid';
 import { useBooks } from '../hooks/useBooks';
 

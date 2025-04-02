@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiBook, FiEdit, FiTrash2, FiPlus, FiSearch, FiFilter, FiAlertCircle } from 'react-icons/fi';
+import { FiBook, FiEdit, FiTrash2, FiPlus, FiSearch, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import { Book } from '../../types/supabase';
