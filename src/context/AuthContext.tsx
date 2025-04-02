@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Session, User, AuthError } from '@supabase/supabase-js';
+import { Session, User } from '@supabase/supabase-js';
 import { supabase, getSession } from '../services/supabase';
 import { Profile } from '../types/supabase';
 
@@ -93,7 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     let subscription: { unsubscribe: () => void } | null = null;
     
     if (supabase) {
-      subscription = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      const { data } = supabase.auth.onAuthStateChange(async (event, newSession) => {
         console.log('Auth state changed:', event);
         setSession(newSession);
         setUser(newSession?.user || null);
@@ -119,6 +119,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setProfile(null);
         }
       });
+      
+      subscription = data.subscription;
     }
 
     return () => {
