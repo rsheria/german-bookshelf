@@ -186,29 +186,59 @@ const ProfilePage: React.FC = () => {
           throw new Error('Supabase client is not initialized');
         }
         
-        const { data: downloads, error: downloadsError } = await supabase
-          .from('download_logs')
-          .select(`
-            id,
-            downloaded_at,
-            books (*)
-          `)
-          .eq('user_id', user.id)
-          .order('downloaded_at', { ascending: false })
-          .limit(10);
-        
-        if (downloadsError) {
-          throw downloadsError;
-        }
-        
-        if (downloads) {
-          const formattedDownloads = downloads.map(item => ({
-            id: item.id,
-            book: item.books as unknown as Book,
-            downloaded_at: item.downloaded_at
-          }));
+        try {
+          const { data: downloads, error: downloadsError } = await supabase
+            .from('download_logs')
+            .select(`
+              id,
+              downloaded_at,
+              book_id,
+              user_id
+            `)
+            .eq('user_id', user.id)
+            .order('downloaded_at', { ascending: false })
+            .limit(10);
           
-          setDownloadHistory(formattedDownloads);
+          if (downloadsError) {
+            console.error('Error fetching download logs:', downloadsError);
+            throw downloadsError;
+          }
+          
+          if (downloads && downloads.length > 0) {
+            // Fetch books separately to avoid relationship issues
+            const bookIds = downloads.map(dl => dl.book_id);
+            
+            const { data: booksData, error: booksError } = await supabase
+              .from('books')
+              .select('*')
+              .in('id', bookIds);
+              
+            if (booksError) {
+              console.error('Error fetching books:', booksError);
+              throw booksError;
+            }
+            
+            // Create a map of book ids to book objects
+            const booksMap = (booksData || []).reduce((map, book) => {
+              map[book.id] = book;
+              return map;
+            }, {} as Record<string, Book>);
+            
+            // Combine download logs with book data
+            const formattedDownloads = downloads.map(item => ({
+              id: item.id,
+              book: booksMap[item.book_id] || { id: item.book_id, title: 'Unknown Book', author: '', cover_url: '' } as Book,
+              downloaded_at: item.downloaded_at
+            }));
+            
+            setDownloadHistory(formattedDownloads);
+          } else {
+            setDownloadHistory([]);
+          }
+        } catch (err) {
+          console.error('Error in download history fetching:', err);
+          setError(err instanceof Error ? err.message : 'An unknown error occurred');
+          setDownloadHistory([]);
         }
       } catch (err) {
         console.error('Error fetching download history:', err);
