@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiSave, FiX, FiUpload, FiAlertCircle } from 'react-icons/fi';
 import { supabase } from '../../services/supabase';
-import { Book, BookType } from '../../types/supabase';
+import { Book } from '../../types/supabase';
 
 interface BookFormProps {
   book?: Book;
