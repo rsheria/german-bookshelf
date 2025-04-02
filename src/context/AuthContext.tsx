@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { getSession } from '../services/supabase';
-import { getSupabaseClient } from '../utils/supabaseHelpers';
+import { supabase, getSession } from '../services/supabase';
 import { Profile } from '../types/supabase';
 
 interface AuthContextType {
@@ -33,7 +32,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         if (data.session?.user) {
           // Fetch user profile
-          const supabaseClient = getSupabaseClient();
+          const supabaseClient = supabase;
           
           // Only try to fetch profile if Supabase is configured
           if (supabaseClient) {
@@ -61,7 +60,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initializeAuth();
 
     // Listen for auth changes
-    const supabaseClient = getSupabaseClient();
+    const supabaseClient = supabase;
     
     // Only set up auth listener if Supabase is configured
     let subscription: { unsubscribe: () => void } | null = null;
@@ -112,7 +111,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (data.session?.user) {
         // Fetch user profile
-        const supabaseClient = getSupabaseClient();
+        const supabaseClient = supabase;
         
         // Only try to fetch profile if Supabase is configured
         if (supabaseClient) {

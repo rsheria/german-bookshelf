@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiUser, FiDownload, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import { getSupabaseClient } from '../utils/supabaseHelpers';
+import { supabase } from '../services/supabase';
 import { useDownloads } from '../hooks/useDownloads';
 import { Book } from '../types/supabase';
 
@@ -177,13 +177,6 @@ const ProfilePage: React.FC = () => {
       
       try {
         setIsLoading(true);
-        
-        // Check if supabase is null
-        const supabase = getSupabaseClient();
-        
-        if (!supabase) {
-          throw new Error('Supabase client is not initialized');
-        }
         
         // Check remaining quota
         await checkRemainingQuota();

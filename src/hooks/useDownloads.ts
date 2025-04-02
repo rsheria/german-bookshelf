@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getSupabaseClient } from '../utils/supabaseHelpers';
+import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 
 interface UseDownloadsResult {
@@ -15,8 +15,6 @@ export const useDownloads = (): UseDownloadsResult => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
-
-  const supabase = getSupabaseClient();
 
   const checkRemainingQuota = async (): Promise<number> => {
     if (!user || !profile) {
