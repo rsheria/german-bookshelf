@@ -111,20 +111,21 @@ export const useBooks = ({
   page = 0
 }: UseBooksProps = {}): UseBooksResult => {
   const [books, setBooks] = useState<Book[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [totalCount, setTotalCount] = useState<number>(0);
+  const [totalCount, setTotalCount] = useState(0);
 
   const fetchBooks = async () => {
     setIsLoading(true);
     setError(null);
-    
-    // If Supabase is not configured, use mock data
+
+    // If Supabase is not available, use mock data
     if (!supabaseAvailable) {
+      console.log('Supabase not available, using mock data');
       setTimeout(() => {
         let filteredBooks = [...mockBooks];
         
-        // Apply filters to mock data
+        // Apply filters
         if (type) {
           filteredBooks = filteredBooks.filter(book => book.type === type);
         }
@@ -138,7 +139,7 @@ export const useBooks = ({
           filteredBooks = filteredBooks.filter(book => 
             book.title.toLowerCase().includes(term) || 
             book.author.toLowerCase().includes(term) || 
-            book.description.toLowerCase().includes(term)
+            (book.description && book.description.toLowerCase().includes(term))
           );
         }
         
@@ -157,6 +158,10 @@ export const useBooks = ({
     
     try {
       // Only proceed if Supabase is configured
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+      
       let query = supabase
         .from('books')
         .select('*', { count: 'exact' });
@@ -189,8 +194,38 @@ export const useBooks = ({
       setBooks(data || []);
       setTotalCount(count || 0);
     } catch (err) {
-      setError(err as Error);
       console.error('Error fetching books:', err);
+      setError(err as Error);
+      
+      // Fallback to mock data on error
+      console.log('Falling back to mock data due to error');
+      let filteredBooks = [...mockBooks];
+      
+      // Apply filters (same as above)
+      if (type) {
+        filteredBooks = filteredBooks.filter(book => book.type === type);
+      }
+      
+      if (genre && genre !== 'all') {
+        filteredBooks = filteredBooks.filter(book => book.genre === genre);
+      }
+      
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        filteredBooks = filteredBooks.filter(book => 
+          book.title.toLowerCase().includes(term) || 
+          book.author.toLowerCase().includes(term) || 
+          (book.description && book.description.toLowerCase().includes(term))
+        );
+      }
+      
+      // Apply pagination
+      const from = page * limit;
+      const to = from + limit;
+      const paginatedBooks = filteredBooks.slice(from, to);
+      
+      setBooks(paginatedBooks);
+      setTotalCount(filteredBooks.length);
     } finally {
       setIsLoading(false);
     }
@@ -205,24 +240,18 @@ export const useBooks = ({
 
 export const useBook = (id: string) => {
   const [book, setBook] = useState<Book | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchBook = async () => {
     setIsLoading(true);
     setError(null);
     
-    // If Supabase is not configured, use mock data
+    // If Supabase is not available, use mock data
     if (!supabaseAvailable) {
       setTimeout(() => {
-        const foundBook = mockBooks.find(book => book.id === id);
-        
-        if (foundBook) {
-          setBook(foundBook);
-        } else {
-          setError(new Error('Book not found'));
-        }
-        
+        const mockBook = mockBooks.find(book => book.id === id);
+        setBook(mockBook || null);
         setIsLoading(false);
       }, 500); // Simulate network delay
       
@@ -231,6 +260,10 @@ export const useBook = (id: string) => {
     
     try {
       // Check if supabase is available
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+      
       const { data, error } = await supabase
         .from('books')
         .select('*')

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import { Session, User, AuthError } from '@supabase/supabase-js';
 import { supabase, getSession } from '../services/supabase';
 import { Profile } from '../types/supabase';
 
@@ -8,50 +8,80 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   isLoading: boolean;
-  isAdmin: boolean;
+  error: Error | null;
   refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const refreshSession = async () => {
+    try {
+      const result = await getSession();
+      
+      // Handle potential errors from getSession
+      if ('error' in result && result.error) {
+        throw result.error;
+      }
+
+      if (result.data.session?.user) {
+        // Fetch user profile
+        if (supabase) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', result.data.session.user.id)
+            .single();
+
+          if (profileError && profileError.code !== 'PGRST116') {
+            console.warn('Error fetching profile:', profileError);
+          }
+
+          setSession(result.data.session);
+          setUser(result.data.session.user);
+          setProfile(profileData || null);
+        } else {
+          console.warn('Supabase client not initialized, cannot fetch profile');
+          setSession(result.data.session);
+          setUser(result.data.session.user);
+        }
+      } else {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+      }
+    } catch (err) {
+      console.error('Error refreshing session:', err);
+      setError(err as Error);
+    }
+  };
 
   useEffect(() => {
-    // Initial session check
     const initializeAuth = async () => {
       setIsLoading(true);
       try {
-        const { data } = await getSession();
-        setSession(data.session);
-        setUser(data.session?.user || null);
-
-        if (data.session?.user) {
-          // Fetch user profile
-          const supabaseClient = supabase;
-          
-          // Only try to fetch profile if Supabase is configured
-          if (supabaseClient) {
-            const { data: profileData, error } = await supabaseClient
-              .from('profiles')
-              .select('*')
-              .eq('id', data.session.user.id)
-              .single();
-
-            if (error) {
-              console.error('Error fetching profile:', error);
-            } else {
-              setProfile(profileData);
-              setIsAdmin(profileData.is_admin);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
+        await refreshSession();
+      } catch (err) {
+        console.error('Error initializing auth:', err);
+        setError(err as Error);
       } finally {
         setIsLoading(false);
       }
@@ -60,42 +90,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initializeAuth();
 
     // Listen for auth changes
-    const supabaseClient = supabase;
-    
-    // Only set up auth listener if Supabase is configured
     let subscription: { unsubscribe: () => void } | null = null;
     
-    if (supabaseClient) {
-      const { data } = supabaseClient.auth.onAuthStateChange(
-        async (_, newSession) => {
-          setSession(newSession);
-          setUser(newSession?.user || null);
-
-          if (newSession?.user) {
-            // Fetch user profile on auth change
-            const { data: profileData, error } = await supabaseClient
+    if (supabase) {
+      subscription = supabase.auth.onAuthStateChange(async (event, newSession) => {
+        console.log('Auth state changed:', event);
+        setSession(newSession);
+        setUser(newSession?.user || null);
+        
+        if (newSession?.user && supabase) {
+          // Fetch user profile
+          try {
+            const { data: profileData, error: profileError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', newSession.user.id)
               .single();
 
-            if (error) {
-              console.error('Error fetching profile:', error);
-            } else {
-              setProfile(profileData);
-              setIsAdmin(profileData.is_admin);
+            if (profileError && profileError.code !== 'PGRST116') {
+              console.warn('Error fetching profile:', profileError);
             }
-          } else {
-            setProfile(null);
-            setIsAdmin(false);
+
+            setProfile(profileData || null);
+          } catch (err) {
+            console.error('Error fetching profile on auth change:', err);
           }
+        } else {
+          setProfile(null);
         }
-      );
-      
-      subscription = data.subscription;
+      });
     }
 
-    // Cleanup subscription on unmount
     return () => {
       if (subscription) {
         subscription.unsubscribe();
@@ -103,48 +128,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  const refreshSession = async () => {
-    try {
-      const { data } = await getSession();
-      setSession(data.session);
-      setUser(data.session?.user || null);
+  // Set up a timer to refresh the session periodically to prevent timeouts
+  useEffect(() => {
+    // Refresh every 10 minutes
+    const intervalId = setInterval(() => {
+      console.log('Refreshing session...');
+      refreshSession();
+    }, 10 * 60 * 1000);
 
-      if (data.session?.user) {
-        // Fetch user profile
-        const supabaseClient = supabase;
-        
-        // Only try to fetch profile if Supabase is configured
-        if (supabaseClient) {
-          const { data: profileData, error } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('id', data.session.user.id)
-            .single();
-
-          if (error) {
-            console.error('Error fetching profile:', error);
-          } else {
-            setProfile(profileData);
-            setIsAdmin(profileData.is_admin);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error refreshing session:', error);
-    }
-  };
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, isLoading, isAdmin, refreshSession }}>
+    <AuthContext.Provider value={{ session, user, profile, isLoading, error, refreshSession }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };
