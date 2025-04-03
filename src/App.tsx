@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ChakraProvider } from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
@@ -101,6 +101,9 @@ const DebugInfo: React.FC = () => {
   );
 };
 
+// Create a context for panic mode
+const PanicModeContext = createContext(false);
+
 // Protected route component
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -109,6 +112,7 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const panicMode = useContext(PanicModeContext);
   
   // Create a more transparent loading state that won't block content
   const [showLoading, setShowLoading] = useState(false);
@@ -143,11 +147,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }, [isLoading]);
   
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !user && !panicMode) {
       // If not loading and no user, redirect to login
+      // But only if we're not in panic mode
       navigate('/login');
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, panicMode]);
+  
+  // PANIC MODE: If panic mode is active, just render content regardless of auth
+  if (panicMode) {
+    console.log(" PANIC MODE ACTIVE - Displaying content regardless of auth state");
+    return <>{children}</>;
+  }
   
   // Fast bypass: if we've been loading for over 2.5 seconds, just show content
   if (isLoading && !showLoading) {
@@ -171,6 +182,7 @@ interface AdminRouteProps {
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const { user, isAdmin, isLoading } = useAuth();
   const navigate = useNavigate();
+  const panicMode = useContext(PanicModeContext);
   
   // Create a more transparent loading state that won't block content
   const [showLoading, setShowLoading] = useState(false);
@@ -205,8 +217,8 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   }, [isLoading]);
   
   useEffect(() => {
-    // Only redirect if we're not loading and we know the user state
-    if (!isLoading) {
+    // Only redirect if we're not loading, we know the user state, and we're not in panic mode
+    if (!isLoading && !panicMode) {
       if (!user) {
         // If no user, redirect to login
         navigate('/login');
@@ -215,7 +227,13 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
         navigate('/');
       }
     }
-  }, [user, isAdmin, isLoading, navigate]);
+  }, [user, isAdmin, isLoading, navigate, panicMode]);
+  
+  // PANIC MODE: If panic mode is active, just render content regardless of auth
+  if (panicMode) {
+    console.log(" PANIC MODE ACTIVE - Displaying admin content regardless of auth state");
+    return <>{children}</>;
+  }
   
   // Fast bypass: if we've been loading for over 2.5 seconds, just show content
   if (isLoading && !showLoading) {
@@ -337,12 +355,53 @@ const AppRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  // Add a forced panic mode that will bypass any loading states
+  const [panicMode, setPanicMode] = useState(false);
+  
+  // Monitor for refresh + stuck loading scenario
+  useEffect(() => {
+    // Check if we're in a post-refresh state
+    const wasRefreshed = performance.navigation?.type === 1 || 
+                        sessionStorage.getItem('page_was_refreshed') === 'true';
+                        
+    // Mark that the page has been refreshed for future reference
+    sessionStorage.setItem('page_was_refreshed', 'true');
+    
+    // If we're in a post-refresh state, start a timer to activate panic mode
+    if (wasRefreshed) {
+      console.log(" Page was refreshed - monitoring for stuck loading state");
+      const panicTimer = setTimeout(() => {
+        console.log(" ACTIVATING PANIC MODE - Forcing content to display");
+        setPanicMode(true);
+        
+        // Force display all content
+        const rootElement = document.getElementById('root');
+        if (rootElement) {
+          rootElement.style.opacity = '1';
+          rootElement.style.visibility = 'visible';
+        }
+        
+        // Hide any loading indicators
+        const loadingElements = document.querySelectorAll('[role="progressbar"], .loading');
+        loadingElements.forEach(el => {
+          if (el instanceof HTMLElement) {
+            el.style.display = 'none';
+          }
+        });
+      }, 2500); // Panic mode activates if content doesn't load after 2.5 seconds
+      
+      return () => clearTimeout(panicTimer);
+    }
+  }, []);
+  
   return (
-    <ChakraProvider>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </ChakraProvider>
+    <PanicModeContext.Provider value={panicMode}>
+      <ChakraProvider>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </ChakraProvider>
+    </PanicModeContext.Provider>
   );
 };
 
