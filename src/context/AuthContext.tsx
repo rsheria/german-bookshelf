@@ -133,12 +133,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        console.log("Simple auth initialization starting...");
-        // Simple approach - just get the current session
+        console.log("Auth initialization starting...");
+        
+        // First try standard session retrieval
         const { data } = await supabase.auth.getSession();
         
         if (data?.session) {
-          console.log("Session found on app load");
+          console.log("Session found via getSession()");
           setSession(data.session);
           setUser(data.session.user);
           
@@ -146,14 +147,62 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             await fetchProfile(data.session.user.id);
           }
         } else {
-          console.log("No session found on app load");
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setIsAdmin(false);
+          console.log("No session found via getSession(), checking localStorage...");
+          
+          // Try to restore from localStorage tokens
+          const accessToken = localStorage.getItem('access_token');
+          const refreshToken = localStorage.getItem('refresh_token');
+          
+          if (accessToken && refreshToken) {
+            try {
+              console.log("Found tokens in localStorage, attempting to restore session...");
+              
+              const { data: sessionData, error } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken
+              });
+              
+              if (error) {
+                console.error("Error restoring session:", error);
+                throw error;
+              }
+              
+              if (sessionData.session) {
+                console.log("Session successfully restored!");
+                setSession(sessionData.session);
+                setUser(sessionData.session.user);
+                
+                if (sessionData.session.user?.id) {
+                  await fetchProfile(sessionData.session.user.id);
+                }
+              } else {
+                console.log("Session restoration returned no session");
+                setSession(null);
+                setUser(null);
+                setProfile(null);
+                setIsAdmin(false);
+              }
+            } catch (e) {
+              console.error("Failed to restore session:", e);
+              setSession(null);
+              setUser(null);
+              setProfile(null);
+              setIsAdmin(false);
+            }
+          } else {
+            console.log("No tokens found in localStorage");
+            setSession(null);
+            setUser(null);
+            setProfile(null);
+            setIsAdmin(false);
+          }
         }
       } catch (error) {
         console.error("Auth initialization error:", error);
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setIsAdmin(false);
       } finally {
         // Always set these to true to ensure the app loads
         setIsLoading(false);
@@ -187,9 +236,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setSession(newSession);
             setUser(newSession.user);
             
-            // Save session to localStorage as a backup
-            localStorage.setItem('supabase.auth.token', JSON.stringify(newSession));
-            localStorage.setItem('sb-auth-token-backup', JSON.stringify(newSession));
+            // Save session to localStorage for refresh persistence
+            try {
+              localStorage.setItem('supabase.auth.token', JSON.stringify(newSession));
+              
+              // Store tokens separately for more reliable restoration
+              localStorage.setItem('access_token', newSession.access_token);
+              localStorage.setItem('refresh_token', newSession.refresh_token);
+              localStorage.setItem('user_id', newSession.user.id);
+              
+              console.log('Session explicitly saved to localStorage for refresh persistence');
+            } catch (e) {
+              console.error('Error saving session to localStorage', e);
+            }
             
             // Fetch profile
             if (newSession.user) {
@@ -211,6 +270,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           localStorage.removeItem('supabase.auth.token');
           localStorage.removeItem('supabase.auth.token.v2');
           localStorage.removeItem('sb-auth-token-backup');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user_id');
           
           setIsLoading(false);
         }

@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { FiHeadphones, FiSearch } from 'react-icons/fi';
 import BookGrid from '../components/BookGrid';
 import { useBooks } from '../hooks/useBooks';
+import { useSessionCheck } from '../hooks/useSessionCheck';
 
 const Container = styled.div`
   max-width: 1200px;
@@ -96,6 +97,9 @@ const AudiobooksPage: React.FC = () => {
   const [genre, setGenre] = useState('');
   const [page, setPage] = useState(0);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  
+  // Use the session check hook to maintain session on refresh
+  useSessionCheck();
   
   // Debounce search term
   useEffect(() => {
