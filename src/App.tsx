@@ -4,6 +4,7 @@ import { ChakraProvider } from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './context/AuthContext';
 import { bypassRefreshIssue } from './services/refreshBypass';
+import { startSessionKeepalive } from './services/supabase';
 import styled from 'styled-components';
 
 // Import components
@@ -357,6 +358,18 @@ const AppRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  // Start session keepalive when the app loads
+  useEffect(() => {
+    // Start the session keepalive mechanism to prevent timeouts
+    console.log('Starting session keepalive mechanism');
+    const cleanup = startSessionKeepalive();
+    
+    // Cleanup when component unmounts
+    return () => {
+      cleanup();
+    };
+  }, []);
+
   // Add a forced panic mode that will bypass any loading states
   const [panicMode, setPanicMode] = useState(false);
   

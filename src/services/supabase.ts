@@ -355,43 +355,72 @@ export const getSession = async () => {
   }
 };
 
-export const refreshSession = async () => {
+// Add session keepalive function
+export const refreshSession = async (): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.auth.refreshSession();
-    
-    if (error) {
-      console.error('Session refresh failed, attempting recovery');
-      
-      // Try to recover with stored tokens
-      const storedSession = getStoredSession();
-      if (storedSession) {
-        try {
-          // Try to set the session directly
-          await supabase.auth.setSession({
-            access_token: storedSession.access_token,
-            refresh_token: storedSession.refresh_token || '',
-          });
-          
-          // Check if set session worked
-          const recoveredSession = await supabase.auth.getSession();
-          if (recoveredSession.data.session) {
-            return { data: recoveredSession.data, error: null };
-          }
-        } catch (sessionError) {
-          console.error('Session recovery failed:', sessionError);
-        }
+    const { data } = await supabase.auth.getSession();
+    if (data?.session) {
+      // Session exists, refresh it
+      const { data: refreshData, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error('Failed to refresh session:', error);
+        return false;
       }
       
-      throw error;
+      // Store the refreshed session
+      if (refreshData?.session) {
+        // Session refreshed successfully
+        console.log('Session refreshed successfully');
+        return true;
+      }
     }
-    
-    if (data.session) {
-      manuallyStoreSession(data.session);
-    }
-    
-    return { data, error: null };
+    return false;
   } catch (error) {
-    console.error('Refresh session error:', error);
-    return { data: null, error };
+    console.error('Error in refreshSession:', error);
+    return false;
   }
+};
+
+// Function to start the session keepalive mechanism
+export const startSessionKeepalive = () => {
+  // Refresh immediately
+  refreshSession();
+  
+  // Set up interval to refresh session every 10 minutes
+  const intervalId = setInterval(() => {
+    refreshSession();
+  }, 10 * 60 * 1000); // 10 minutes
+  
+  // Also refresh on user activity
+  const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+  
+  let activityTimeout: NodeJS.Timeout | null = null;
+  
+  const activityHandler = () => {
+    // Clear existing timeout
+    if (activityTimeout) {
+      clearTimeout(activityTimeout);
+    }
+    
+    // Set new timeout to refresh 5 seconds after activity stops
+    activityTimeout = setTimeout(() => {
+      refreshSession();
+    }, 5000);
+  };
+  
+  // Add event listeners for user activity
+  activityEvents.forEach(event => {
+    window.addEventListener(event, activityHandler);
+  });
+  
+  // Return a function to clean up
+  return () => {
+    clearInterval(intervalId);
+    if (activityTimeout) {
+      clearTimeout(activityTimeout);
+    }
+    activityEvents.forEach(event => {
+      window.removeEventListener(event, activityHandler);
+    });
+  };
 };
