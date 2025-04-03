@@ -1,101 +1,142 @@
-import React, { useEffect, useState, ReactNode } from 'react';
-import { ChakraProvider, extendTheme } from '@chakra-ui/react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ChakraProvider } from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
-import './i18n/i18n'; // Fixed path to i18n
+import styled from 'styled-components';
 
-// Import from existing files
-// Note: If these paths don't match your file structure, adjust as needed
-import LoginPage from './components/LoginForm';
-import RegisterPage from './components/SignupForm';
-import ProfilePage from './pages/ProfilePage';
+// Import components
+import Navbar from './components/Navbar';
+import LoginForm from './components/LoginForm';
+import SignupForm from './components/SignupForm';
+
+// Import pages
 import HomePage from './pages/HomePage';
+import AudiobooksPage from './pages/AudiobooksPage';
+import EbooksPage from './pages/EbooksPage';
 import BookDetailsPage from './pages/BookDetailsPage';
-import BooksPage from './pages/AudiobooksPage'; // Using existing page as fallback
-import NotFoundPage from './pages/NotFoundPage'; // Create or adjust if needed
-import AdminPage from './pages/admin/AdminDashboardPage'; // Using existing admin page
+import ProfilePage from './pages/ProfilePage';
+import SearchPage from './pages/SearchPage';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminBooksPage from './pages/admin/AdminBooksPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AddBookPage from './pages/admin/AddBookPage';
+import EditBookPage from './pages/admin/EditBookPage';
 import DebugPage from './pages/DebugPage';
-import RecoveryHandler from './components/RecoveryHandler'; // Fixed import
 
-// App container and error boundary components
-const AppContainer: React.FC<{children: ReactNode}> = ({ children }) => (
-  <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-    {children}
-  </div>
-);
+// Import context and i18n
+import { AuthProvider, useAuth } from './context/AuthContext';
+import './i18n/i18n';
 
-// Simple error boundary component
-class ErrorBoundary extends React.Component<{children: ReactNode}, {hasError: boolean}> {
-  constructor(props: {children: ReactNode}) {
+// Error boundary component
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
+  constructor(props: {children: React.ReactNode}) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("App error:", error, errorInfo);
+    console.error("React Error Boundary caught an error:", error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
-      return <div>Something went wrong. Try refreshing the page.</div>;
+      return (
+        <div style={{ padding: '20px', color: 'red', backgroundColor: '#ffeeee', border: '1px solid red', borderRadius: '5px', margin: '20px' }}>
+          <h2>Something went wrong</h2>
+          <p>Error: {this.state.error?.message}</p>
+          <p>Check the console for more details</p>
+          <button onClick={() => this.setState({ hasError: false })}>Try again</button>
+        </div>
+      );
     }
+
     return this.props.children;
   }
 }
 
-// Theme
-const theme = extendTheme({
-  colors: {
-    brand: {
-      50: '#f0f9ff',
-      100: '#e0f2fe',
-      200: '#bae6fd',
-      300: '#7dd3fc',
-      400: '#38bdf8',
-      500: '#0ea5e9',
-      600: '#0284c7',
-      700: '#0369a1',
-      800: '#075985',
-      900: '#0c4a6e',
-    },
-  },
-  fonts: {
-    heading: '"Nunito", sans-serif',
-    body: '"Nunito", sans-serif',
-  },
-});
+const AppContainer = styled.div`
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8f9fa;
+`;
 
-// Protected route component with proper typing
+const MainContent = styled.main`
+  flex: 1;
+  padding-bottom: 3rem;
+`;
+
+const Footer = styled.footer`
+  background-color: #2c3e50;
+  color: white;
+  padding: 2rem;
+  text-align: center;
+`;
+
+// Debug component to show environment variables
+const DebugInfo: React.FC = () => {
+  const [showDebug, setShowDebug] = useState(false);
+  
+  return (
+    <div style={{ position: 'fixed', bottom: '10px', right: '10px', zIndex: 9999 }}>
+      <button onClick={() => setShowDebug(!showDebug)} style={{ padding: '5px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '3px' }}>
+        Debug
+      </button>
+      {showDebug && (
+        <div style={{ backgroundColor: 'rgba(0,0,0,0.8)', color: 'white', padding: '10px', borderRadius: '5px', marginTop: '5px', maxWidth: '500px', overflow: 'auto' }}>
+          <p>VITE_SUPABASE_URL: {import.meta.env.VITE_SUPABASE_URL || 'Not set'}</p>
+          <p>VITE_SUPABASE_ANON_KEY set: {import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Yes' : 'No'}</p>
+          <p>NODE_ENV: {import.meta.env.MODE}</p>
+          <p>Base URL: {import.meta.env.BASE_URL}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Protected route component
 interface ProtectedRouteProps {
-  children: ReactNode;
-  requiredRole?: string | null;
+  children: React.ReactNode;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole = null }) => {
-  const { user, isAdmin, authStatusChecked } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { user, isLoading } = useAuth();
   
-  // Normal auth checks
-  if (!authStatusChecked) {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
   
   if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (requiredRole === 'admin' && !isAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" />;
   }
   
   return <>{children}</>;
 };
 
-const App: React.FC = () => {
+// Admin route component
+interface AdminRouteProps {
+  children: React.ReactNode;
+}
+
+const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
+  const { user, isAdmin, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+  
+  if (!user || !isAdmin) {
+    return <Navigate to="/" />;
+  }
+  
+  return <>{children}</>;
+};
+
+const AppRoutes: React.FC = () => {
   const { i18n } = useTranslation();
   const [appLoaded, setAppLoaded] = useState(false);
   const { authStatusChecked } = useAuth();
@@ -108,10 +149,10 @@ const App: React.FC = () => {
     }
   }, [i18n]);
   
-  // Wait for auth to be checked before showing app
+  // Only set appLoaded once authStatusChecked is true
   useEffect(() => {
     if (authStatusChecked) {
-      console.log('Auth status checked, app can now be loaded');
+      console.log("Auth status checked, app can now be loaded");
       setAppLoaded(true);
     }
   }, [authStatusChecked]);
@@ -121,7 +162,7 @@ const App: React.FC = () => {
     const safetyTimer = setTimeout(() => {
       console.log("Safety timeout triggered - forcing app to load");
       setAppLoaded(true);
-    }, 5000); // Increased to 5 second safety timeout for more time
+    }, 6000); // 6 second safety timeout
     
     return () => clearTimeout(safetyTimer);
   }, []);
@@ -130,16 +171,14 @@ const App: React.FC = () => {
     return (
       <div style={{ 
         display: 'flex', 
+        flexDirection: 'column',
         justifyContent: 'center', 
         alignItems: 'center', 
         height: '100vh',
-        flexDirection: 'column',
-        gap: '20px'
+        gap: '1rem'
       }}>
-        <div>Loading German Bookshelf...</div>
-        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-          <a href="/debug" style={{ textDecoration: 'underline' }}>Debug Page</a>
-        </div>
+        <div>Initializing German Bookshelf...</div>
+        <div>If this takes more than 10 seconds, try the <a href="/debug" style={{color: 'blue', textDecoration: 'underline'}}>Debug Page</a></div>
       </div>
     );
   }
@@ -147,59 +186,92 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <AppContainer>
-        <RecoveryHandler />
-        <Router>
+        <Navbar />
+        <MainContent>
           <Routes>
             {/* Public routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/audiobooks" element={<AudiobooksPage />} />
+            <Route path="/ebooks" element={<EbooksPage />} />
+            <Route path="/books/:id" element={<BookDetailsPage />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/login" element={<LoginForm />} />
+            <Route path="/signup" element={<SignupForm />} />
             <Route path="/debug" element={<DebugPage />} />
             
             {/* Protected routes */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <HomePage />
-              </ProtectedRoute>
-            } />
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            } />
-            <Route path="/books" element={
-              <ProtectedRoute>
-                <BooksPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/book/:id" element={
-              <ProtectedRoute>
-                <BookDetailsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin" element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminPage />
-              </ProtectedRoute>
-            } />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Admin routes */}
+            <Route 
+              path="/admin" 
+              element={
+                <AdminRoute>
+                  <AdminDashboardPage />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/books" 
+              element={
+                <AdminRoute>
+                  <AdminBooksPage />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/users" 
+              element={
+                <AdminRoute>
+                  <AdminUsersPage />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/books/add" 
+              element={
+                <AdminRoute>
+                  <AddBookPage />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/books/edit/:id" 
+              element={
+                <AdminRoute>
+                  <EditBookPage />
+                </AdminRoute>
+              } 
+            />
             
             {/* Fallback route */}
-            <Route path="*" element={<NotFoundPage />} />
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
-        </Router>
+        </MainContent>
+        <Footer>
+          &copy; {new Date().getFullYear()} German Bookshelf - All rights reserved
+        </Footer>
+        <DebugInfo />
       </AppContainer>
     </ErrorBoundary>
   );
 };
 
-// Wrap the app with providers
-const AppWithProviders: React.FC = () => {
+const App: React.FC = () => {
   return (
-    <ChakraProvider theme={theme}>
+    <ChakraProvider>
       <AuthProvider>
-        <App />
+        <AppRoutes />
       </AuthProvider>
     </ChakraProvider>
   );
 };
 
-export default AppWithProviders;
+export default App;
