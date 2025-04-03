@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { createSupabaseClient } from '../services/supabase';
+import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
+import { supabase } from '../services/supabase';
 import { Profile } from '../types/supabase';
 
 interface AuthContextType {
@@ -37,21 +37,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [authStatusChecked, setAuthStatusChecked] = useState(false);
 
-  // Simplified session refresh with our new Supabase implementation
-  const refreshSession = async () => {
+  // Function to refresh session and fetch profile
+  const handleRefreshSession = async () => {
     try {
       console.log("Refreshing session...");
-      
-      // Always get a fresh client
-      const supabase = createSupabaseClient();
-      
-      if (!supabase) {
-        console.error("Supabase client not available");
-        setError(new Error("Supabase client not available"));
-        setIsLoading(false);
-        setAuthStatusChecked(true);
-        return;
-      }
       
       // Get current session
       const { data, error: sessionError } = await supabase.auth.getSession();
@@ -139,7 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       setIsLoading(true);
       try {
-        await refreshSession();
+        await handleRefreshSession();
       } catch (error) {
         console.error("Critical auth error:", error);
         setIsLoading(false);
@@ -161,20 +150,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Set up auth state change listener
   useEffect(() => {
-    const supabase = createSupabaseClient();
-    if (!supabase) {
-      setAuthStatusChecked(true);
-      return;
-    }
-    
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
+      async (event: AuthChangeEvent, newSession: Session | null) => {
         console.log('Auth state changed:', event, newSession ? 'Session exists' : 'No session');
         
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           setIsLoading(true);
-          await refreshSession();
+          await handleRefreshSession();
         } else if (event === 'SIGNED_OUT') {
           setSession(null);
           setUser(null);
@@ -192,7 +175,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Periodic session refresh
   useEffect(() => {
-    const intervalId = setInterval(refreshSession, 5 * 60 * 1000);
+    const intervalId = setInterval(handleRefreshSession, 5 * 60 * 1000);
     return () => clearInterval(intervalId);
   }, []);
 
@@ -204,7 +187,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isLoading, 
       error, 
       isAdmin, 
-      refreshSession,
+      refreshSession: handleRefreshSession,
       authStatusChecked 
     }}>
       {children}
