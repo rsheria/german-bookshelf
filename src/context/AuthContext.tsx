@@ -37,13 +37,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       try {
         // Attempt to synchronize session between Supabase and localStorage
-        const session = await synchronizeSession();
+        const session: any = await synchronizeSession();
         
         if (session) {
           console.log('Session synchronized successfully');
           
-          // Set user data
-          setUser(session.user);
+          // Set user data - handle potential undefined values
+          if (session.user) {
+            setUser(session.user);
+          }
           
           // Check if the user is an admin
           const isUserAdmin = 
@@ -65,13 +67,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error('Error initializing auth:', error);
         
         // EMERGENCY FALLBACK: If everything else fails, try to restore from localStorage
-        const localSession = getSessionFromLocalStorage();
-        if (localSession) {
-          console.log('EMERGENCY: Restoring session from localStorage');
-          setUser(localSession.user);
-          setIsAdmin(localStorage.getItem('user_is_admin') === 'true');
-        } else {
-          // Reset auth state if no session can be found
+        try {
+          const localSession = getSessionFromLocalStorage();
+          if (localSession && localSession.user) {
+            console.log('EMERGENCY: Restoring session from localStorage');
+            setUser(localSession.user);
+            setIsAdmin(localStorage.getItem('user_is_admin') === 'true');
+          } else {
+            // Reset auth state if no session can be found
+            setUser(null);
+            setIsAdmin(false);
+          }
+        } catch (fallbackError) {
+          console.error('Error in fallback auth handling:', fallbackError);
           setUser(null);
           setIsAdmin(false);
         }
