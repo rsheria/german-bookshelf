@@ -132,107 +132,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Initialize auth on component mount - once only
   useEffect(() => {
     const initializeAuth = async () => {
-      setIsLoading(true);
-      console.log("Initializing auth state...");
-      
       try {
-        // First try getting the current session directly
-        const { data: sessionData } = await supabase.auth.getSession();
+        console.log("Simple auth initialization starting...");
+        // Simple approach - just get the current session
+        const { data } = await supabase.auth.getSession();
         
-        if (sessionData?.session) {
-          console.log("✅ Active session found from supabase.auth.getSession()");
-          setSession(sessionData.session);
-          setUser(sessionData.session.user);
+        if (data?.session) {
+          console.log("Session found on app load");
+          setSession(data.session);
+          setUser(data.session.user);
           
-          // Store session redundantly to ensure persistence
-          localStorage.setItem('supabase.auth.token', JSON.stringify(sessionData.session));
-          localStorage.setItem('sb-auth-token-backup', JSON.stringify(sessionData.session));
-          
-          if (sessionData.session.user?.id) {
-            await fetchProfile(sessionData.session.user.id);
+          if (data.session.user?.id) {
+            await fetchProfile(data.session.user.id);
           }
-          setIsLoading(false);
-          setAuthStatusChecked(true);
-          return;
+        } else {
+          console.log("No session found on app load");
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setIsAdmin(false);
         }
-        
-        // If no current session, try our persisted session
-        console.log("No active session, checking local storage...");
-        const persistedSession = localStorage.getItem('supabase.auth.token') || 
-                                 localStorage.getItem('sb-auth-token') ||
-                                 localStorage.getItem('sb-auth-token-backup');
-                                 
-        if (persistedSession) {
-          try {
-            const parsedSession = JSON.parse(persistedSession);
-            console.log("Found persisted session, checking if valid...");
-            
-            if (parsedSession && !isSessionExpired(parsedSession)) {
-              console.log("✅ Using valid persisted session");
-              
-              // Try to restore the session with supabase
-              try {
-                await supabase.auth.setSession({
-                  access_token: parsedSession.access_token,
-                  refresh_token: parsedSession.refresh_token || '',
-                });
-                console.log("Session restored successfully");
-                
-                // Get the restored session
-                const { data: restoredData } = await supabase.auth.getSession();
-                if (restoredData?.session) {
-                  setSession(restoredData.session);
-                  setUser(restoredData.session.user);
-                  
-                  // Update storage with fresh session
-                  localStorage.setItem('supabase.auth.token', JSON.stringify(restoredData.session));
-                  localStorage.setItem('sb-auth-token-backup', JSON.stringify(restoredData.session));
-                  
-                  if (restoredData.session.user?.id) {
-                    await fetchProfile(restoredData.session.user.id);
-                  }
-                  setIsLoading(false);
-                  setAuthStatusChecked(true);
-                  return;
-                }
-              } catch (e) {
-                console.error("❌ Error restoring session:", e);
-              }
-            } else {
-              console.log("⚠️ Persisted session is expired or invalid");
-            }
-          } catch (e) {
-            console.error("❌ Error parsing persisted session:", e);
-          }
-        }
-        
-        // Last resort - try regular refresh
-        console.log("Trying session refresh as last resort...");
-        await handleRefreshSession();
       } catch (error) {
-        console.error("❌ Critical auth error:", error);
+        console.error("Auth initialization error:", error);
+      } finally {
+        // Always set these to true to ensure the app loads
         setIsLoading(false);
         setAuthStatusChecked(true);
       }
     };
-    
-    // Check if a session is expired
-    const isSessionExpired = (session: any): boolean => {
-      if (!session.expires_at) return false;
-      const expiryTime = new Date(session.expires_at * 1000);
-      return expiryTime < new Date();
-    };
 
-    // Add a safety timeout to ensure auth always completes
-    const safetyTimer = setTimeout(() => {
-      console.log("Auth safety timeout triggered - forcing completion");
-      setIsLoading(false);
-      setAuthStatusChecked(true);
-    }, 3000); // 3 second safety timeout
-
+    // Initialize immediately
     initializeAuth();
     
-    return () => clearTimeout(safetyTimer);
+    // Set a short timeout as a backup to ensure we always exit loading state
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      setAuthStatusChecked(true);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   // Set up auth state change listener

@@ -28,7 +28,7 @@ import AdminBookRequestsPage from './pages/admin/AdminBookRequestsPage';
 // Import context and i18n
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './i18n/i18n';
-import { useSessionPersistence } from './hooks/useSessionPersistence';
+// import { useSessionPersistence } from './hooks/useSessionPersistence';
 
 // Error boundary component
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
@@ -144,8 +144,8 @@ const AppRoutes: React.FC = () => {
   const [appLoaded, setAppLoaded] = useState(false);
   const { authStatusChecked } = useAuth();
   
-  // Apply session persistence hook to ensure login state survives refreshes
-  useSessionPersistence();
+  // Comment out session persistence temporarily as it may be causing loading issues
+  // useSessionPersistence();
   
   // Set language from localStorage on app load
   useEffect(() => {
@@ -154,6 +154,16 @@ const AppRoutes: React.FC = () => {
       i18n.changeLanguage(savedLanguage);
     }
   }, [i18n]);
+  
+  // Force app to load after a short timeout regardless of auth status
+  useEffect(() => {
+    const forceLoadTimer = setTimeout(() => {
+      console.log("Force loading app after timeout");
+      setAppLoaded(true);
+    }, 1500); // Short 1.5 second timeout
+    
+    return () => clearTimeout(forceLoadTimer);
+  }, []);
   
   // Only set appLoaded once authStatusChecked is true
   useEffect(() => {
