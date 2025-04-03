@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ChakraProvider } from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './context/AuthContext';
@@ -118,6 +118,17 @@ const DebugInfo: React.FC = () => {
 
 // Create a context for panic mode
 const PanicModeContext = createContext(false);
+
+// ScrollToTop component to handle scroll position on navigation
+const ScrollToTop: React.FC = () => {
+  const { pathname } = useLocation();
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  
+  return null;
+};
 
 // Protected route component
 interface ProtectedRouteProps {
@@ -303,6 +314,7 @@ const AppRoutes: React.FC = () => {
         <AppContainer>
           <Navbar />
           <MainContent>
+            <ScrollToTop />
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<HomePage />} />
@@ -393,6 +405,7 @@ const AppRoutes: React.FC = () => {
       <AppContainer>
         <Navbar />
         <MainContent>
+          <ScrollToTop />
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<HomePage />} />
