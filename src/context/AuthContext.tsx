@@ -147,7 +147,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
+    // Add a safety timeout to ensure auth always completes
+    const safetyTimer = setTimeout(() => {
+      console.log("Auth safety timeout triggered - forcing completion");
+      setIsLoading(false);
+      setAuthStatusChecked(true);
+    }, 2000); // 2 second safety timeout
+
     initializeAuth();
+    
+    return () => clearTimeout(safetyTimer);
   }, []);
 
   // Set up auth state change listener

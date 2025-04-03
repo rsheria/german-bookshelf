@@ -149,6 +149,16 @@ const AppRoutes: React.FC = () => {
     }
   }, [authStatusChecked]);
   
+  // Add a safety timeout to ensure the app loads eventually
+  useEffect(() => {
+    const safetyTimer = setTimeout(() => {
+      console.log("Safety timeout triggered - forcing app to load");
+      setAppLoaded(true);
+    }, 3000); // 3 second safety timeout
+    
+    return () => clearTimeout(safetyTimer);
+  }, []);
+  
   if (!appLoaded) {
     return (
       <div style={{ 

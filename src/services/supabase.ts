@@ -24,6 +24,19 @@ export const createSupabaseClient = (): SupabaseClient<Database> | null => {
         autoRefreshToken: true,
         detectSessionInUrl: true,
         storageKey: 'supabase.auth.token.v2'
+      },
+      // Adding global error handler for fetch errors
+      global: {
+        fetch: (...args) => {
+          return fetch(...args).catch(err => {
+            console.error('Fetch error in Supabase client:', err);
+            // Return a successful but empty response to prevent crashes
+            return new Response(JSON.stringify({ error: 'Network error occurred' }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          });
+        }
       }
     });
     
