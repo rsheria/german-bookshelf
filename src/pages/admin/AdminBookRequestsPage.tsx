@@ -372,7 +372,7 @@ interface EditFormData {
 const AdminBookRequestsPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, profile, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isAdmin } = useAuth();
   
   const [requests, setRequests] = useState<BookRequest[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<BookRequest[]>([]);
@@ -402,10 +402,10 @@ const AdminBookRequestsPage: React.FC = () => {
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/login');
-    } else if (!authLoading && user && profile && profile.admin !== true) {
+    } else if (!authLoading && user && !isAdmin) {
       navigate('/home');
     }
-  }, [user, authLoading, profile, navigate]);
+  }, [user, authLoading, isAdmin, navigate]);
   
   // Fetch all book requests
   useEffect(() => {

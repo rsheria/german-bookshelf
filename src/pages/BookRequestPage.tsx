@@ -7,8 +7,7 @@ import {
   FiSend, 
   FiAlertCircle, 
   FiCheckCircle, 
-  FiClock,
-  FiList
+  FiClock
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
