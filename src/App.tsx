@@ -141,12 +141,6 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 
 const AppRoutes: React.FC = () => {
   const { i18n } = useTranslation();
-  const [appLoaded, setAppLoaded] = useState(false);
-  const { authStatusChecked } = useAuth();
-  
-  // Comment out session persistence temporarily as it may be causing loading issues
-  // useSessionPersistence();
-  
   // Set language from localStorage on app load
   useEffect(() => {
     const savedLanguage = localStorage.getItem('language');
@@ -155,50 +149,6 @@ const AppRoutes: React.FC = () => {
     }
   }, [i18n]);
   
-  // Force app to load after a short timeout regardless of auth status
-  useEffect(() => {
-    const forceLoadTimer = setTimeout(() => {
-      console.log("Force loading app after timeout");
-      setAppLoaded(true);
-    }, 1500); // Short 1.5 second timeout
-    
-    return () => clearTimeout(forceLoadTimer);
-  }, []);
-  
-  // Only set appLoaded once authStatusChecked is true
-  useEffect(() => {
-    if (authStatusChecked) {
-      console.log("Auth status checked, app can now be loaded");
-      setAppLoaded(true);
-    }
-  }, [authStatusChecked]);
-  
-  // Add a safety timeout to ensure the app loads eventually
-  useEffect(() => {
-    const safetyTimer = setTimeout(() => {
-      console.log("Safety timeout triggered - forcing app to load");
-      setAppLoaded(true);
-    }, 6000); // 6 second safety timeout
-    
-    return () => clearTimeout(safetyTimer);
-  }, []);
-  
-  if (!appLoaded) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column',
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        gap: '1rem'
-      }}>
-        <div>Initializing German Bookshelf...</div>
-        <div>If this takes more than 10 seconds, try the <a href="/debug" style={{color: 'blue', textDecoration: 'underline'}}>Debug Page</a></div>
-      </div>
-    );
-  }
-
   return (
     <ErrorBoundary>
       <AppContainer>
