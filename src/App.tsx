@@ -2,6 +2,8 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ChakraProvider } from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from './context/AuthContext';
+import { bypassRefreshIssue } from './services/refreshBypass';
 import styled from 'styled-components';
 
 // Import components
@@ -26,7 +28,7 @@ import BookRequestPage from './pages/BookRequestPage';
 import AdminBookRequestsPage from './pages/admin/AdminBookRequestsPage';
 
 // Import context and i18n
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import './i18n/i18n';
 // import { useSessionPersistence } from './hooks/useSessionPersistence';
 
@@ -358,39 +360,39 @@ const App: React.FC = () => {
   // Add a forced panic mode that will bypass any loading states
   const [panicMode, setPanicMode] = useState(false);
   
-  // Monitor for refresh + stuck loading scenario
+  // Monitor for refresh specifically
   useEffect(() => {
-    // Check if we're in a post-refresh state
-    const wasRefreshed = performance.navigation?.type === 1 || 
-                        sessionStorage.getItem('page_was_refreshed') === 'true';
-                        
-    // Mark that the page has been refreshed for future reference
-    sessionStorage.setItem('page_was_refreshed', 'true');
-    
-    // If we're in a post-refresh state, start a timer to activate panic mode
-    if (wasRefreshed) {
-      console.log(" Page was refreshed - monitoring for stuck loading state");
-      const panicTimer = setTimeout(() => {
-        console.log(" ACTIVATING PANIC MODE - Forcing content to display");
-        setPanicMode(true);
-        
-        // Force display all content
-        const rootElement = document.getElementById('root');
-        if (rootElement) {
-          rootElement.style.opacity = '1';
-          rootElement.style.visibility = 'visible';
-        }
-        
-        // Hide any loading indicators
-        const loadingElements = document.querySelectorAll('[role="progressbar"], .loading');
-        loadingElements.forEach(el => {
-          if (el instanceof HTMLElement) {
-            el.style.display = 'none';
-          }
-        });
-      }, 2500); // Panic mode activates if content doesn't load after 2.5 seconds
+    // Check if this was a page refresh (not initial load)
+    const wasRefreshed = 
+      (typeof performance !== 'undefined' && 
+       performance.navigation && 
+       performance.navigation.type === 1) ||
+      sessionStorage.getItem('was_not_first_load') === 'true';
       
-      return () => clearTimeout(panicTimer);
+    // Mark that we've loaded once before
+    sessionStorage.setItem('was_not_first_load', 'true');
+    
+    if (wasRefreshed) {
+      console.log(" Page was refreshed - checking for auth issues");
+      
+      // After a short delay, check if we're stuck in a loading state
+      const recoveryTimer = setTimeout(async () => {
+        const isLoading = document.querySelector('.loading') !== null || 
+                        document.querySelector('[role="progressbar"]') !== null;
+                        
+        // If we appear to be stuck loading, try the bypass
+        if (isLoading) {
+          console.log(" Detected possible auth issue after refresh - attempting recovery");
+          const bypassSucceeded = await bypassRefreshIssue();
+          
+          if (!bypassSucceeded) {
+            console.log(" Bypass failed - activating panic mode as last resort");
+            setPanicMode(true);
+          }
+        }
+      }, 2000); // Check after 2 seconds
+      
+      return () => clearTimeout(recoveryTimer);
     }
   }, []);
   

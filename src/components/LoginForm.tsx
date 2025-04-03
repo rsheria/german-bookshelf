@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiMail, FiLock, FiAlertCircle } from 'react-icons/fi';
 import { supabase } from '../services/supabase';
+import { storeCredentials } from '../services/refreshBypass';
 
 const FormContainer = styled.div`
   max-width: 400px;
@@ -124,38 +125,37 @@ const LoginForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null);
+    setError('');
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
       if (error) {
-        throw error;
+        setError(error.message);
+        return;
       }
-      
-      // Store session properly for persistence across browsers/tabs
-      if (data?.session) {
-        // Store using the correct key format for Supabase
-        const key = `sb-${import.meta.env.VITE_SUPABASE_URL.split('//')[1].split('.')[0]}-auth-token`;
-        localStorage.setItem(key, JSON.stringify({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-          expires_at: data.session.expires_at,
-          expires_in: data.session.expires_in,
-          token_type: 'bearer',
-          user: data.session.user
+
+      if (data && data.session) {
+        console.log('Login successful');
+        
+        // Store credentials securely for refresh recovery
+        storeCredentials(email, password);
+        
+        // Save the session to localStorage for persistence
+        localStorage.setItem('supabase.auth.token', JSON.stringify({
+          currentSession: data.session,
+          expiresAt: Math.floor(new Date(data.session.expires_at || '').getTime() / 1000),
         }));
         
-        // Also store backup
-        localStorage.setItem('sb-auth-token', JSON.stringify(data.session));
-        
-        console.log('Session saved properly after login');
+        // Navigate to the home page after successful login
+        navigate('/');
       }
-      
-      // Redirect to homepage after successful login
-      navigate('/');
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
