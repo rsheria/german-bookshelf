@@ -214,6 +214,16 @@ const ProfilePage: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
+      // Set a timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        if (isLoading) {
+          console.log("Download history fetch timed out");
+          setIsLoading(false);
+          setDownloadHistory([]);
+          setError("Download history took too long to load. Please try refreshing.");
+        }
+      }, 5000); // 5 second timeout
+      
       try {
         // Check remaining quota with error handling
         try {
@@ -229,53 +239,44 @@ const ProfilePage: React.FC = () => {
           if (!user?.id) {
             console.warn("User ID not available for download history");
             setDownloadHistory([]);
+            clearTimeout(timeoutId);
+            setIsLoading(false);
             return;
           }
 
-          // Get download logs
-          const { data: downloads, error: downloadsError } = await supabase
+          // SIMPLIFIED APPROACH: Fetch directly with a join query
+          // This avoids multiple queries that could time out
+          const { data: downloadData, error: downloadError } = await supabase
             .from('download_logs')
-            .select('id, book_id, downloaded_at')
+            .select(`
+              id,
+              downloaded_at,
+              books (
+                id,
+                title,
+                author,
+                cover_url
+              )
+            `)
             .eq('user_id', user.id)
             .order('downloaded_at', { ascending: false })
             .limit(10);
             
-          if (downloadsError) {
-            console.error('Error fetching download logs:', downloadsError);
-            throw new Error(`Failed to fetch download history: ${downloadsError.message}`);
+          if (downloadError) {
+            console.error('Error fetching download logs:', downloadError);
+            throw new Error(`Failed to fetch download history: ${downloadError.message}`);
           }
           
-          // Only proceed with book fetching if we have download logs
-          if (downloads && downloads.length > 0) {
-            // Get unique book ids
-            const bookIds = [...new Set(downloads.map((item: any) => item.book_id))];
-            
-            // Get book details
-            const { data: booksData, error: booksError } = await supabase
-              .from('books')
-              .select('id, title, author, cover_url')
-              .in('id', bookIds);
-              
-            if (booksError) {
-              console.error('Error fetching books:', booksError);
-              throw new Error(`Failed to fetch book details: ${booksError.message}`);
-            }
-            
-            // Create a map of book ids to book objects
-            const booksMap = (booksData || []).reduce((map: Record<string, Book>, book: any) => {
-              map[book.id] = book as Book;
-              return map;
-            }, {} as Record<string, Book>);
-            
-            // Combine download logs with book data
-            const formattedDownloads = downloads.map((item: { id: string; book_id: string; downloaded_at: string }) => ({
+          if (downloadData && downloadData.length > 0) {
+            // Format the data from the join query
+            const formattedDownloads = downloadData.map((item: any) => ({
               id: item.id,
-              book: booksMap[item.book_id] || { 
-                id: item.book_id, 
-                title: 'Book ' + item.book_id.slice(0, 8), 
+              book: item.books || { 
+                id: 'unknown',
+                title: 'Unknown Book', 
                 author: 'Unknown Author', 
                 cover_url: '' 
-              } as Book,
+              },
               downloaded_at: item.downloaded_at
             }));
             
@@ -287,12 +288,13 @@ const ProfilePage: React.FC = () => {
         } catch (err) {
           console.error('Error in download history processing:', err);
           // Set error but continue showing the profile
-          setError('Could not load download history. Profile information is still available.');
+          setError('Could not load download history. Try the refresh button or running the SQL fix.');
         }
       } catch (err) {
         console.error('Fatal error in profile page:', err);
         setError((err as Error).message || 'An unexpected error occurred');
       } finally {
+        clearTimeout(timeoutId);
         setIsLoading(false);
       }
     };
