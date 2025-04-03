@@ -76,20 +76,8 @@ WITH CHECK (true);
 -- Create a view for admin dashboard
 CREATE OR REPLACE VIEW admin_book_requests AS
 SELECT 
-    br.id,
-    br.title,
-    br.author,
-    br.language,
-    br.format,
-    br.description,
-    br.priority,
-    br.status,
-    br.admin_notes,
-    br.created_at,
-    br.updated_at,
-    br.fulfilled_at,
-    p.username as requester_username,
-    p.email as requester_email
+    br.*,
+    p.username as requester_username
 FROM 
     book_requests br
 JOIN 

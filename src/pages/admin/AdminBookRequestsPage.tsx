@@ -360,7 +360,6 @@ interface BookRequest {
   fulfilled_at: string | null;
   admin_notes: string | null;
   requester_username?: string;
-  requester_email?: string;
 }
 
 // Form data interface for editing
@@ -465,8 +464,7 @@ const AdminBookRequestsPage: React.FC = () => {
           request.title.toLowerCase().includes(query) ||
           (request.author && request.author.toLowerCase().includes(query)) ||
           (request.description && request.description.toLowerCase().includes(query)) ||
-          (request.requester_username && request.requester_username.toLowerCase().includes(query)) ||
-          (request.requester_email && request.requester_email.toLowerCase().includes(query))
+          (request.requester_username && request.requester_username.toLowerCase().includes(query))
       );
     }
     
@@ -706,7 +704,6 @@ const AdminBookRequestsPage: React.FC = () => {
                     <Td>{request.format}</Td>
                     <Td>
                       {request.requester_username || 'Unknown'}
-                      {request.requester_email && <div>{request.requester_email}</div>}
                     </Td>
                     <Td>
                       <Badge type={request.status}>{request.status}</Badge>
@@ -818,8 +815,7 @@ const AdminBookRequestsPage: React.FC = () => {
               <DetailItem>
                 <DetailLabel>{t('admin.requester', 'Requester')}:</DetailLabel>
                 <DetailValue>
-                  {selectedRequest.requester_username || 'Unknown'} 
-                  {selectedRequest.requester_email && ` (${selectedRequest.requester_email})`}
+                  {selectedRequest.requester_username || 'Unknown'}
                 </DetailValue>
               </DetailItem>
               <DetailItem>
