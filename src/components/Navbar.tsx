@@ -229,7 +229,54 @@ const LanguageToggle = styled(IconWrapper)`
   min-width: 40px;
 `;
 
-const ThemeToggle = styled(IconWrapper)`
+const ThemeToggle = styled(motion.button)`
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: ${theme.borderRadius.full};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  svg {
+    font-size: 1.2rem;
+    position: relative;
+    z-index: 2;
+    transition: all 0.3s ease;
+  }
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: ${props => props.theme.colors.accent};
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1;
+  }
+  
+  &:hover::before {
+    opacity: 0.2;
+  }
 `;
 
 const MenuButton = styled(motion.button)`
@@ -468,7 +515,13 @@ const Navbar: React.FC = () => {
              {i18n.language === 'de' ? 'EN' : 'DE'}
            </LanguageToggle>
 
-           <ThemeToggle onClick={toggleTheme} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+           <ThemeToggle 
+             onClick={toggleTheme} 
+             whileHover={{ scale: 1.05 }} 
+             whileTap={{ scale: 0.95 }}
+             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+             title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+           >
              {isDark ? <FiSun /> : <FiMoon />}
            </ThemeToggle>
         </NavLinks>
@@ -542,7 +595,13 @@ const Navbar: React.FC = () => {
                   {i18n.language === 'de' ? 'EN' : 'DE'}
                 </LanguageToggle>
 
-                <ThemeToggle onClick={toggleTheme} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <ThemeToggle 
+                  onClick={toggleTheme} 
+                  whileHover={{ scale: 1.05 }} 
+                  whileTap={{ scale: 0.95 }}
+                  aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                  title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                >
                   {isDark ? <FiSun /> : <FiMoon />}
                 </ThemeToggle>
               </NavSection>

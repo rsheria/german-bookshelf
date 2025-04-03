@@ -14,6 +14,13 @@ const GlobalStyle = createGlobalStyle`
     padding: 0;
   }
   
+  html {
+    font-size: ${theme.typography.fontSize.md};
+    line-height: ${theme.typography.lineHeight.normal};
+    scroll-behavior: smooth;
+    height: 100%;
+  }
+  
   body {
     font-family: ${theme.typography.fontFamily.body};
     font-weight: ${theme.typography.fontWeight.normal};
@@ -22,8 +29,11 @@ const GlobalStyle = createGlobalStyle`
     color: ${theme.colors.text};
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.4s ease-in-out, color 0.4s ease-in-out, border-color 0.4s ease-in-out;
     scroll-behavior: smooth;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
     
     &[data-theme='dark'] {
       background-color: ${darkTheme.colors.background};
@@ -31,10 +41,18 @@ const GlobalStyle = createGlobalStyle`
     }
   }
   
-  html {
-    font-size: ${theme.typography.fontSize.md};
-    line-height: ${theme.typography.lineHeight.normal};
-    scroll-behavior: smooth;
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  main {
+    flex: 1 0 auto;
+  }
+  
+  footer {
+    flex-shrink: 0;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -43,6 +61,7 @@ const GlobalStyle = createGlobalStyle`
     line-height: ${theme.typography.lineHeight.tight};
     margin-bottom: ${theme.spacing.md};
     color: ${theme.colors.primary};
+    transition: color 0.4s ease-in-out;
     
     body[data-theme='dark'] & {
       color: ${darkTheme.colors.primary};
@@ -76,12 +95,13 @@ const GlobalStyle = createGlobalStyle`
   
   p {
     margin-bottom: ${theme.spacing.md};
+    transition: color 0.4s ease-in-out;
   }
   
   a {
     color: ${theme.colors.accent};
     text-decoration: none;
-    transition: color ${theme.transitions.fast};
+    transition: color 0.4s ease-in-out, text-decoration 0.4s ease-in-out;
     
     body[data-theme='dark'] & {
       color: ${darkTheme.colors.accent};
@@ -101,6 +121,7 @@ const GlobalStyle = createGlobalStyle`
     font-family: inherit;
     cursor: pointer;
     outline: none;
+    transition: all 0.4s ease-in-out;
   }
   
   img {
@@ -115,6 +136,7 @@ const GlobalStyle = createGlobalStyle`
 
   ::-webkit-scrollbar-track {
     background: ${theme.colors.backgroundAlt};
+    transition: background-color 0.4s ease-in-out;
     
     body[data-theme='dark'] & {
       background: ${darkTheme.colors.backgroundAlt};
@@ -125,6 +147,7 @@ const GlobalStyle = createGlobalStyle`
     background-color: ${theme.colors.primaryLight};
     border-radius: ${theme.borderRadius.full};
     border: 2px solid ${theme.colors.backgroundAlt};
+    transition: background-color 0.4s ease-in-out, border-color 0.4s ease-in-out;
     
     body[data-theme='dark'] & {
       background-color: ${darkTheme.colors.primaryLight};
@@ -144,6 +167,7 @@ const GlobalStyle = createGlobalStyle`
   :focus {
     outline: 3px solid ${theme.colors.accent};
     outline-offset: 2px;
+    transition: outline-color 0.4s ease-in-out;
     
     body[data-theme='dark'] & {
       outline: 3px solid ${darkTheme.colors.accent};
@@ -156,6 +180,24 @@ const GlobalStyle = createGlobalStyle`
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 ${theme.spacing.md};
+  }
+
+  /* Fade transitions for theme switching */
+  .fade-transition {
+    transition: all 0.4s ease-in-out;
+  }
+
+  /* Ensure consistent card styling across themes */
+  .card {
+    background-color: ${theme.colors.card};
+    border-radius: ${theme.borderRadius.md};
+    box-shadow: ${theme.shadows.md};
+    transition: background-color 0.4s ease-in-out, box-shadow 0.4s ease-in-out;
+    
+    body[data-theme='dark'] & {
+      background-color: ${darkTheme.colors.card};
+      box-shadow: ${darkTheme.shadows.md};
+    }
   }
 `;
 

@@ -1,64 +1,48 @@
+// High-End Professional Dark Theme for German Bookshelf
 import { DefaultTheme } from 'styled-components';
+import theme from './theme';
 
 const darkTheme: DefaultTheme = {
   colors: {
-    primary: '#bb86fc',
-    primaryDark: '#3700b3',
-    secondary: '#03dac6',
-    secondaryDark: '#018786',
-    background: '#121212',
-    text: '#ffffff',
-    textLight: '#cccccc',
-    error: '#cf6679',
+    // Core Palette - Dark Mode
+    primary: '#3B82F6',            // Bright blue that pops on dark backgrounds
+    primaryLight: '#60A5FA',       // Lighter blue for hover states
+    primaryDark: '#2563EB',        // Darker blue
+    secondary: '#10B981',          // Emerald green that complements the blue
+    secondaryLight: '#34D399',     // Lighter green
+    secondaryDark: '#059669',      // Darker green 
+    accent: '#F472B6',            // Softer pink that works well with dark mode
+    
+    // Neutrals - Dark Mode
+    background: '#111827',         // Deep slate background
+    backgroundAlt: '#1F2937',      // Slightly lighter slate for cards and elements
+    card: '#1E293B',               // Slate card background
+    text: '#F9FAFB',               // Off-white text for readability
+    textLight: '#D1D5DB',          // Light gray text for secondary information
+    border: '#374151',             // Dark gray border
+    
+    // Functional Colors
+    success: '#10B981',            // Success green
+    warning: '#F59E0B',            // Warning amber
+    error: '#EF4444',              // Error red
+    
+    // Gradients
+    primaryGradient: 'linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%)',
+    accentGradient: 'linear-gradient(135deg, #F472B6 0%, #10B981 100%)',
   },
-  typography: {
-    fontFamily: {
-      body: 'Roboto, sans-serif',
-      heading: 'Montserrat, sans-serif',
-    },
-    fontSize: {
-      sm: '0.8rem',
-      md: '1rem',
-      lg: '1.2rem',
-      xl: '1.5rem',
-      '3xl': '2rem',
-      '5xl': '3rem',
-    },
-    fontWeight: {
-      normal: 400,
-      semibold: 600,
-      bold: 700,
-    },
-    lineHeight: {
-      normal: '1.5',
-      relaxed: '1.75',
-    },
-  },
-  spacing: {
-    xs: '0.25rem',
-    sm: '0.5rem',
-    md: '1rem',
-    lg: '1.5rem',
-    xl: '2rem',
-    '2xl': '3rem',
-    '3xl': '4rem',
-  },
-  borderRadius: {
-    none: '0',
-    sm: '0.125rem',
-    md: '0.375rem',
-    lg: '0.5rem',
-    full: '9999px',
-  },
+  typography: theme.typography,    // Keep typography consistent
+  spacing: theme.spacing,          // Keep spacing consistent
+  borderRadius: theme.borderRadius, // Keep border radius consistent
   shadows: {
-    sm: '0 1px 2px rgba(0,0,0,0.05)',
-    md: '0 4px 6px rgba(0,0,0,0.1)',
-    lg: '0 10px 15px rgba(0,0,0,0.15)',
+    sm: '0 2px 4px rgba(0, 0, 0, 0.3)',
+    md: '0 5px 10px rgba(0, 0, 0, 0.4)',
+    lg: '0 10px 20px rgba(0, 0, 0, 0.5)',
+    xl: '0 20px 40px rgba(0, 0, 0, 0.6)',
+    inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.4)',
+    outline: '0 0 0 3px rgba(59, 130, 246, 0.5)', // Primary blue outline for focus
   },
-  transitions: {
-    normal: '0.3s ease',
-    fast: '0.2s ease',
-  },
+  transitions: theme.transitions,  // Keep transitions consistent
+  zIndex: theme.zIndex             // Keep z-index consistent
 };
 
 export default darkTheme;
