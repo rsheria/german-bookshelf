@@ -27,6 +27,9 @@ import DebugPage from './pages/DebugPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './i18n/i18n';
 
+// Import refresh handler
+import { setupRefreshDetection, wasRefreshed, checkForceRefreshNeeded } from './utils/refreshHandler';
+
 // Error boundary component
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
   constructor(props: {children: React.ReactNode}) {
@@ -132,6 +135,19 @@ const AppRoutes: React.FC = () => {
   const { i18n } = useTranslation();
   const [appLoaded, setAppLoaded] = useState(false);
   const { authStatusChecked } = useAuth();
+  const [isRefresh, setIsRefresh] = useState(false);
+  
+  // Setup refresh detection on component mount
+  useEffect(() => {
+    setupRefreshDetection();
+    const refreshed = wasRefreshed();
+    setIsRefresh(refreshed);
+    
+    // Check if we need a forced refresh due to stale session
+    checkForceRefreshNeeded();
+    
+    console.log("App initialization - Was page refreshed:", refreshed);
+  }, []);
   
   // Set language from localStorage on app load
   useEffect(() => {
@@ -145,9 +161,19 @@ const AppRoutes: React.FC = () => {
   useEffect(() => {
     if (authStatusChecked) {
       console.log("Auth status checked, app can now be loaded");
-      setAppLoaded(true);
+      
+      // If this is a refresh, add a small delay to ensure everything is ready
+      if (isRefresh) {
+        console.log("Page was refreshed, adding small delay before loading");
+        const timer = setTimeout(() => {
+          setAppLoaded(true);
+        }, 1500); // 1.5 second delay after refresh
+        return () => clearTimeout(timer);
+      } else {
+        setAppLoaded(true);
+      }
     }
-  }, [authStatusChecked]);
+  }, [authStatusChecked, isRefresh]);
   
   if (!appLoaded) {
     return (

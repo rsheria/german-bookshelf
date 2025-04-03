@@ -3,6 +3,9 @@ import { Session, User } from '@supabase/supabase-js';
 import { createSupabaseClient } from '../services/supabase';
 import { Profile } from '../types/supabase';
 
+// Flag to track if we're handling a refresh
+let isHandlingRefresh = false;
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -40,7 +43,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Simplified and more robust session refresh
   const refreshSession = async () => {
     try {
-      console.log("Refreshing session...");
+      console.log("Refreshing session... (Refresh handling:", isHandlingRefresh ? "YES" : "NO", ")");
       const supabase = createSupabaseClient();
       
       if (!supabase) {
@@ -149,12 +152,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       setIsLoading(true);
       try {
+        // Check if we're handling a browser refresh
+        const refreshKey = 'app_was_refreshed';
+        const wasRefreshed = localStorage.getItem(refreshKey) === 'true';
+        
+        if (wasRefreshed) {
+          console.log("Browser refresh detected, using enhanced initialization");
+          isHandlingRefresh = true;
+          
+          // Clear the refresh flag
+          localStorage.removeItem(refreshKey);
+          
+          // Add a slight delay to ensure Supabase has time to initialize properly after refresh
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Re-create the Supabase client to ensure it's fresh
+          const freshClient = createSupabaseClient();
+          if (!freshClient) {
+            throw new Error("Failed to create fresh Supabase client after refresh");
+          }
+        }
+        
         await refreshSession();
       } catch (error) {
         console.error("Critical auth error:", error);
         // Ensure the app loads even if auth completely fails
         setIsLoading(false);
         setAuthStatusChecked(true);
+      } finally {
+        isHandlingRefresh = false;
       }
     };
 
