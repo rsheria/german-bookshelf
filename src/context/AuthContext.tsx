@@ -72,34 +72,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data.session.user);
         
         try {
-          // Fetch profile with retry
-          let profileAttempts = 0;
+          // Fetch profile with retry (but don't block auth completion)
           let profileData = null;
-          let profileError = null;
           
-          while (profileAttempts < 3 && !profileData && !profileError) {
-            profileAttempts++;
-            console.log(`Fetching profile data, attempt ${profileAttempts}`);
-            
-            const { data: fetchedProfile, error: fetchError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', data.session.user.id)
-              .single();
-            
-            if (fetchError) {
-              if (fetchError.code === 'PGRST116') {
-                // No data found, wait a bit and retry
-                console.log("Profile not found, will retry...");
-                await new Promise(resolve => setTimeout(resolve, 1000));
-              } else {
-                // Other error
-                console.error("Profile fetch error:", fetchError);
-                profileError = fetchError;
+          // Try to get the profile data once
+          const { data: fetchedProfile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.session.user.id)
+            .single();
+          
+          if (fetchError) {
+            if (fetchError.code === 'PGRST116') {
+              console.log("Profile not found, creating a new one...");
+              
+              // Try to create a profile
+              try {
+                const { data: newProfile, error: insertError } = await supabase
+                  .from('profiles')
+                  .insert({
+                    id: data.session.user.id,
+                    username: data.session.user.email,
+                    is_admin: false,
+                    daily_quota: 3
+                  })
+                  .select()
+                  .single();
+                
+                if (insertError) {
+                  console.error("Error creating profile:", insertError);
+                } else {
+                  console.log("Created new profile:", newProfile);
+                  profileData = newProfile;
+                }
+              } catch (err) {
+                console.error("Exception creating profile:", err);
               }
             } else {
-              profileData = fetchedProfile;
+              console.error("Profile fetch error:", fetchError);
             }
+          } else {
+            profileData = fetchedProfile;
           }
           
           if (profileData) {
@@ -107,12 +120,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setProfile(profileData);
             setIsAdmin(profileData.is_admin || false);
           } else {
-            console.warn("Could not find profile after retries");
+            console.warn("Could not find or create profile");
             setProfile(null);
             setIsAdmin(false);
           }
         } catch (err) {
           console.error("Profile fetch exception:", err);
+          // Continue with auth even if profile fetch fails
         }
       } else {
         setSession(null);
@@ -124,6 +138,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Error in refresh session:', err);
       setError(err as Error);
     } finally {
+      // Always set these to ensure the app continues loading
       setIsLoading(false);
       setAuthStatusChecked(true);
     }
@@ -133,16 +148,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       setIsLoading(true);
-      await refreshSession();
+      try {
+        await refreshSession();
+      } catch (error) {
+        console.error("Critical auth error:", error);
+        // Ensure the app loads even if auth completely fails
+        setIsLoading(false);
+        setAuthStatusChecked(true);
+      }
     };
 
+    // Add a safety timeout to ensure auth always completes
+    const safetyTimer = setTimeout(() => {
+      console.log("Safety timeout triggered - ensuring auth completes");
+      setIsLoading(false);
+      setAuthStatusChecked(true);
+    }, 5000); // 5 second safety timeout
+
     initializeAuth();
+
+    return () => clearTimeout(safetyTimer);
   }, []);
 
   // Set up auth state change listener
   useEffect(() => {
     const supabase = createSupabaseClient();
-    if (!supabase) return;
+    if (!supabase) {
+      // If no Supabase client, ensure auth status is marked checked
+      setAuthStatusChecked(true);
+      return;
+    }
     
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -151,7 +186,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           setIsLoading(true);
-          await refreshSession();
+          try {
+            await refreshSession();
+          } catch (error) {
+            console.error("Auth state change error:", error);
+            // Ensure loading completes even if refresh fails
+            setIsLoading(false);
+            setAuthStatusChecked(true);
+          }
         } else if (event === 'SIGNED_OUT') {
           setSession(null);
           setUser(null);

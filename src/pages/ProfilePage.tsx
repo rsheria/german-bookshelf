@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiUser, FiDownload, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../services/supabase';
+import { createSupabaseClient } from '../services/supabase';
 import { useDownloads } from '../hooks/useDownloads';
 import { Book } from '../types/supabase';
 
@@ -182,6 +182,8 @@ const ProfilePage: React.FC = () => {
         await checkRemainingQuota();
         
         // Fetch download history with book details
+        const supabase = createSupabaseClient();
+        
         if (!supabase) {
           throw new Error('Supabase client is not initialized');
         }
