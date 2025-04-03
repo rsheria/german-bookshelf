@@ -38,52 +38,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [authStatusChecked, setAuthStatusChecked] = useState(false);
   
-  // Function to fetch user's profile data
+  // Enhanced fetchProfile with admin status persistence
   const fetchProfile = async (userId: string) => {
     try {
-      const { data: profileData, error: profileError } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
-      
-      if (profileError) {
-        if (profileError.code === 'PGRST116') {
-          console.log("Profile not found, creating a new one...");
-          
-          // Create a default profile
-          try {
-            const { data: newProfile, error: insertError } = await supabase
-              .from('profiles')
-              .insert({
-                id: userId,
-                username: user?.email,
-                is_admin: false,
-                daily_quota: 3
-              })
-              .select()
-              .single();
-            
-            if (insertError) {
-              console.error("Error creating profile:", insertError);
-            } else {
-              console.log("Created new profile:", newProfile);
-              setProfile(newProfile);
-              setIsAdmin(newProfile.is_admin || false);
-            }
-          } catch (err) {
-            console.error("Exception creating profile:", err);
-          }
-        } else {
-          console.error("Profile fetch error:", profileError);
-        }
-      } else if (profileData) {
-        console.log("Profile found:", profileData);
-        setProfile(profileData);
-        setIsAdmin(profileData.is_admin || false);
+
+      if (error) {
+        throw error;
       }
-    } catch (err) {
-      console.error("Profile fetch exception:", err);
+
+      setProfile(data);
+      
+      // Set admin status based on profile
+      if (data && data.is_admin) {
+        setIsAdmin(true);
+        console.log("ADMIN STATUS SET TO TRUE!");
+        // Store admin status in localStorage for persistence
+        localStorage.setItem('user_is_admin', 'true');
+      } else {
+        setIsAdmin(false);
+        console.log("ADMIN STATUS SET TO FALSE");
+        localStorage.removeItem('user_is_admin');
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      return null;
     }
   };
 
@@ -167,12 +152,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       // Start with loading state
       setIsLoading(true);
+      console.log("AUTH INIT STARTED!");
       
       try {
+        // Check for stored admin status first
+        const savedAdminStatus = localStorage.getItem('user_is_admin');
+        if (savedAdminStatus === 'true') {
+          console.log("FOUND STORED ADMIN STATUS - SETTING TO TRUE");
+          setIsAdmin(true);
+        }
+        
         // Use our enhanced getSession function to get the current session
         const { data } = await supabase.auth.getSession();
         
         if (data?.session) {
+          console.log("VALID SESSION FOUND!");
           // We have a session, set auth state
           setSession(data.session);
           setUser(data.session.user);
@@ -182,12 +176,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           if (data.session.user?.id) {
             await fetchProfile(data.session.user.id);
+            console.log("PROFILE FETCHED SUCCESSFULLY!");
           }
         } else {
           // Try to restore from localStorage as fallback
           try {
+            console.log("NO SESSION FOUND, TRYING LOCALSTORAGE");
             const storedSession = localStorage.getItem('supabase.auth.token');
             if (storedSession) {
+              console.log("STORED SESSION FOUND, ATTEMPTING RESTORATION");
               const parsedSession = JSON.parse(storedSession);
               
               // Try to restore the session with setSession
@@ -197,16 +194,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               });
               
               if (error) {
+                console.error("SESSION RESTORATION ERROR:", error);
                 throw error;
               }
               
               if (restoredData.session) {
-                console.log("Session successfully restored from localStorage");
+                console.log("SESSION RESTORED SUCCESSFULLY!");
                 setSession(restoredData.session);
                 setUser(restoredData.session.user);
                 
                 if (restoredData.session.user?.id) {
                   await fetchProfile(restoredData.session.user.id);
+                  console.log("PROFILE FETCHED AFTER SESSION RESTORATION!");
                 }
                 setIsLoading(false);
                 setAuthStatusChecked(true);
@@ -218,6 +217,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
           
           // No session found or restoration failed
+          console.log("NO SESSION OR RESTORATION FAILED");
           setSession(null);
           setUser(null);
           setProfile(null);
@@ -234,6 +234,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Always finish loading
         setIsLoading(false);
         setAuthStatusChecked(true);
+        console.log("AUTH INIT COMPLETE!");
       }
     };
 
