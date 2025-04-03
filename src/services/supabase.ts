@@ -5,10 +5,17 @@ import { Database } from '../types/supabase';
 const getSupabaseUrl = () => import.meta.env.VITE_SUPABASE_URL;
 const getSupabaseAnonKey = () => import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Create a fresh Supabase client on each access
-// This prevents stale clients after page refresh
+// Use a persistent client to avoid "Multiple GoTrueClient instances" warning
+let persistentClient: SupabaseClient<Database> | null = null;
+
+// Create a Supabase client, reusing the persistent one when possible
 export const createSupabaseClient = (): SupabaseClient<Database> | null => {
   try {
+    // Return existing client if available (avoids multiple instances warning)
+    if (persistentClient !== null) {
+      return persistentClient;
+    }
+    
     const supabaseUrl = getSupabaseUrl();
     const supabaseAnonKey = getSupabaseAnonKey();
     
@@ -17,8 +24,8 @@ export const createSupabaseClient = (): SupabaseClient<Database> | null => {
       return null;
     }
 
-    // Create a fresh client instance each time
-    const client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    // Create client with proper options
+    persistentClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -40,14 +47,14 @@ export const createSupabaseClient = (): SupabaseClient<Database> | null => {
       }
     });
     
-    return client;
+    return persistentClient;
   } catch (error) {
     console.error('Failed to initialize Supabase client:', error);
     return null;
   }
 };
 
-// Get a client for direct use - will always be fresh
+// Get a client for direct use
 export const supabase = createSupabaseClient();
 
 // Helper functions for authentication with error handling
@@ -83,11 +90,17 @@ export const signOut = async () => {
     if (!client) {
       return { error: null };
     }
+    
     // Clear browser storage when signing out to prevent stale data
     localStorage.removeItem('supabase.auth.token');
     localStorage.removeItem('supabase.auth.token.v2');
     sessionStorage.clear();
-    return await client.auth.signOut();
+    
+    // Reset the persistent client after signout
+    const result = await client.auth.signOut();
+    persistentClient = null;
+    
+    return result;
   } catch (error) {
     console.error('Sign out error:', error);
     return { error: { message: 'Sign out failed' } };
