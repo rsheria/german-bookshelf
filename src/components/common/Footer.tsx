@@ -1,162 +1,148 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import styled from 'styled-components';
-import { FiBook, FiMail, FiPhone, FiMapPin, FiGlobe, FiHeart } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { FiBook, FiHeadphones, FiUser, FiMail, FiGlobe, FiGithub, FiTwitter, FiInstagram } from 'react-icons/fi';
 import theme from '../../styles/theme';
 
 const FooterContainer = styled.footer`
   background-color: ${theme.colors.primary};
   color: white;
-  padding: ${theme.spacing['2xl']} 0 ${theme.spacing.lg};
-  margin-top: ${theme.spacing['3xl']};
+  padding: ${theme.spacing.xl} 0;
+  width: 100%;
   position: relative;
+  z-index: 10;
+  margin-top: auto;
   
-  &::before {
-    content: '';
-    position: absolute;
-    top: -50px;
-    left: 0;
-    width: 100%;
-    height: 50px;
-    background-color: ${theme.colors.primary};
-    clip-path: polygon(0 100%, 100% 100%, 100% 0, 50% 60%, 0 0);
+  body[data-theme='dark'] & {
+    background-color: ${({ theme }) => theme.colors.backgroundAlt};
+    border-top: 1px solid ${({ theme }) => theme.colors.border};
   }
 `;
 
 const FooterContent = styled.div`
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0 ${theme.spacing.xl};
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: ${theme.spacing.xl};
-  padding: 0 ${theme.spacing.lg};
   
-  @media (max-width: 992px) {
-    grid-template-columns: repeat(2, 1fr);
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    padding: 0 ${theme.spacing.lg};
+    gap: ${theme.spacing.lg};
   }
   
-  @media (max-width: 576px) {
+  @media (max-width: 480px) {
     grid-template-columns: 1fr;
+    padding: 0 ${theme.spacing.md};
   }
 `;
 
 const FooterSection = styled.div`
-  display: flex;
-  flex-direction: column;
+  margin-bottom: ${theme.spacing.lg};
 `;
 
 const FooterTitle = styled.h3`
-  font-family: ${theme.typography.fontFamily.heading};
+  color: white;
   font-size: ${theme.typography.fontSize.lg};
-  font-weight: ${theme.typography.fontWeight.bold};
   margin-bottom: ${theme.spacing.md};
+  font-weight: ${theme.typography.fontWeight.bold};
   position: relative;
-  padding-bottom: ${theme.spacing.sm};
+  display: inline-block;
   
   &::after {
     content: '';
     position: absolute;
-    bottom: 0;
+    bottom: -8px;
     left: 0;
     width: 40px;
     height: 3px;
     background-color: ${theme.colors.secondary};
+    border-radius: ${theme.borderRadius.full};
   }
-`;
-
-const FooterText = styled.p`
-  margin-bottom: ${theme.spacing.md};
-  line-height: ${theme.typography.lineHeight.relaxed};
-  opacity: 0.9;
+  
+  body[data-theme='dark'] & {
+    color: ${({ theme }) => theme.colors.text};
+    
+    &::after {
+      background-color: ${({ theme }) => theme.colors.secondary};
+    }
+  }
 `;
 
 const FooterLink = styled(Link)`
-  color: white;
-  text-decoration: none;
-  margin-bottom: ${theme.spacing.sm};
-  transition: all ${theme.transitions.fast};
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.xs};
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  margin-bottom: ${theme.spacing.sm};
+  transition: color 0.3s ease, transform 0.3s ease;
+  
+  svg {
+    margin-right: ${theme.spacing.sm};
+  }
   
   &:hover {
     color: ${theme.colors.secondary};
     transform: translateX(5px);
   }
-`;
-
-const ExternalLink = styled.a`
-  color: white;
-  text-decoration: none;
-  margin-bottom: ${theme.spacing.sm};
-  transition: all ${theme.transitions.fast};
-  display: flex;
-  align-items: center;
-  gap: ${theme.spacing.xs};
   
-  &:hover {
-    color: ${theme.colors.secondary};
-    transform: translateX(5px);
+  body[data-theme='dark'] & {
+    color: ${({ theme }) => theme.colors.textLight};
+    
+    &:hover {
+      color: ${({ theme }) => theme.colors.secondary};
+    }
   }
 `;
 
-const FooterBottom = styled.div`
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin-top: ${theme.spacing.xl};
-  padding-top: ${theme.spacing.lg};
-  text-align: center;
-  max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
-  font-size: ${theme.typography.fontSize.sm};
-  opacity: 0.8;
+const SocialLinks = styled.div`
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  
-  @media (max-width: 576px) {
-    font-size: ${theme.typography.fontSize.xs};
-  }
+  gap: ${theme.spacing.md};
+  margin-top: ${theme.spacing.md};
 `;
 
-const CreatedWithLove = styled.p`
+const SocialLink = styled.a`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: ${theme.spacing.xs};
-  margin-top: ${theme.spacing.sm};
+  width: 40px;
+  height: 40px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
   
-  svg {
-    color: ${theme.colors.error};
+  &:hover {
+    background-color: ${theme.colors.secondary};
+    transform: translateY(-3px);
+  }
+  
+  body[data-theme='dark'] & {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: ${({ theme }) => theme.colors.text};
+    
+    &:hover {
+      background-color: ${({ theme }) => theme.colors.secondary};
+      color: white;
+    }
   }
 `;
 
-const Logo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${theme.spacing.sm};
-  margin-bottom: ${theme.spacing.md};
+const Copyright = styled.div`
+  text-align: center;
+  padding-top: ${theme.spacing.xl};
+  margin-top: ${theme.spacing.xl};
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: ${theme.typography.fontSize.sm};
+  grid-column: 1 / -1;
   
-  svg {
-    font-size: 2rem;
-  }
-  
-  span {
-    font-family: ${theme.typography.fontFamily.heading};
-    font-size: ${theme.typography.fontSize.xl};
-    font-weight: ${theme.typography.fontWeight.bold};
-  }
-`;
-
-const IconRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${theme.spacing.sm};
-  margin-bottom: ${theme.spacing.sm};
-  
-  svg {
-    min-width: 18px;
+  body[data-theme='dark'] & {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    color: ${({ theme }) => theme.colors.textLight};
   }
 `;
 
@@ -168,68 +154,45 @@ const Footer: React.FC = () => {
     <FooterContainer>
       <FooterContent>
         <FooterSection>
-          <Logo>
-            <FiBook />
-            <span>{t('app.title')}</span>
-          </Logo>
-          <FooterText>
-            {t('footer.description', 'Your ultimate destination for German language e-books and audiobooks. Improve your language skills with our curated collection.')}
-          </FooterText>
-          <IconRow>
-            <FiMail />
-            <span>contact@germanbookshelf.com</span>
-          </IconRow>
-          <IconRow>
-            <FiPhone />
-            <span>+49 (0) 123 456789</span>
-          </IconRow>
-          <IconRow>
-            <FiMapPin />
-            <span>Berlin, Germany</span>
-          </IconRow>
-        </FooterSection>
-        
-        <FooterSection>
           <FooterTitle>{t('footer.quickLinks', 'Quick Links')}</FooterTitle>
-          <FooterLink to="/">{t('nav.home')}</FooterLink>
-          <FooterLink to="/audiobooks">{t('nav.audiobooks')}</FooterLink>
-          <FooterLink to="/ebooks">{t('nav.ebooks')}</FooterLink>
-          <FooterLink to="/book-requests">{t('nav.bookRequests', 'Request Books')}</FooterLink>
-          <FooterLink to="/login">{t('nav.login')}</FooterLink>
+          <FooterLink to="/"><FiBook /> {t('nav.home')}</FooterLink>
+          <FooterLink to="/audiobooks"><FiHeadphones /> {t('nav.audiobooks')}</FooterLink>
+          <FooterLink to="/ebooks"><FiBook /> {t('nav.ebooks')}</FooterLink>
+          <FooterLink to="/book-requests"><FiMail /> {t('nav.bookRequests', 'Request Books')}</FooterLink>
         </FooterSection>
         
         <FooterSection>
-          <FooterTitle>{t('footer.resources', 'Resources')}</FooterTitle>
-          <FooterLink to="/privacy-policy">{t('footer.privacyPolicy', 'Privacy Policy')}</FooterLink>
-          <FooterLink to="/terms-of-service">{t('footer.termsOfService', 'Terms of Service')}</FooterLink>
-          <FooterLink to="/faq">{t('footer.faq', 'FAQ')}</FooterLink>
-          <FooterLink to="/contact">{t('footer.contact', 'Contact Us')}</FooterLink>
-          <FooterLink to="/about">{t('footer.about', 'About Us')}</FooterLink>
+          <FooterTitle>{t('footer.account', 'Account')}</FooterTitle>
+          <FooterLink to="/login"><FiUser /> {t('nav.login')}</FooterLink>
+          <FooterLink to="/signup"><FiUser /> {t('nav.signup')}</FooterLink>
+          <FooterLink to="/profile"><FiUser /> {t('nav.profile')}</FooterLink>
         </FooterSection>
         
         <FooterSection>
-          <FooterTitle>{t('footer.partners', 'Partners')}</FooterTitle>
-          <ExternalLink href="https://www.goethe.de/" target="_blank" rel="noopener noreferrer">
-            <FiGlobe /> Goethe Institut
-          </ExternalLink>
-          <ExternalLink href="https://www.dw.com/" target="_blank" rel="noopener noreferrer">
-            <FiGlobe /> Deutsche Welle
-          </ExternalLink>
-          <ExternalLink href="https://www.daad.de/" target="_blank" rel="noopener noreferrer">
-            <FiGlobe /> DAAD
-          </ExternalLink>
-          <ExternalLink href="https://www.duden.de/" target="_blank" rel="noopener noreferrer">
-            <FiGlobe /> Duden
-          </ExternalLink>
+          <FooterTitle>{t('footer.contact', 'Contact Us')}</FooterTitle>
+          <p style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: theme.spacing.md }}>
+            {t('footer.contactText', 'Have questions or suggestions? Get in touch with us.')}
+          </p>
+          <SocialLinks>
+            <SocialLink href="#" aria-label="Twitter">
+              <FiTwitter />
+            </SocialLink>
+            <SocialLink href="#" aria-label="Instagram">
+              <FiInstagram />
+            </SocialLink>
+            <SocialLink href="#" aria-label="GitHub">
+              <FiGithub />
+            </SocialLink>
+            <SocialLink href="#" aria-label="Website">
+              <FiGlobe />
+            </SocialLink>
+          </SocialLinks>
         </FooterSection>
+        
+        <Copyright>
+          &copy; {currentYear} {t('app.title')}. {t('footer.copyright', 'All rights reserved.')}
+        </Copyright>
       </FooterContent>
-      
-      <FooterBottom>
-        <p>© {currentYear} {t('app.title')} - {t('footer.allRightsReserved', 'All Rights Reserved')}</p>
-        <CreatedWithLove>
-          {t('footer.createdWith', 'Created with')} <FiHeart /> {t('footer.inGermany', 'in Germany')}
-        </CreatedWithLove>
-      </FooterBottom>
     </FooterContainer>
   );
 };

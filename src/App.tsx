@@ -79,15 +79,17 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
 }
 
 const AppContainer = styled.div`
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f8f9fa;
+  min-height: 100vh; /* Full viewport height */
 `;
 
 const MainContent = styled.main`
-  flex: 1;
-  padding-bottom: 3rem;
+  flex: 1 0 auto; /* Grow to fill available space */
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
 `;
 
 // Debug component to show environment variables
