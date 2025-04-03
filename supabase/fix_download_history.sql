@@ -1,17 +1,36 @@
 -- PRODUCTION-READY FIX FOR DOWNLOAD HISTORY
 -- This script specifically fixes issues with the download_logs table and its relationships
 
--- First, ensure download_logs table has proper access
-ALTER TABLE download_logs ENABLE ROW LEVEL SECURITY;
-
--- Drop any existing problematic policies on the download_logs table
+-- First, drop all existing policies that might be using the user_id column
 DROP POLICY IF EXISTS "Users can view their own download logs" ON download_logs;
 DROP POLICY IF EXISTS "Users can create their own download logs" ON download_logs;
 DROP POLICY IF EXISTS "Users can view download logs" ON download_logs;
 DROP POLICY IF EXISTS "download_logs_select_policy" ON download_logs;
 DROP POLICY IF EXISTS "download_logs_insert_policy" ON download_logs;
+DROP POLICY IF EXISTS "download_logs_delete_policy" ON download_logs;
 
--- Create proper policies that actually work for download history
+-- Now we can safely alter the column type if needed
+DO $$
+BEGIN
+  -- Check if column is already UUID type
+  IF (SELECT data_type FROM information_schema.columns 
+      WHERE table_name = 'download_logs' AND column_name = 'user_id') 
+      NOT LIKE '%uuid%' THEN
+    -- Only alter if not already UUID
+    ALTER TABLE download_logs 
+    ALTER COLUMN user_id TYPE uuid USING user_id::uuid;
+  END IF;
+END $$;
+
+-- Set automatic timestamps and NOT NULL constraints
+ALTER TABLE download_logs 
+ALTER COLUMN downloaded_at SET DEFAULT now(),
+ALTER COLUMN downloaded_at SET NOT NULL;
+
+-- Ensure download_logs table has proper RLS
+ALTER TABLE download_logs ENABLE ROW LEVEL SECURITY;
+
+-- Create proper policies for download history
 CREATE POLICY "Users can view their own download logs" 
 ON download_logs FOR SELECT 
 USING (auth.uid() = user_id);
@@ -34,7 +53,7 @@ USING (true);
 CREATE INDEX IF NOT EXISTS idx_download_logs_user_id ON download_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_download_logs_book_id ON download_logs(book_id);
 
--- Check for foreign key relationships and fix if needed
+-- Fix foreign key relationship if needed
 DO $$
 BEGIN
   -- Check if foreign key exists
@@ -49,16 +68,6 @@ BEGIN
     FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE;
   END IF;
 END $$;
-
--- Verify table structure is correct
-ALTER TABLE download_logs 
-ALTER COLUMN user_id TYPE uuid USING user_id::uuid,
-ALTER COLUMN user_id SET NOT NULL;
-
--- Set automatic timestamps if not already set
-ALTER TABLE download_logs 
-ALTER COLUMN downloaded_at SET DEFAULT now(),
-ALTER COLUMN downloaded_at SET NOT NULL;
 
 -- Make sure users have proper permissions to all necessary tables
 GRANT ALL ON TABLE download_logs TO authenticated;
