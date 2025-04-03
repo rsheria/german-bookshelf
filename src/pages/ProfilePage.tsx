@@ -194,6 +194,10 @@ const ProfilePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Add state to track if data has ever been successfully loaded
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  // Add a cache for download history
+  const [cachedHistory, setCachedHistory] = useState<DownloadHistoryItem[]>([]);
 
   // Handler to manually refresh data
   const handleRefresh = () => {
@@ -227,7 +231,10 @@ const ProfilePage: React.FC = () => {
         return;
       }
       
-      setIsLoading(true);
+      // Don't set loading state if we have cached history
+      if (!cachedHistory.length) {
+        setIsLoading(true);
+      }
       setError(null);
       
       // Clear any existing timeout
@@ -240,7 +247,10 @@ const ProfilePage: React.FC = () => {
         if (isLoading) {
           console.log("Download history fetch timed out");
           setIsLoading(false);
-          setError("Database query timed out. Please run the SQL fix in Supabase and try again.");
+          // Keep showing cached history if we have it
+          if (!cachedHistory.length) {
+            setError("Database query timed out. Please run the SQL fix in Supabase and try again.");
+          }
         }
       }, 10000); // 10 second timeout
       
@@ -277,6 +287,10 @@ const ProfilePage: React.FC = () => {
         if (downloadsError) {
           console.error('Error fetching download logs:', downloadsError);
           setError(`Database error: ${downloadsError.message}. Please run the SQL fix in the Supabase dashboard.`);
+          // Keep showing cached history
+          if (cachedHistory.length) {
+            setDownloadHistory(cachedHistory);
+          }
           setIsLoading(false);
           if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
@@ -307,6 +321,10 @@ const ProfilePage: React.FC = () => {
         if (booksError) {
           console.error('Error fetching books:', booksError);
           setError(`Book data error: ${booksError.message}. Please run the SQL fix in the Supabase dashboard.`);
+          // Keep showing cached history
+          if (cachedHistory.length) {
+            setDownloadHistory(cachedHistory);
+          }
           setIsLoading(false);
           if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
@@ -348,9 +366,16 @@ const ProfilePage: React.FC = () => {
         
         console.log("Successfully loaded download history:", formattedDownloads.length);
         setDownloadHistory(formattedDownloads);
+        // Save to cache for future use
+        setCachedHistory(formattedDownloads);
+        setHistoryLoaded(true);
       } catch (err) {
         console.error('Error in download history retrieval:', err);
         setError(`Error: ${err instanceof Error ? err.message : String(err)}. Run the SQL fix in Supabase dashboard.`);
+        // Keep showing cached history
+        if (cachedHistory.length) {
+          setDownloadHistory(cachedHistory);
+        }
       } finally {
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
@@ -361,7 +386,7 @@ const ProfilePage: React.FC = () => {
     };
     
     fetchDownloadHistory();
-  }, [user, checkRemainingQuota, retryCount]);
+  }, [user, checkRemainingQuota, retryCount, cachedHistory]);
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -398,6 +423,11 @@ const ProfilePage: React.FC = () => {
     : displayProfile.daily_quota;
   const quotaUsed = Math.max(0, displayProfile.daily_quota - safeRemainingQuota);
   const quotaPercentUsed = Math.min(100, (quotaUsed / Math.max(1, displayProfile.daily_quota)) * 100);
+
+  // Use the history we already have while loading new data
+  const displayHistory = historyLoaded || cachedHistory.length > 0 
+    ? downloadHistory.length > 0 ? downloadHistory : cachedHistory
+    : [];
 
   return (
     <Container>
@@ -450,11 +480,11 @@ const ProfilePage: React.FC = () => {
           {isLoading && <span>Loading...</span>}
         </CardTitle>
         
-        {isLoading ? (
+        {isLoading && displayHistory.length === 0 ? (
           <LoadingState>{t('common.loading', 'Loading...')}</LoadingState>
-        ) : downloadHistory.length > 0 ? (
+        ) : displayHistory.length > 0 ? (
           <DownloadList>
-            {downloadHistory.map((item) => (
+            {displayHistory.map((item) => (
               <DownloadItem key={item.id}>
                 <BookCover 
                   src={item.book.cover_url || 'https://via.placeholder.com/50x75?text=No+Cover'} 
