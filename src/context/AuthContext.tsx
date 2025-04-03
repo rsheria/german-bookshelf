@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase, getSession } from '../services/supabase';
+import { createSupabaseClient } from '../services/supabase';
 import { Profile } from '../types/supabase';
 
 interface AuthContextType {
@@ -11,6 +11,7 @@ interface AuthContextType {
   error: Error | null;
   isAdmin: boolean;
   refreshSession: () => Promise<void>;
+  authStatusChecked: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,119 +35,155 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [authStatusChecked, setAuthStatusChecked] = useState(false);
 
+  // Simplified and more robust session refresh
   const refreshSession = async () => {
     try {
-      const result = await getSession();
+      console.log("Refreshing session...");
+      const supabase = createSupabaseClient();
       
-      // Handle potential errors from getSession
-      if ('error' in result && result.error) {
-        throw result.error;
+      if (!supabase) {
+        console.error("Supabase client not available");
+        setError(new Error("Supabase client not available"));
+        setIsLoading(false);
+        setAuthStatusChecked(true);
+        return;
+      }
+      
+      // Get current session
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Session refresh error:", sessionError);
+        setError(sessionError);
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setIsLoading(false);
+        setAuthStatusChecked(true);
+        return;
       }
 
-      if (result.data.session?.user) {
-        // Fetch user profile
-        if (supabase) {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', result.data.session.user.id)
-            .single();
-
-          if (profileError && profileError.code !== 'PGRST116') {
-            console.warn('Error fetching profile:', profileError);
+      console.log("Session data:", data?.session ? "Found" : "Not found");
+      
+      if (data?.session) {
+        setSession(data.session);
+        setUser(data.session.user);
+        
+        try {
+          // Fetch profile with retry
+          let profileAttempts = 0;
+          let profileData = null;
+          let profileError = null;
+          
+          while (profileAttempts < 3 && !profileData && !profileError) {
+            profileAttempts++;
+            console.log(`Fetching profile data, attempt ${profileAttempts}`);
+            
+            const { data: fetchedProfile, error: fetchError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', data.session.user.id)
+              .single();
+            
+            if (fetchError) {
+              if (fetchError.code === 'PGRST116') {
+                // No data found, wait a bit and retry
+                console.log("Profile not found, will retry...");
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              } else {
+                // Other error
+                console.error("Profile fetch error:", fetchError);
+                profileError = fetchError;
+              }
+            } else {
+              profileData = fetchedProfile;
+            }
           }
-
-          setSession(result.data.session);
-          setUser(result.data.session.user);
-          setProfile(profileData || null);
-          setIsAdmin(profileData?.is_admin || false);
-        } else {
-          console.warn('Supabase client not initialized, cannot fetch profile');
-          setSession(result.data.session);
-          setUser(result.data.session.user);
+          
+          if (profileData) {
+            console.log("Profile found:", profileData);
+            setProfile(profileData);
+            setIsAdmin(profileData.is_admin || false);
+          } else {
+            console.warn("Could not find profile after retries");
+            setProfile(null);
+            setIsAdmin(false);
+          }
+        } catch (err) {
+          console.error("Profile fetch exception:", err);
         }
       } else {
         setSession(null);
         setUser(null);
         setProfile(null);
+        setIsAdmin(false);
       }
     } catch (err) {
-      console.error('Error refreshing session:', err);
+      console.error('Error in refresh session:', err);
       setError(err as Error);
+    } finally {
+      setIsLoading(false);
+      setAuthStatusChecked(true);
     }
   };
 
+  // Initialize auth on component mount
   useEffect(() => {
     const initializeAuth = async () => {
       setIsLoading(true);
-      try {
-        await refreshSession();
-      } catch (err) {
-        console.error('Error initializing auth:', err);
-        setError(err as Error);
-      } finally {
-        setIsLoading(false);
-      }
+      await refreshSession();
     };
 
     initializeAuth();
+  }, []);
 
-    // Listen for auth changes
-    let subscription: { unsubscribe: () => void } | null = null;
+  // Set up auth state change listener
+  useEffect(() => {
+    const supabase = createSupabaseClient();
+    if (!supabase) return;
     
-    if (supabase) {
-      const { data } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-        console.log('Auth state changed:', event);
-        setSession(newSession);
-        setUser(newSession?.user || null);
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        console.log('Auth state changed:', event, newSession ? 'Session exists' : 'No session');
         
-        if (newSession?.user && supabase) {
-          // Fetch user profile
-          try {
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', newSession.user.id)
-              .single();
-
-            if (profileError && profileError.code !== 'PGRST116') {
-              console.warn('Error fetching profile:', profileError);
-            }
-
-            setProfile(profileData || null);
-            setIsAdmin(profileData?.is_admin || false);
-          } catch (err) {
-            console.error('Error fetching profile on auth change:', err);
-          }
-        } else {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          setIsLoading(true);
+          await refreshSession();
+        } else if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
           setProfile(null);
+          setIsAdmin(false);
+          setIsLoading(false);
         }
-      });
-      
-      subscription = data.subscription;
-    }
+      }
+    );
 
     return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-      }
+      subscription.unsubscribe();
     };
   }, []);
 
-  // Set up a timer to refresh the session periodically to prevent timeouts
+  // Periodic session refresh
   useEffect(() => {
-    // Refresh every 10 minutes
-    const intervalId = setInterval(() => {
-      console.log('Refreshing session...');
-      refreshSession();
-    }, 10 * 60 * 1000);
-
+    const intervalId = setInterval(refreshSession, 5 * 60 * 1000);
     return () => clearInterval(intervalId);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, isLoading, error, isAdmin, refreshSession }}>
+    <AuthContext.Provider value={{ 
+      session, 
+      user, 
+      profile, 
+      isLoading, 
+      error, 
+      isAdmin, 
+      refreshSession,
+      authStatusChecked 
+    }}>
       {children}
     </AuthContext.Provider>
   );

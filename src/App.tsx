@@ -131,33 +131,7 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const AppRoutes: React.FC = () => {
   const { i18n } = useTranslation();
   const [appLoaded, setAppLoaded] = useState(false);
-  const { refreshSession } = useAuth();
-  
-  // Periodically refresh the session to prevent timeouts
-  useEffect(() => {
-    // Initial session refresh
-    refreshSession();
-    
-    // Set up interval to refresh session every 5 minutes
-    const refreshInterval = setInterval(() => {
-      refreshSession();
-      console.log("Session refreshed");
-    }, 5 * 60 * 1000); // 5 minutes in milliseconds
-    
-    return () => clearInterval(refreshInterval);
-  }, [refreshSession]);
-  
-  useEffect(() => {
-    // Add a delay to ensure auth context is fully initialized
-    const timer = setTimeout(() => {
-      setAppLoaded(true);
-      console.log("App fully loaded");
-      console.log("Environment:", import.meta.env.MODE);
-      console.log("Supabase URL available:", !!import.meta.env.VITE_SUPABASE_URL);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
+  const { authStatusChecked } = useAuth();
   
   // Set language from localStorage on app load
   useEffect(() => {
@@ -167,8 +141,28 @@ const AppRoutes: React.FC = () => {
     }
   }, [i18n]);
   
+  // Only set appLoaded once authStatusChecked is true
+  useEffect(() => {
+    if (authStatusChecked) {
+      console.log("Auth status checked, app can now be loaded");
+      setAppLoaded(true);
+    }
+  }, [authStatusChecked]);
+  
   if (!appLoaded) {
-    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
+    return (
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        gap: '1rem'
+      }}>
+        <div>Initializing German Bookshelf...</div>
+        <div>If this takes more than 10 seconds, try the <a href="/debug" style={{color: 'blue', textDecoration: 'underline'}}>Debug Page</a></div>
+      </div>
+    );
   }
 
   return (

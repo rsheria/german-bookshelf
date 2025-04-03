@@ -133,7 +133,7 @@ UPDATE profiles
 SET is_admin = TRUE
 WHERE id IN (
   SELECT id FROM auth.users
-  WHERE email = 'your-email@example.com' -- Replace with your actual email
+  WHERE email = 'rsher@example.com' -- Replace with your actual email
 );
 
 -- Add missing columns if they don't exist
