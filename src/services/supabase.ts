@@ -42,6 +42,166 @@ const supabase = createClient<Database>(
 // Export the singleton client
 export { supabase };
 
+// -------------------- SESSION MANAGEMENT --------------------
+// We use localStorage as a reliable backup for Supabase's built-in session store
+
+/**
+ * Ensures all session data is reliably stored in localStorage to prevent login loss on refresh
+ */
+export const saveSessionToLocalStorage = (session: any) => {
+  if (!session) {
+    console.log('Removing session from localStorage');
+    localStorage.removeItem('supabase.auth.token');
+    localStorage.removeItem('sb-session');
+    localStorage.removeItem('supabase-auth-token');
+    localStorage.removeItem('sb-access-token');
+    localStorage.removeItem('sb-refresh-token');
+    localStorage.removeItem('user_is_admin');
+    return;
+  }
+
+  // First, standard Supabase key
+  localStorage.setItem('supabase.auth.token', JSON.stringify({
+    currentSession: session,
+    expiresAt: Math.floor(new Date(session.expires_at || '').getTime() / 1000),
+  }));
+
+  // Second, backup in our own format for redundancy
+  localStorage.setItem('sb-session', JSON.stringify(session));
+  
+  // Save individual components for triple redundancy
+  localStorage.setItem('sb-access-token', session.access_token);
+  localStorage.setItem('sb-refresh-token', session.refresh_token);
+  
+  // Handle admin status
+  if (session.user?.app_metadata?.is_admin) {
+    localStorage.setItem('user_is_admin', 'true');
+  }
+  
+  console.log('Session saved to localStorage with triple redundancy');
+};
+
+/**
+ * Retrieves session data from localStorage (used as fallback if Supabase fails)
+ */
+export const getSessionFromLocalStorage = (): any => {
+  try {
+    // Try the standard Supabase key first
+    const supabaseToken = localStorage.getItem('supabase.auth.token');
+    if (supabaseToken) {
+      const parsed = JSON.parse(supabaseToken);
+      if (parsed?.currentSession) {
+        console.log('Retrieved session from supabase.auth.token');
+        return parsed.currentSession;
+      }
+    }
+    
+    // Try our backup format
+    const sbSession = localStorage.getItem('sb-session');
+    if (sbSession) {
+      console.log('Retrieved session from sb-session backup');
+      return JSON.parse(sbSession);
+    }
+    
+    // Try to manually reconstruct from components
+    const accessToken = localStorage.getItem('sb-access-token');
+    const refreshToken = localStorage.getItem('sb-refresh-token');
+    
+    if (accessToken && refreshToken) {
+      console.log('Reconstructing session from individual tokens');
+      
+      // Create a basic session object with the tokens
+      const session = {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expires_in: 3600,
+        expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
+        token_type: 'bearer',
+        user: {
+          id: '', // Will be populated by Supabase on first API call
+          app_metadata: {
+            provider: 'email',
+            is_admin: localStorage.getItem('user_is_admin') === 'true',
+          },
+          user_metadata: {},
+          aud: 'authenticated',
+          confirmed_at: '',
+          created_at: '',
+          updated_at: '',
+          email: '',
+          phone: '',
+          role: 'authenticated',
+        },
+      };
+      
+      return session;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error retrieving session from localStorage:', error);
+    return null;
+  }
+};
+
+/**
+ * Synchronizes the local session state with Supabase's built-in storage
+ * Call this on app initialization to ensure persistence across refreshes
+ */
+export const synchronizeSession = async (): Promise<any> => {
+  try {
+    console.log('Synchronizing session...');
+    
+    // First try to get the session from Supabase
+    const { data: { session: supabaseSession } } = await supabase.auth.getSession();
+    
+    if (supabaseSession) {
+      console.log('Found active session in Supabase, saving to localStorage');
+      saveSessionToLocalStorage(supabaseSession);
+      return supabaseSession;
+    }
+    
+    // If Supabase doesn't have a session, try to get it from localStorage
+    const localSession = getSessionFromLocalStorage();
+    
+    if (localSession) {
+      console.log('Found session in localStorage, restoring to Supabase');
+      
+      // Set the session in Supabase manually
+      try {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: localSession.access_token,
+          refresh_token: localSession.refresh_token,
+        });
+        
+        if (error) {
+          console.error('Error setting session in Supabase:', error);
+          // Even if setSession fails, we still have the session data
+          return localSession;
+        }
+        
+        if (data?.session) {
+          console.log('Successfully restored session to Supabase');
+          saveSessionToLocalStorage(data.session);
+          return data.session;
+        }
+      } catch (setSessionError) {
+        console.error('Error in setSession:', setSessionError);
+        // Return the local session even if there was an error
+        return localSession;
+      }
+    }
+    
+    console.log('No session found in Supabase or localStorage');
+    return null;
+  } catch (error) {
+    console.error('Error synchronizing session:', error);
+    
+    // Fallback to localStorage if everything else fails
+    return getSessionFromLocalStorage();
+  }
+};
+
 // Consistently manage session manually as an additional layer of persistence
 export const manuallyStoreSession = (session: any) => {
   if (!session) return;
