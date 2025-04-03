@@ -110,6 +110,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   
+  // Create a more transparent loading state that won't block content
+  const [showLoading, setShowLoading] = useState(false);
+  
+  useEffect(() => {
+    // Set a timer to show loading only if it takes too long
+    const timer = setTimeout(() => {
+      if (isLoading) {
+        setShowLoading(true);
+      }
+    }, 500); // Only show loading if it takes more than 500ms
+    
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+  
   useEffect(() => {
     if (!isLoading && !user) {
       // If not loading and no user, redirect to login
@@ -117,8 +131,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
   }, [user, isLoading, navigate]);
   
+  // If loading, either show content if we have it or a minimal loading indicator
   if (isLoading) {
-    return <div>Loading...</div>;
+    // If we're still loading but we have user data from localStorage, render content
+    const adminStatus = localStorage.getItem('user_is_admin');
+    if (adminStatus === 'true' || localStorage.getItem('supabase.auth.token')) {
+      return <>{children}</>;
+    }
+    
+    // Only show loading if it's been a while
+    return showLoading ? <div>Loading...</div> : <>{children}</>;
   }
   
   // Only render children if we have a user
@@ -134,6 +156,20 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const { user, isAdmin, isLoading } = useAuth();
   const navigate = useNavigate();
   
+  // Create a more transparent loading state that won't block content
+  const [showLoading, setShowLoading] = useState(false);
+  
+  useEffect(() => {
+    // Set a timer to show loading only if it takes too long
+    const timer = setTimeout(() => {
+      if (isLoading) {
+        setShowLoading(true);
+      }
+    }, 500); // Only show loading if it takes more than 500ms
+    
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+  
   useEffect(() => {
     // Only redirect if we're not loading and we know the user state
     if (!isLoading) {
@@ -147,8 +183,17 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     }
   }, [user, isAdmin, isLoading, navigate]);
   
+  // If loading, try to show content if we can
   if (isLoading) {
-    return <div>Loading...</div>;
+    // Check localStorage for admin status to avoid flickering
+    const adminStatus = localStorage.getItem('user_is_admin');
+    if (adminStatus === 'true') {
+      // If we have saved admin status, show the admin page
+      return <>{children}</>;
+    }
+    
+    // Only show loading if it's been a while
+    return showLoading ? <div>Loading...</div> : <>{children}</>;
   }
   
   // Only render children if we have an admin user
