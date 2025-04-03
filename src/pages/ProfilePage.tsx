@@ -166,7 +166,7 @@ const RefreshButton = styled.button`
   }
 `;
 
-// Fallback values for when data isn't loaded properly
+// Fallback values for profile display only when needed
 const DEFAULT_QUOTA = 3;
 const FALLBACK_USER = { email: 'user@example.com' };
 const FALLBACK_PROFILE = { username: 'User', daily_quota: DEFAULT_QUOTA };
@@ -193,8 +193,6 @@ const ProfilePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  // Track if data was ever successfully loaded
-  const [dataWasLoaded, setDataWasLoaded] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Handler to manually refresh data
@@ -202,8 +200,6 @@ const ProfilePage: React.FC = () => {
     setRetryCount(prev => prev + 1);
     setIsLoading(true);
     setError(null);
-    // Reset the data loaded flag when manually refreshing
-    setDataWasLoaded(false);
   };
 
   useEffect(() => {
@@ -244,155 +240,117 @@ const ProfilePage: React.FC = () => {
         if (isLoading) {
           console.log("Download history fetch timed out");
           setIsLoading(false);
-          // Only clear history if it was never successfully loaded
-          if (!dataWasLoaded) {
-            setDownloadHistory([]);
-          }
-          setError("Download history took too long to load. Please try refreshing.");
+          setError("Database query timed out. Please run the SQL fix in Supabase and try again.");
         }
-      }, 8000); // 8 second timeout - increased for more reliability
+      }, 10000); // 10 second timeout
       
       try {
-        // Check remaining quota with error handling
+        // Check quota first (don't block on errors)
         try {
           await checkRemainingQuota();
         } catch (err) {
           console.warn("Could not check quota, continuing with profile page", err);
-          // Don't set error or return - continue with the rest of the profile
         }
         
-        console.log("Fetching download history...");
-        
-        // Mock data for testing - this ensures something always shows
-        const mockData = [
-          {
-            id: "mock-1",
-            book: {
-              id: "mock-book-1",
-              title: "Der Kleine Prinz",
-              author: "Antoine de Saint-Exupéry",
-              cover_url: "https://via.placeholder.com/50x75?text=Book+1"
-            },
-            downloaded_at: new Date().toISOString()
-          },
-          {
-            id: "mock-2",
-            book: {
-              id: "mock-book-2",
-              title: "Kafka am Strand",
-              author: "Haruki Murakami",
-              cover_url: "https://via.placeholder.com/50x75?text=Book+2"
-            },
-            downloaded_at: new Date(Date.now() - 86400000).toISOString()
+        // Check if user exists before fetching
+        if (!user?.id) {
+          console.warn("User ID not available for download history");
+          setIsLoading(false);
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
           }
-        ];
-        
-        try {
-          // Check if user exists before fetching
-          if (!user?.id) {
-            console.warn("User ID not available for download history");
-            // Use mock data instead of showing nothing
-            setDownloadHistory(mockData);
-            setDataWasLoaded(true);
-            
-            if (timeoutRef.current) {
-              clearTimeout(timeoutRef.current);
-              timeoutRef.current = null;
-            }
-            
-            setIsLoading(false);
-            return;
-          }
+          return;
+        }
 
-          console.log("Fetching data for user:", user.id);
+        console.log("Fetching real download history for user:", user.id);
+        
+        // PRODUCTION-READY APPROACH:
+        // First fetch download logs
+        const { data: downloads, error: downloadsError } = await supabase
+          .from('download_logs')
+          .select('id, book_id, downloaded_at')
+          .eq('user_id', user.id)
+          .order('downloaded_at', { ascending: false })
+          .limit(10);
           
-          // Try the most basic query possible to ensure it works
-          const { data: basicData, error: basicError } = await supabase
-            .from('download_logs')
-            .select('*')
-            .eq('user_id', user.id)
-            .limit(10);
-            
-          console.log("Basic query result:", basicData, basicError);
-          
-          if (basicError) {
-            console.error("Basic query failed:", basicError);
-            // Use mock data if the basic query fails
-            setDownloadHistory(mockData);
-            setDataWasLoaded(true);
-            setError("Using example data. Database query failed: " + basicError.message);
-            return;
+        if (downloadsError) {
+          console.error('Error fetching download logs:', downloadsError);
+          setError(`Database error: ${downloadsError.message}. Please run the SQL fix in the Supabase dashboard.`);
+          setIsLoading(false);
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
           }
-            
-          // Since we got basic data, try the full query
-          const { data: downloadData, error: downloadError } = await supabase
-            .from('download_logs')
-            .select(`
-              id,
-              downloaded_at,
-              book_id
-            `)
-            .eq('user_id', user.id)
-            .order('downloaded_at', { ascending: false })
-            .limit(10);
-            
-          console.log("Full query result:", downloadData, downloadError);  
-            
-          if (downloadError) {
-            console.error('Error fetching download logs:', downloadError);
-            // Use mock data if the query fails
-            setDownloadHistory(mockData);
-            setDataWasLoaded(true);
-            setError("Using example data. " + downloadError.message);
-            return;
-          }
-          
-          if (downloadData && downloadData.length > 0) {
-            // Convert to proper format
-            const formattedDownloads = downloadData.map((item: any) => ({
-              id: item.id,
-              book: {
-                id: item.book_id || 'unknown',
-                title: `Book ${item.book_id ? item.book_id.substring(0, 6) : 'Unknown'}`, 
-                author: 'German Author',
-                cover_url: `https://via.placeholder.com/50x75?text=${item.book_id ? item.book_id.substring(0, 6) : 'Book'}`
-              },
-              downloaded_at: item.downloaded_at
-            }));
-            
-            console.log("Setting formatted data:", formattedDownloads);
-            setDownloadHistory(formattedDownloads);
-            setDataWasLoaded(true);
-          } else {
-            // No downloads in DB, use mock data
-            console.log("No download data found, using mock data");
-            setDownloadHistory(mockData);
-            setDataWasLoaded(true);
-          }
-        } catch (err) {
-          console.error('Error in download history processing:', err);
-          // Set mock data in case of error
-          setDownloadHistory(mockData);
-          setDataWasLoaded(true);
-          setError('Using example data. Database error: ' + (err instanceof Error ? err.message : String(err)));
+          return;
         }
-      } catch (err) {
-        console.error('Fatal error in profile page:', err);
-        setError((err as Error).message || 'An unexpected error occurred');
-        // Use mock data even for fatal errors
-        setDownloadHistory([
-          {
-            id: "error-1",
-            book: {
-              id: "error-book",
-              title: "Error Recovery Book",
-              author: "System Author",
-              cover_url: "https://via.placeholder.com/50x75?text=Error"
-            },
-            downloaded_at: new Date().toISOString()
+        
+        if (!downloads || downloads.length === 0) {
+          console.log("No download history found");
+          setDownloadHistory([]);
+          setIsLoading(false);
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
           }
-        ]);
-        setDataWasLoaded(true);
+          return;
+        }
+        
+        // Then fetch the books for those downloads
+        const bookIds = [...new Set(downloads.map(d => d.book_id))];
+        
+        const { data: books, error: booksError } = await supabase
+          .from('books')
+          .select('id, title, author, cover_url')
+          .in('id', bookIds);
+          
+        if (booksError) {
+          console.error('Error fetching books:', booksError);
+          setError(`Book data error: ${booksError.message}. Please run the SQL fix in the Supabase dashboard.`);
+          setIsLoading(false);
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+          return;
+        }
+        
+        // Create a map of book IDs to book objects
+        const bookMap: Record<string, SimpleBook> = {};
+        
+        if (books) {
+          books.forEach((book: any) => {
+            bookMap[book.id] = {
+              id: book.id,
+              title: book.title || 'Unknown Book',
+              author: book.author || 'Unknown Author',
+              cover_url: book.cover_url || ''
+            };
+          });
+        }
+        
+        // Combine download logs with book data
+        const formattedDownloads = downloads.map(item => {
+          // Find the book in our map, or use placeholder data
+          const book = bookMap[item.book_id] || {
+            id: item.book_id,
+            title: `Book ${item.book_id.substring(0, 6)}`,
+            author: 'Unknown Author',
+            cover_url: ''
+          };
+          
+          return {
+            id: item.id,
+            book,
+            downloaded_at: item.downloaded_at
+          };
+        });
+        
+        console.log("Successfully loaded download history:", formattedDownloads.length);
+        setDownloadHistory(formattedDownloads);
+      } catch (err) {
+        console.error('Error in download history retrieval:', err);
+        setError(`Error: ${err instanceof Error ? err.message : String(err)}. Run the SQL fix in Supabase dashboard.`);
       } finally {
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
@@ -425,7 +383,7 @@ const ProfilePage: React.FC = () => {
   if (authLoading) {
     return (
       <Container>
-        <LoadingState>{t('common.loading')}</LoadingState>
+        <LoadingState>{t('common.loading', 'Loading...')}</LoadingState>
       </Container>
     );
   }
@@ -440,9 +398,6 @@ const ProfilePage: React.FC = () => {
     : displayProfile.daily_quota;
   const quotaUsed = Math.max(0, displayProfile.daily_quota - safeRemainingQuota);
   const quotaPercentUsed = Math.min(100, (quotaUsed / Math.max(1, displayProfile.daily_quota)) * 100);
-
-  // Always use the downloads we've loaded, never clear them
-  const displayDownloads = downloadHistory.length > 0 ? downloadHistory : [];
 
   return (
     <Container>
@@ -492,14 +447,14 @@ const ProfilePage: React.FC = () => {
           <span>
             <FiDownload /> {t('profile.downloadHistory', 'Download History')}
           </span>
-          {isLoading && !dataWasLoaded && <span>Loading...</span>}
+          {isLoading && <span>Loading...</span>}
         </CardTitle>
         
-        {isLoading && !dataWasLoaded ? (
+        {isLoading ? (
           <LoadingState>{t('common.loading', 'Loading...')}</LoadingState>
-        ) : displayDownloads.length > 0 ? (
+        ) : downloadHistory.length > 0 ? (
           <DownloadList>
-            {displayDownloads.map((item) => (
+            {downloadHistory.map((item) => (
               <DownloadItem key={item.id}>
                 <BookCover 
                   src={item.book.cover_url || 'https://via.placeholder.com/50x75?text=No+Cover'} 
