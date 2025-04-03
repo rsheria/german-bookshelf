@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FiMenu, FiX, FiSearch, FiUser, FiLogOut, FiBook, FiHeadphones } from 'react-icons/fi';
+import { FiMenu, FiX, FiSearch, FiUser, FiLogOut, FiBook, FiHeadphones, FiPlusCircle } from 'react-icons/fi';
 import styled from 'styled-components';
 import { useAuth } from '../context/AuthContext';
 import { signOut } from '../services/supabase';
@@ -197,6 +197,10 @@ const Navbar: React.FC = () => {
             <>
               <NavLink to="/profile" onClick={() => setIsOpen(false)}>
                 <FiUser /> {t('nav.profile')}
+              </NavLink>
+              
+              <NavLink to="/book-requests" onClick={() => setIsOpen(false)}>
+                <FiPlusCircle /> {t('nav.bookRequests', 'Request Books')}
               </NavLink>
 
               {isAdmin && (

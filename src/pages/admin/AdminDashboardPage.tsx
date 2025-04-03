@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiUsers, FiBook, FiDownload } from 'react-icons/fi';
+import { FiUsers, FiBook, FiDownload, FiMessageSquare } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 
@@ -290,6 +290,10 @@ const AdminDashboardPage: React.FC = () => {
         
         <ActionButton onClick={() => navigate('/admin/books/add')}>
           <FiBook /> {t('admin.addBook')}
+        </ActionButton>
+
+        <ActionButton onClick={() => navigate('/admin/book-requests')}>
+          <FiMessageSquare /> {t('admin.manageBookRequests', 'Manage Book Requests')}
         </ActionButton>
       </ButtonsContainer>
       
