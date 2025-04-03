@@ -15,7 +15,8 @@ const supabase = createClient<Database>(
       autoRefreshToken: true,
       detectSessionInUrl: true, // Enable redirect detection for auth flows
       storage: localStorage,    // Explicitly use localStorage for best compatibility
-      storageKey: 'sb-auth-token' // Consistent key for storage
+      storageKey: 'sb-auth-token', // Consistent key for storage
+      flowType: 'implicit' // Use implicit flow for better token management
     },
     global: {
       // Global error handler to make fetch operations more resilient

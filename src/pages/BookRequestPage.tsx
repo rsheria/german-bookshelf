@@ -2,44 +2,61 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { 
-  FiBookOpen, 
-  FiSend, 
-  FiAlertCircle, 
-  FiCheckCircle, 
-  FiClock
-} from 'react-icons/fi';
+import { FiCheckCircle, FiAlertCircle, FiX, FiLoader } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 
-// Styled components
+// Styled components for the page
 const Container = styled.div`
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 2rem 1rem;
 `;
 
 const Header = styled.div`
-  display: flex;
-  align-items: center;
   margin-bottom: 2rem;
 `;
 
 const Title = styled.h1`
   font-size: 2rem;
   color: #2c3e50;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+`;
+
+const Subtitle = styled.p`
+  color: #7f8c8d;
+  margin-top: 0;
 `;
 
 const Card = styled.div`
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+`;
+
+const Tabs = styled.div`
+  display: flex;
+  border-bottom: 1px solid #eee;
+`;
+
+const Tab = styled.button<{ active: boolean }>`
+  flex: 1;
+  padding: 1rem;
+  background-color: ${({ active }) => (active ? '#3498db' : 'transparent')};
+  color: ${({ active }) => (active ? 'white' : '#333')};
+  border: none;
+  cursor: pointer;
+  font-weight: ${({ active }) => (active ? 'bold' : 'normal')};
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: ${({ active }) => (active ? '#3498db' : '#f5f5f5')};
+  }
+`;
+
+const FormContainer = styled.div`
   padding: 1.5rem;
-  margin-bottom: 2rem;
 `;
 
 const FormGroup = styled.div`
@@ -56,49 +73,53 @@ const Label = styled.label`
 const Input = styled.input`
   width: 100%;
   padding: 0.75rem;
-  font-size: 1rem;
   border: 1px solid #ddd;
   border-radius: 4px;
-  transition: border-color 0.2s;
-  
-  &:focus {
-    border-color: #3498db;
-    outline: none;
-  }
-`;
-
-const Textarea = styled.textarea`
-  width: 100%;
-  padding: 0.75rem;
   font-size: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  min-height: 100px;
-  resize: vertical;
-  transition: border-color 0.2s;
   
   &:focus {
-    border-color: #3498db;
     outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
   }
 `;
 
 const Select = styled.select`
   width: 100%;
   padding: 0.75rem;
-  font-size: 1rem;
   border: 1px solid #ddd;
   border-radius: 4px;
+  font-size: 1rem;
   background-color: white;
-  transition: border-color 0.2s;
   
   &:focus {
-    border-color: #3498db;
     outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
   }
 `;
 
-const Button = styled.button`
+const Textarea = styled.textarea`
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  min-height: 100px;
+  resize: vertical;
+  
+  &:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  }
+`;
+
+const SubmitButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   background-color: #3498db;
   color: white;
   border: none;
@@ -107,9 +128,6 @@ const Button = styled.button`
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
   transition: background-color 0.2s;
   
   &:hover {
@@ -122,113 +140,131 @@ const Button = styled.button`
   }
 `;
 
-const RequestsList = styled.div`
-  margin-top: 2rem;
+const LoadingSpinner = styled.div`
+  display: inline-block;
+  animation: spin 1s linear infinite;
+  margin-right: 0.5rem;
+  
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
 `;
 
-const RequestCard = styled.div<{ status: string }>`
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 1.25rem;
+const RequestList = styled.div`
+  padding: 1.5rem;
+`;
+
+const RequestItem = styled.div`
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 1.5rem;
   margin-bottom: 1rem;
-  border-left: 4px solid ${({ status }) => {
-    switch (status) {
-      case 'Pending': return '#f39c12';
-      case 'Approved': return '#3498db';
-      case 'Fulfilled': return '#2ecc71';
-      case 'Rejected': return '#e74c3c';
-      default: return '#95a5a6';
-    }
-  }};
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const RequestHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
 `;
 
 const RequestTitle = styled.h3`
-  margin: 0 0 0.5rem 0;
-  font-size: 1.2rem;
+  margin: 0;
   color: #2c3e50;
 `;
 
-const RequestDetails = styled.div`
-  font-size: 0.9rem;
-  color: #7f8c8d;
-  margin-bottom: 0.75rem;
-`;
-
-const RequestMeta = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.85rem;
-  color: #7f8c8d;
-`;
-
 const RequestStatus = styled.span<{ status: string }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
   font-weight: 500;
-  color: ${({ status }) => {
+  background-color: ${({ status }) => {
     switch (status) {
+      case 'Approved': return '#27ae60';
       case 'Pending': return '#f39c12';
-      case 'Approved': return '#3498db';
-      case 'Fulfilled': return '#2ecc71';
-      case 'Rejected': return '#e74c3c';
+      case 'Fulfilled': return '#3498db';
+      case 'Declined': return '#e74c3c';
       default: return '#95a5a6';
     }
   }};
+  color: white;
 `;
 
-const Alert = styled.div<{ type: 'error' | 'success' | 'info' }>`
+const RequestInfo = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+`;
+
+const InfoItem = styled.div`
+  margin-bottom: 0.5rem;
+`;
+
+const InfoLabel = styled.span`
+  font-size: 0.8rem;
+  color: #7f8c8d;
+  display: block;
+`;
+
+const InfoValue = styled.span`
+  font-weight: 500;
+  color: #2c3e50;
+`;
+
+const RequestDescription = styled.div`
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+`;
+
+const AdminNotes = styled.div`
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+  background-color: #f9f9f9;
+  padding: 1rem;
+  border-radius: 4px;
+`;
+
+const AdminNotesLabel = styled.span`
+  font-size: 0.8rem;
+  color: #7f8c8d;
+  display: block;
+  margin-bottom: 0.5rem;
+`;
+
+const Alert = styled.div<{ type: 'error' | 'success' }>`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: ${({ type }) => {
-    switch (type) {
-      case 'error': return '#f8d7da';
-      case 'success': return '#d4edda';
-      case 'info': return '#d1ecf1';
-      default: return '#f8d7da';
-    }
-  }};
-  color: ${({ type }) => {
-    switch (type) {
-      case 'error': return '#721c24';
-      case 'success': return '#155724';
-      case 'info': return '#0c5460';
-      default: return '#721c24';
-    }
-  }};
+  background-color: ${({ type }) => (type === 'error' ? '#f8d7da' : '#d4edda')};
+  color: ${({ type }) => (type === 'error' ? '#721c24' : '#155724')};
   padding: 1rem;
   border-radius: 4px;
   margin-bottom: 1.5rem;
 `;
 
-const Tabs = styled.div`
-  display: flex;
-  border-bottom: 1px solid #e1e1e1;
-  margin-bottom: 1.5rem;
-`;
-
-const Tab = styled.button<{ active: boolean }>`
-  padding: 0.75rem 1.25rem;
-  background: ${({ active }) => active ? 'white' : 'transparent'};
+const CloseButton = styled.button`
+  background: none;
   border: none;
-  border-bottom: ${({ active }) => active ? '2px solid #3498db' : 'none'};
-  color: ${({ active }) => active ? '#3498db' : '#7f8c8d'};
-  font-weight: ${({ active }) => active ? '500' : 'normal'};
+  color: inherit;
   cursor: pointer;
-  transition: all 0.2s;
-  
-  &:hover {
-    color: #3498db;
-  }
-`;
-
-const LoadingState = styled.div`
-  text-align: center;
-  padding: 3rem;
-  color: #666;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
 `;
 
 const EmptyState = styled.div`
@@ -302,31 +338,44 @@ interface BookRequest {
   title: string;
   author: string | null;
   language: string;
-  format: 'Book' | 'Audiobook' | 'Either';
+  format: string;
   description: string | null;
-  priority: 'Low' | 'Medium' | 'High' | null;
-  status: 'Pending' | 'Approved' | 'Fulfilled' | 'Rejected';
+  priority: string;
+  status: string;
   created_at: string;
-  updated_at: string;
+  admin_notes: string | null;
   fulfilled_at: string | null;
 }
 
-// Form data interface
+// Interface for form data
 interface FormData {
   title: string;
   author: string;
   language: string;
-  format: 'Book' | 'Audiobook' | 'Either';
+  format: string;
   description: string;
-  priority: 'Low' | 'Medium' | 'High';
+  priority: string;
 }
 
+// Main component
 const BookRequestPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
   
-  const [activeTab, setActiveTab] = useState<'form' | 'requests'>('form');
+  const [isShowingForm, setIsShowingForm] = useState(() => {
+    // Try to restore the last active tab from localStorage
+    const savedTab = localStorage.getItem('bookRequestTab');
+    return savedTab ? savedTab === 'form' : true;
+  });
+  const [requests, setRequests] = useState<BookRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [quotaInfo, setQuotaInfo] = useState<{used: number, max: number, remaining: number, canRequest: boolean} | null>(null);
+  
+  // Initialize form data
   const [formData, setFormData] = useState<FormData>({
     title: '',
     author: '',
@@ -336,19 +385,17 @@ const BookRequestPage: React.FC = () => {
     priority: 'Medium'
   });
   
-  const [requests, setRequests] = useState<BookRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [quotaInfo, setQuotaInfo] = useState<{used: number, max: number, remaining: number, canRequest: boolean} | null>(null);
-  
   // Redirect if not logged in
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/login');
+      navigate('/login', { replace: true });
     }
   }, [user, authLoading, navigate]);
+  
+  // Save active tab to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('bookRequestTab', isShowingForm ? 'form' : 'requests');
+  }, [isShowingForm]);
   
   // Fetch user's book requests
   useEffect(() => {
@@ -395,6 +442,40 @@ const BookRequestPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
+  // Handle deleting a request
+  const handleDeleteRequest = async (id: string) => {
+    if (!user || !window.confirm(t('bookRequest.confirmDelete', 'Are you sure you want to delete this request?'))) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('book_requests')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update the requests list
+      setRequests(prev => prev.filter(request => request.id !== id));
+      
+      // Update quota info after deletion
+      const { data: quotaData, error: quotaError } = await supabase
+        .rpc('get_user_request_quota', { user_id: user.id });
+        
+      if (!quotaError) {
+        setQuotaInfo(quotaData);
+      }
+      
+      setSuccess(t('bookRequest.requestDeleted', 'Book request deleted successfully.'));
+    } catch (err) {
+      console.error('Error deleting book request:', err);
+      setError(t('bookRequest.errorDeleting', 'Failed to delete book request. Please try again later.'));
+    }
+  };
+  
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -412,7 +493,7 @@ const BookRequestPage: React.FC = () => {
     
     // Validate form
     if (!formData.title.trim()) {
-      setError('Please enter a book title.');
+      setError(t('bookRequest.errorTitle', 'Title is required'));
       return;
     }
     
@@ -456,9 +537,9 @@ const BookRequestPage: React.FC = () => {
       }
       
       // Show success message
-      setSuccess('Your book request has been submitted successfully!');
+      setSuccess(t('bookRequest.requestSubmitted', 'Your book request has been submitted successfully.'));
       
-      // Reset form
+      // Reset the form
       setFormData({
         title: '',
         author: '',
@@ -469,76 +550,35 @@ const BookRequestPage: React.FC = () => {
       });
       
       // Switch to requests tab
-      setActiveTab('requests');
+      setIsShowingForm(false);
     } catch (err) {
       console.error('Error submitting book request:', err);
-      setError('Failed to submit your book request. Please try again later.');
+      setError(t('bookRequest.errorSubmitting', 'Failed to submit your book request. Please try again later.'));
     } finally {
       setIsSubmitting(false);
     }
   };
   
-  // Handle request deletion
-  const handleDeleteRequest = async (id: string) => {
-    if (!confirm(t('bookRequest.confirmDelete', 'Are you sure you want to delete this request?'))) {
-      return;
-    }
-    
-    try {
-      const { error } = await supabase
-        .from('book_requests')
-        .delete()
-        .eq('id', id);
-        
-      if (error) {
-        throw error;
-      }
-      
-      // Remove the deleted request from the list
-      setRequests(prev => prev.filter(request => request.id !== id));
-      
-      // Show success message
-      setSuccess('Request deleted successfully');
-    } catch (err) {
-      console.error('Error deleting book request:', err);
-      setError('Failed to delete the request. Please try again later.');
-    }
-  };
-  
   // Format date for display
   const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      }).format(date);
-    } catch (e) {
-      return 'Unknown date';
-    }
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
   };
   
-  // Get status icon
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Pending':
-        return <FiClock />;
-      case 'Approved':
-        return <FiCheckCircle />;
-      case 'Fulfilled':
-        return <FiBookOpen />;
-      case 'Rejected':
-        return <FiAlertCircle />;
-      default:
-        return <FiClock />;
-    }
-  };
-  
-  if (authLoading || (isLoading && requests.length === 0)) {
+  // If still checking authentication, show loading
+  if (authLoading) {
     return (
       <Container>
-        <LoadingState>{t('common.loading', 'Loading...')}</LoadingState>
+        <LoadingSpinner>
+          <FiLoader size={24} />
+        </LoadingSpinner>
+        {t('common.loading', 'Loading...')}
       </Container>
     );
   }
@@ -546,15 +586,19 @@ const BookRequestPage: React.FC = () => {
   return (
     <Container>
       <Header>
-        <Title>
-          <FiBookOpen /> {t('bookRequest.title', 'Book Requests')}
-        </Title>
+        <Title>{t('bookRequest.title', 'Book Requests')}</Title>
+        <Subtitle>
+          {t('bookRequest.subtitle', 'Request books that you would like to see added to our collection')}
+        </Subtitle>
       </Header>
       
       {error && (
         <Alert type="error">
           <FiAlertCircle />
           {error}
+          <CloseButton onClick={() => setError(null)}>
+            <FiX />
+          </CloseButton>
         </Alert>
       )}
       
@@ -562,6 +606,9 @@ const BookRequestPage: React.FC = () => {
         <Alert type="success">
           <FiCheckCircle />
           {success}
+          <CloseButton onClick={() => setSuccess(null)}>
+            <FiX />
+          </CloseButton>
         </Alert>
       )}
       
@@ -582,143 +629,194 @@ const BookRequestPage: React.FC = () => {
       <Card>
         <Tabs>
           <Tab 
-            active={activeTab === 'form'} 
-            onClick={() => setActiveTab('form')}
+            active={isShowingForm} 
+            onClick={() => setIsShowingForm(true)}
           >
             {t('bookRequest.newRequest', 'New Request')}
           </Tab>
           <Tab 
-            active={activeTab === 'requests'} 
-            onClick={() => setActiveTab('requests')}
+            active={!isShowingForm} 
+            onClick={() => setIsShowingForm(false)}
           >
             {t('bookRequest.yourRequests', 'Your Requests')} ({requests.length})
           </Tab>
         </Tabs>
         
-        {activeTab === 'form' ? (
-          <form onSubmit={handleSubmit}>
-            <FormGroup>
-              <Label htmlFor="title">{t('bookRequest.bookTitle', 'Book Title')} *</Label>
-              <Input
-                id="title"
-                name="title"
-                type="text"
-                value={formData.title}
-                onChange={handleChange}
-                placeholder={t('bookRequest.bookTitlePlaceholder', 'Enter the book title')}
-                required
-              />
-            </FormGroup>
-            
-            <FormGroup>
-              <Label htmlFor="author">{t('bookRequest.author', 'Author')}</Label>
-              <Input
-                id="author"
-                name="author"
-                type="text"
-                value={formData.author}
-                onChange={handleChange}
-                placeholder={t('bookRequest.authorPlaceholder', 'Enter the author name (if known)')}
-              />
-            </FormGroup>
-            
-            <FormGroup>
-              <Label htmlFor="language">{t('bookRequest.language', 'Language')}</Label>
-              <Select
-                id="language"
-                name="language"
-                value={formData.language}
-                onChange={handleChange}
-              >
-                <option value="German">German</option>
-                <option value="English">English</option>
-                <option value="Other">Other</option>
-              </Select>
-            </FormGroup>
-            
-            <FormGroup>
-              <Label htmlFor="format">{t('bookRequest.format', 'Format')}</Label>
-              <Select
-                id="format"
-                name="format"
-                value={formData.format}
-                onChange={handleChange}
-              >
-                <option value="Book">{t('bookRequest.formatBook', 'Book')}</option>
-                <option value="Audiobook">{t('bookRequest.formatAudiobook', 'Audiobook')}</option>
-                <option value="Either">{t('bookRequest.formatEither', 'Either')}</option>
-              </Select>
-            </FormGroup>
-            
-            <FormGroup>
-              <Label htmlFor="priority">{t('bookRequest.priority', 'Priority')}</Label>
-              <Select
-                id="priority"
-                name="priority"
-                value={formData.priority}
-                onChange={handleChange}
-              >
-                <option value="Low">{t('bookRequest.priorityLow', 'Low')}</option>
-                <option value="Medium">{t('bookRequest.priorityMedium', 'Medium')}</option>
-                <option value="High">{t('bookRequest.priorityHigh', 'High')}</option>
-              </Select>
-            </FormGroup>
-            
-            <FormGroup>
-              <Label htmlFor="description">{t('bookRequest.description', 'Description')}</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder={t('bookRequest.descriptionPlaceholder', 'Add any additional details about the book or why you\'re requesting it')}
-              />
-            </FormGroup>
-            
-            <Button type="submit" disabled={isSubmitting}>
-              <FiSend />
-              {isSubmitting 
-                ? t('bookRequest.submitting', 'Submitting...') 
-                : t('bookRequest.submitRequest', 'Submit Request')}
-            </Button>
-          </form>
+        {isShowingForm ? (
+          <FormContainer>
+            <form onSubmit={handleSubmit}>
+              <FormGroup>
+                <Label htmlFor="title">{t('bookRequest.bookTitle', 'Book Title')} *</Label>
+                <Input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  required
+                />
+              </FormGroup>
+              
+              <FormGroup>
+                <Label htmlFor="author">{t('bookRequest.author', 'Author')}</Label>
+                <Input
+                  type="text"
+                  id="author"
+                  name="author"
+                  value={formData.author}
+                  onChange={handleChange}
+                />
+              </FormGroup>
+              
+              <FormGroup>
+                <Label htmlFor="language">{t('bookRequest.language', 'Language')}</Label>
+                <Select
+                  id="language"
+                  name="language"
+                  value={formData.language}
+                  onChange={handleChange}
+                >
+                  <option value="German">German</option>
+                  <option value="English">English</option>
+                  <option value="Other">Other</option>
+                </Select>
+              </FormGroup>
+              
+              <FormGroup>
+                <Label htmlFor="format">{t('bookRequest.format', 'Format')}</Label>
+                <Select
+                  id="format"
+                  name="format"
+                  value={formData.format}
+                  onChange={handleChange}
+                >
+                  <option value="Book">Book</option>
+                  <option value="Audiobook">Audiobook</option>
+                  <option value="E-book">E-book</option>
+                </Select>
+              </FormGroup>
+              
+              <FormGroup>
+                <Label htmlFor="description">{t('bookRequest.description', 'Description / Notes')}</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  placeholder={t('bookRequest.descriptionPlaceholder', 'Any additional information about the book or specific edition')}
+                />
+              </FormGroup>
+              
+              <FormGroup>
+                <Label htmlFor="priority">{t('bookRequest.priority', 'Priority')}</Label>
+                <Select
+                  id="priority"
+                  name="priority"
+                  value={formData.priority}
+                  onChange={handleChange}
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </Select>
+              </FormGroup>
+              
+              <SubmitButton type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <LoadingSpinner>
+                      <FiLoader size={18} />
+                    </LoadingSpinner>
+                    {t('common.submitting', 'Submitting...')}
+                  </>
+                ) : (
+                  t('bookRequest.submitRequest', 'Submit Request')
+                )}
+              </SubmitButton>
+            </form>
+          </FormContainer>
         ) : (
-          <RequestsList>
-            {requests.length === 0 ? (
+          <RequestList>
+            {isLoading ? (
+              <div style={{ textAlign: 'center', padding: '2rem' }}>
+                <LoadingSpinner>
+                  <FiLoader size={24} />
+                </LoadingSpinner>
+                {t('common.loading', 'Loading...')}
+              </div>
+            ) : requests.length === 0 ? (
               <EmptyState>
-                {t('bookRequest.noRequests', 'You haven\'t made any book requests yet')}
+                {t('bookRequest.noRequests', 'You have not made any book requests yet.')}
               </EmptyState>
             ) : (
               requests.map(request => (
-                <RequestCard key={request.id} status={request.status}>
-                  <RequestTitle>{request.title}</RequestTitle>
-                  <RequestDetails>
-                    {request.author && <div>{t('bookRequest.by', 'by')} {request.author}</div>}
-                    <div>
-                      {request.language} • {t(`bookRequest.format${request.format}`, request.format)}
-                      {request.priority && ` • ${t(`bookRequest.priority${request.priority}`, request.priority)} ${t('bookRequest.priority', 'Priority')}`}
-                    </div>
-                    {request.description && <div>{request.description}</div>}
-                  </RequestDetails>
-                  <RequestMeta>
-                    <span>{t('bookRequest.requested', 'Requested')}: {formatDate(request.created_at)}</span>
+                <RequestItem key={request.id}>
+                  <RequestHeader>
+                    <RequestTitle>{request.title}</RequestTitle>
                     <RequestStatus status={request.status}>
-                      {getStatusIcon(request.status)}
-                      {t(`bookRequest.status${request.status}`, request.status)}
-                      {request.status === 'Pending' && (
-                        <DeleteButton 
-                          onClick={() => handleDeleteRequest(request.id)}
-                          title={t('bookRequest.deleteRequest', 'Delete Request')}
-                        >
-                          {t('common.delete', 'Delete')}
-                        </DeleteButton>
-                      )}
+                      {t(`bookRequest.status.${request.status.toLowerCase()}`, request.status)}
                     </RequestStatus>
-                  </RequestMeta>
-                </RequestCard>
+                  </RequestHeader>
+                  
+                  <RequestInfo>
+                    <InfoItem>
+                      <InfoLabel>{t('bookRequest.author', 'Author')}</InfoLabel>
+                      <InfoValue>{request.author || '-'}</InfoValue>
+                    </InfoItem>
+                    
+                    <InfoItem>
+                      <InfoLabel>{t('bookRequest.format', 'Format')}</InfoLabel>
+                      <InfoValue>{request.format}</InfoValue>
+                    </InfoItem>
+                    
+                    <InfoItem>
+                      <InfoLabel>{t('bookRequest.language', 'Language')}</InfoLabel>
+                      <InfoValue>{request.language}</InfoValue>
+                    </InfoItem>
+                    
+                    <InfoItem>
+                      <InfoLabel>{t('bookRequest.priority', 'Priority')}</InfoLabel>
+                      <InfoValue>{request.priority}</InfoValue>
+                    </InfoItem>
+                    
+                    <InfoItem>
+                      <InfoLabel>{t('bookRequest.requestedOn', 'Requested On')}</InfoLabel>
+                      <InfoValue>{formatDate(request.created_at)}</InfoValue>
+                    </InfoItem>
+                    
+                    {request.fulfilled_at && (
+                      <InfoItem>
+                        <InfoLabel>{t('bookRequest.fulfilledOn', 'Fulfilled On')}</InfoLabel>
+                        <InfoValue>{formatDate(request.fulfilled_at)}</InfoValue>
+                      </InfoItem>
+                    )}
+                  </RequestInfo>
+                  
+                  {request.description && (
+                    <RequestDescription>
+                      <InfoLabel>{t('bookRequest.description', 'Description / Notes')}</InfoLabel>
+                      <p>{request.description}</p>
+                    </RequestDescription>
+                  )}
+                  
+                  {request.admin_notes && (
+                    <AdminNotes>
+                      <AdminNotesLabel>{t('bookRequest.adminNotes', 'Admin Notes')}</AdminNotesLabel>
+                      <p>{request.admin_notes}</p>
+                    </AdminNotes>
+                  )}
+                  
+                  {request.status === 'Pending' && (
+                    <div style={{ marginTop: '1rem', textAlign: 'right' }}>
+                      <DeleteButton onClick={() => handleDeleteRequest(request.id)}>
+                        {t('common.delete', 'Delete')}
+                      </DeleteButton>
+                    </div>
+                  )}
+                </RequestItem>
               ))
             )}
-          </RequestsList>
+          </RequestList>
         )}
       </Card>
     </Container>
