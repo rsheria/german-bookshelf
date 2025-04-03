@@ -3,9 +3,6 @@ import { Session, User } from '@supabase/supabase-js';
 import { createSupabaseClient } from '../services/supabase';
 import { Profile } from '../types/supabase';
 
-// Flag to track if we're handling a refresh
-let isHandlingRefresh = false;
-
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -40,10 +37,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [authStatusChecked, setAuthStatusChecked] = useState(false);
 
-  // Simplified and more robust session refresh
+  // Simplified session refresh with our new Supabase implementation
   const refreshSession = async () => {
     try {
-      console.log("Refreshing session... (Refresh handling:", isHandlingRefresh ? "YES" : "NO", ")");
+      console.log("Refreshing session...");
+      
+      // Always get a fresh client
       const supabase = createSupabaseClient();
       
       if (!supabase) {
@@ -75,18 +74,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data.session.user);
         
         try {
-          // Fetch profile with retry (but don't block auth completion)
-          let profileData = null;
-          
-          // Try to get the profile data once
-          const { data: fetchedProfile, error: fetchError } = await supabase
+          // Fetch profile data
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', data.session.user.id)
             .single();
           
-          if (fetchError) {
-            if (fetchError.code === 'PGRST116') {
+          if (profileError) {
+            if (profileError.code === 'PGRST116') {
               console.log("Profile not found, creating a new one...");
               
               // Try to create a profile
@@ -106,30 +102,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   console.error("Error creating profile:", insertError);
                 } else {
                   console.log("Created new profile:", newProfile);
-                  profileData = newProfile;
+                  setProfile(newProfile);
+                  setIsAdmin(newProfile.is_admin || false);
                 }
               } catch (err) {
                 console.error("Exception creating profile:", err);
               }
             } else {
-              console.error("Profile fetch error:", fetchError);
+              console.error("Profile fetch error:", profileError);
             }
-          } else {
-            profileData = fetchedProfile;
-          }
-          
-          if (profileData) {
+          } else if (profileData) {
             console.log("Profile found:", profileData);
             setProfile(profileData);
             setIsAdmin(profileData.is_admin || false);
-          } else {
-            console.warn("Could not find or create profile");
-            setProfile(null);
-            setIsAdmin(false);
           }
         } catch (err) {
           console.error("Profile fetch exception:", err);
-          // Continue with auth even if profile fetch fails
         }
       } else {
         setSession(null);
@@ -141,7 +129,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Error in refresh session:', err);
       setError(err as Error);
     } finally {
-      // Always set these to ensure the app continues loading
       setIsLoading(false);
       setAuthStatusChecked(true);
     }
@@ -152,55 +139,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       setIsLoading(true);
       try {
-        // Check if we're handling a browser refresh
-        const refreshKey = 'app_was_refreshed';
-        const wasRefreshed = localStorage.getItem(refreshKey) === 'true';
-        
-        if (wasRefreshed) {
-          console.log("Browser refresh detected, using enhanced initialization");
-          isHandlingRefresh = true;
-          
-          // Clear the refresh flag
-          localStorage.removeItem(refreshKey);
-          
-          // Add a slight delay to ensure Supabase has time to initialize properly after refresh
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Re-create the Supabase client to ensure it's fresh
-          const freshClient = createSupabaseClient();
-          if (!freshClient) {
-            throw new Error("Failed to create fresh Supabase client after refresh");
-          }
-        }
-        
         await refreshSession();
       } catch (error) {
         console.error("Critical auth error:", error);
-        // Ensure the app loads even if auth completely fails
         setIsLoading(false);
         setAuthStatusChecked(true);
-      } finally {
-        isHandlingRefresh = false;
       }
     };
 
-    // Add a safety timeout to ensure auth always completes
-    const safetyTimer = setTimeout(() => {
-      console.log("Safety timeout triggered - ensuring auth completes");
-      setIsLoading(false);
-      setAuthStatusChecked(true);
-    }, 5000); // 5 second safety timeout
-
     initializeAuth();
-
-    return () => clearTimeout(safetyTimer);
   }, []);
 
   // Set up auth state change listener
   useEffect(() => {
     const supabase = createSupabaseClient();
     if (!supabase) {
-      // If no Supabase client, ensure auth status is marked checked
       setAuthStatusChecked(true);
       return;
     }
@@ -212,14 +165,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           setIsLoading(true);
-          try {
-            await refreshSession();
-          } catch (error) {
-            console.error("Auth state change error:", error);
-            // Ensure loading completes even if refresh fails
-            setIsLoading(false);
-            setAuthStatusChecked(true);
-          }
+          await refreshSession();
         } else if (event === 'SIGNED_OUT') {
           setSession(null);
           setUser(null);

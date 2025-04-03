@@ -1,33 +1,40 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/supabase';
 
-// Get environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Get environment variables directly on each import to ensure they're always loaded
+const getSupabaseUrl = () => import.meta.env.VITE_SUPABASE_URL;
+const getSupabaseAnonKey = () => import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Create Supabase client
-let supabaseClient: SupabaseClient<Database> | null = null;
-
-// Export the client creation with simplified error handling
-export const createSupabaseClient = () => {
-  if (supabaseClient) return supabaseClient;
-  
+// Create a fresh Supabase client on each access
+// This prevents stale clients after page refresh
+export const createSupabaseClient = (): SupabaseClient<Database> | null => {
   try {
+    const supabaseUrl = getSupabaseUrl();
+    const supabaseAnonKey = getSupabaseAnonKey();
+    
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.warn('Missing Supabase environment variables. Using mock data.');
+      console.warn('Missing Supabase environment variables');
       return null;
     }
+
+    // Create a fresh client instance each time
+    const client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: 'supabase.auth.token.v2'
+      }
+    });
     
-    supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey);
-    console.log('Supabase client initialized successfully');
-    return supabaseClient;
+    return client;
   } catch (error) {
     console.error('Failed to initialize Supabase client:', error);
     return null;
   }
 };
 
-// Initialize the client immediately for export
+// Get a client for direct use - will always be fresh
 export const supabase = createSupabaseClient();
 
 // Helper functions for authentication with error handling
@@ -35,7 +42,6 @@ export const signUp = async (email: string, password: string) => {
   try {
     const client = createSupabaseClient();
     if (!client) {
-      console.warn('Cannot sign up: Supabase not configured');
       return { data: { user: null }, error: { message: 'Supabase not configured' } };
     }
     return await client.auth.signUp({ email, password });
@@ -49,7 +55,6 @@ export const signIn = async (email: string, password: string) => {
   try {
     const client = createSupabaseClient();
     if (!client) {
-      console.warn('Cannot sign in: Supabase not configured');
       return { data: { user: null, session: null }, error: { message: 'Supabase not configured' } };
     }
     return await client.auth.signInWithPassword({ email, password });
@@ -63,9 +68,12 @@ export const signOut = async () => {
   try {
     const client = createSupabaseClient();
     if (!client) {
-      console.warn('Cannot sign out: Supabase not configured');
       return { error: null };
     }
+    // Clear browser storage when signing out to prevent stale data
+    localStorage.removeItem('supabase.auth.token');
+    localStorage.removeItem('supabase.auth.token.v2');
+    sessionStorage.clear();
     return await client.auth.signOut();
   } catch (error) {
     console.error('Sign out error:', error);
@@ -77,7 +85,6 @@ export const getCurrentUser = async () => {
   try {
     const client = createSupabaseClient();
     if (!client) {
-      console.warn('Cannot get user: Supabase not configured');
       return { data: { user: null } };
     }
     return await client.auth.getUser();
@@ -91,7 +98,6 @@ export const getSession = async () => {
   try {
     const client = createSupabaseClient();
     if (!client) {
-      console.warn('Cannot get session: Supabase not configured');
       return { data: { session: null } };
     }
     return await client.auth.getSession();
