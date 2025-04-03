@@ -108,6 +108,10 @@ const Container = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   padding: ${theme.spacing.md};
+  
+  @media (max-width: 768px) {
+    padding: ${theme.spacing.sm};
+  }
 `;
 
 const Hero = styled(motion.div)` 
@@ -119,15 +123,17 @@ const Hero = styled(motion.div)`
   position: relative; 
   overflow: hidden; 
   z-index: ${theme.zIndex.base}; 
-`;
-
-const ParticlesContainer = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1; 
+  
+  @media (max-width: 1024px) {
+    padding: ${theme.spacing['2xl']} ${theme.spacing.lg};
+    margin-bottom: ${theme.spacing.xl};
+  }
+  
+  @media (max-width: 768px) {
+    padding: ${theme.spacing.xl} ${theme.spacing.md};
+    margin-bottom: ${theme.spacing.lg};
+    border-radius: ${theme.borderRadius.lg};
+  }
 `;
 
 const HeroContent = styled(motion.div)` 
@@ -156,8 +162,27 @@ const HeroTitle = styled(motion.h1)`
     border-radius: ${theme.borderRadius.full};
   }
 
+  @media (max-width: 1024px) {
+    font-size: ${theme.typography.fontSize['4xl']};
+    
+    &::after {
+      width: 60px;
+      height: 3px;
+    }
+  }
+
   @media (max-width: 768px) {
     font-size: ${theme.typography.fontSize['3xl']};
+  }
+  
+  @media (max-width: 480px) {
+    font-size: ${theme.typography.fontSize['2xl']};
+    
+    &::after {
+      width: 40px;
+      height: 2px;
+      bottom: -5px;
+    }
   }
 `;
 
@@ -169,8 +194,19 @@ const HeroSubtitle = styled(motion.p)`
   line-height: ${theme.typography.lineHeight.relaxed};
   color: ${theme.colors.background}; 
 
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     font-size: ${theme.typography.fontSize.lg};
+    max-width: 600px;
+  }
+
+  @media (max-width: 768px) {
+    font-size: ${theme.typography.fontSize.md};
+    margin: ${theme.spacing.md} auto;
+    max-width: 100%;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: ${theme.typography.fontSize.sm};
   }
 `;
 
@@ -183,26 +219,43 @@ const HeroActions = styled(motion.div)`
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: center;
+    gap: ${theme.spacing.sm};
+    margin-top: ${theme.spacing.md};
   }
+`;
+
+const ParticlesContainer = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1; 
 `;
 
 const FeatureSection = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: ${theme.spacing.xl};
-  margin: ${theme.spacing['3xl']} 0;
+  margin: ${theme.spacing['2xl']} 0;
   
-  @media (max-width: 992px) {
-    grid-template-columns: repeat(2, 1fr);
+  @media (max-width: 1024px) {
+    gap: ${theme.spacing.lg};
+    margin: ${theme.spacing.xl} 0;
   }
   
   @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: ${theme.spacing.md};
+  }
+  
+  @media (max-width: 480px) {
     grid-template-columns: 1fr;
   }
 `;
 
 const FeatureCard = styled.div`
-  background-color: white;
+  background-color: ${theme.colors.card};
   border-radius: ${theme.borderRadius.lg};
   padding: ${theme.spacing.xl};
   box-shadow: ${theme.shadows.md};
@@ -212,6 +265,14 @@ const FeatureCard = styled.div`
   &:hover {
     transform: translateY(-5px);
     box-shadow: ${theme.shadows.lg};
+  }
+  
+  @media (max-width: 1024px) {
+    padding: ${theme.spacing.lg};
+  }
+  
+  @media (max-width: 768px) {
+    padding: ${theme.spacing.md};
   }
 `;
 
@@ -225,30 +286,63 @@ const FeatureIcon = styled.div`
   align-items: center;
   justify-content: center;
   margin: 0 auto ${theme.spacing.lg};
+  font-size: 1.8rem;
   
-  svg {
-    font-size: 30px;
+  @media (max-width: 768px) {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
+    margin: 0 auto ${theme.spacing.md};
+  }
+  
+  @media (max-width: 480px) {
+    width: 50px;
+    height: 50px;
+    font-size: 1.2rem;
   }
 `;
 
 const FeatureTitle = styled.h3`
-  font-family: ${theme.typography.fontFamily.heading};
   font-size: ${theme.typography.fontSize.xl};
+  font-weight: ${theme.typography.fontWeight.bold};
+  font-family: ${theme.typography.fontFamily.heading};
+  margin: 0 0 ${theme.spacing.md} 0;
   color: ${theme.colors.primary};
-  margin-bottom: ${theme.spacing.sm};
+  
+  @media (max-width: 1024px) {
+    font-size: ${theme.typography.fontSize.lg};
+    margin: 0 0 ${theme.spacing.sm} 0;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: ${theme.typography.fontSize.md};
+  }
 `;
 
 const FeatureDescription = styled.p`
-  color: ${theme.colors.textLight};
+  margin: 0;
   line-height: ${theme.typography.lineHeight.relaxed};
+  color: ${theme.colors.textLight};
+  
+  @media (max-width: 768px) {
+    font-size: ${theme.typography.fontSize.sm};
+  }
 `;
 
 const HomeSection = styled.section`
-  margin-bottom: ${theme.spacing['3xl']};
+  margin: ${theme.spacing['3xl']} 0;
+  
+  @media (max-width: 1024px) {
+    margin: ${theme.spacing['2xl']} 0;
+  }
+  
+  @media (max-width: 768px) {
+    margin: ${theme.spacing.xl} 0;
+  }
 `;
 
 const ViewAllLink = styled(Link)`
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: ${theme.spacing.xs};
   color: ${theme.colors.secondary};
