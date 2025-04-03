@@ -1,17 +1,27 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase, saveSessionToLocalStorage, getSessionFromLocalStorage, synchronizeSession } from '../services/supabase';
-import type { User } from '@supabase/supabase-js';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase, signUp, signIn } from '../services/supabase';
+import { setUserFromSupabase, isLoggedIn as isLocalLoggedIn, getCurrentUser, clearAuthData, initializeLocalAuth } from '../services/localAuth';
 
 interface AuthContextType {
+  session: Session | null;
   user: User | null;
+  profile: any | null;
   isAdmin: boolean;
   isLoading: boolean;
-  signOut: () => Promise<void>;
-  session: any | null;
-  profile: any | null;
-  error: Error | null;
-  refreshSession: () => Promise<{ data: { session: any | null }, error: Error | null }>;
   authStatusChecked: boolean;
+  error: Error | null;
+  login: (email: string, password: string) => Promise<{ 
+    error: Error | null; 
+    data: { user: User | null; session: Session | null } | null 
+  }>;
+  logout: () => Promise<void>;
+  signup: (email: string, password: string) => Promise<{ 
+    error: Error | null; 
+    data: { user: User | null; session: Session | null } | null 
+  }>;
+  refreshSession: () => Promise<{ data: { session: Session | null }, error: Error | null }>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,22 +42,77 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [session, setSession] = useState<any | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [authStatusChecked, setAuthStatusChecked] = useState<boolean>(false);
 
   // Initialize auth state with extra reliability to handle refreshes
   useEffect(() => {
-    // This function uses our triple-redundancy session management
+    // This function uses triple-redundancy session management
     const initializeAuth = async () => {
-      console.log('Initializing auth state with enhanced reliability...');
+      console.log('Initializing auth state with fail-proof backup system...');
       setIsLoading(true);
       setAuthStatusChecked(false);
       
       try {
-        // Attempt to synchronize session between Supabase and localStorage
-        const sessionData: any = await synchronizeSession();
+        // COMPLETELY NEW APPROACH: First check if we have local auth data
+        if (isLocalLoggedIn()) {
+          console.log(' LOCAL AUTH: User is already logged in based on local data');
+          const localUser = getCurrentUser();
+          
+          if (localUser) {
+            // We have local data, use it immediately to prevent loading state
+            setIsAdmin(localUser.isAdmin);
+            
+            // Attempt to get Supabase session in the background
+            const { data } = await supabase.auth.getSession();
+            if (data?.session) {
+              console.log(' Supabase session synchronized with local auth');
+              setSession(data.session);
+              setUser(data.session.user);
+              
+              // Try to fetch profile data if we have a user
+              try {
+                const { data: profileData } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', data.session.user.id)
+                  .single();
+                  
+                if (profileData) {
+                  setProfile(profileData);
+                }
+              } catch (profileError) {
+                console.error('Error fetching profile:', profileError);
+              }
+            } else {
+              // If Supabase session is gone but we have local data,
+              // create a synthetic user object from local data
+              console.log(' Using synthetic user from local data');
+              setUser({
+                id: localUser.id,
+                email: localUser.email,
+                user_metadata: { username: localUser.username },
+                app_metadata: { is_admin: localUser.isAdmin },
+                aud: 'authenticated',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                role: 'authenticated',
+                confirmed_at: new Date().toISOString()
+              } as unknown as User);
+            }
+            
+            // Important: We've already handled the auth state, so exit early
+            setIsLoading(false);
+            setAuthStatusChecked(true);
+            return;
+          }
+        }
+        
+        // Regular path - attempt to get session from Supabase
+        const { data } = await supabase.auth.getSession();
+        const sessionData = data?.session;
         
         if (sessionData) {
           console.log('Session synchronized successfully');
@@ -86,34 +151,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.log('User is an admin');
             localStorage.setItem('user_is_admin', 'true');
           }
+          
+          // IMPORTANT: Also save to our local auth system
+          setUserFromSupabase(sessionData.user, !!isUserAdmin);
         } else {
           console.log('No active session found');
           setUser(null);
           setSession(null);
           setProfile(null);
           setIsAdmin(false);
+          
+          // Clear local auth data
+          clearAuthData();
         }
-      } catch (authError) {
-        console.error('Error initializing auth:', authError);
-        setError(authError instanceof Error ? authError : new Error(String(authError)));
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        setError(error instanceof Error ? error : new Error(String(error)));
         
-        // EMERGENCY FALLBACK: If everything else fails, try to restore from localStorage
-        try {
-          const localSession = getSessionFromLocalStorage();
-          if (localSession && localSession.user) {
-            console.log('EMERGENCY: Restoring session from localStorage');
-            setSession(localSession);
-            setUser(localSession.user);
-            setIsAdmin(localStorage.getItem('user_is_admin') === 'true');
-          } else {
-            // Reset auth state if no session can be found
-            setUser(null);
-            setSession(null);
-            setProfile(null);
-            setIsAdmin(false);
+        // LAST RESORT FALLBACK: If we have local auth data, use it
+        if (isLocalLoggedIn()) {
+          const localUser = getCurrentUser();
+          if (localUser) {
+            console.log(' LAST RESORT: Using local auth data after error');
+            setIsAdmin(localUser.isAdmin);
+            setUser({
+              id: localUser.id,
+              email: localUser.email,
+              user_metadata: { username: localUser.username },
+              app_metadata: { is_admin: localUser.isAdmin },
+              aud: 'authenticated',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              role: 'authenticated',
+              confirmed_at: new Date().toISOString()
+            } as unknown as User);
           }
-        } catch (fallbackError) {
-          console.error('Error in fallback auth handling:', fallbackError);
+        } else {
+          // Reset auth state if no local data
+          console.log('No local auth data available after error');
           setUser(null);
           setSession(null);
           setProfile(null);
@@ -122,77 +197,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } finally {
         setIsLoading(false);
         setAuthStatusChecked(true);
-        console.log('Auth initialization complete, status checked:', true);
+        console.log('Auth initialization complete');
       }
     };
 
     // Call the initialization function
     initializeAuth();
     
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, sessionData) => {
-        console.log('Auth state changed:', event);
-        
-        if (sessionData) {
-          console.log('New session established');
-          setUser(sessionData.user);
-          setSession(sessionData);
-          
-          // Try to fetch profile data if we have a user
-          if (sessionData.user) {
-            try {
-              const { data: profileData } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', sessionData.user.id)
-                .single();
-                
-              if (profileData) {
-                setProfile(profileData);
-              }
-            } catch (profileError) {
-              console.error('Error fetching profile:', profileError);
-            }
-          }
-          
-          // Save session data with triple redundancy
-          saveSessionToLocalStorage(sessionData);
-          
-          // Check if user is admin
-          const isUserAdmin = sessionData.user?.app_metadata?.is_admin === true;
-          setIsAdmin(isUserAdmin);
-          
-          if (isUserAdmin) {
-            console.log('User is admin');
-            localStorage.setItem('user_is_admin', 'true');
-          } else {
-            localStorage.removeItem('user_is_admin');
-          }
-        } else if (event === 'SIGNED_OUT') {
-          console.log('User signed out');
-          setUser(null);
-          setSession(null);
-          setProfile(null);
-          setIsAdmin(false);
-          
-          // Clear all session data
-          saveSessionToLocalStorage(null);
-        }
-      }
-    );
-
-    // Clean up subscription on unmount
-    return () => {
-      subscription.unsubscribe();
-    };
+    // Initialize local auth system
+    console.log('Starting local auth system...');
+    initializeLocalAuth();
   }, []);
 
   // Sign out function with enhanced reliability
   const signOut = async () => {
     try {
       // First remove from localStorage to ensure it's gone even if Supabase fails
-      saveSessionToLocalStorage(null);
+      localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('sb-session');
+      localStorage.removeItem('sb-access-token');
+      localStorage.removeItem('sb-refresh-token');
+      localStorage.removeItem('user_is_admin');
       
       // Then sign out from Supabase
       await supabase.auth.signOut();
@@ -226,7 +251,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const refreshSession = async () => {
     try {
       console.log('Manually refreshing session...');
-      const refreshedSession = await synchronizeSession();
+      const { data } = await supabase.auth.getSession();
+      const refreshedSession = data?.session;
       
       if (refreshedSession) {
         setSession(refreshedSession);
@@ -262,16 +288,69 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const login = async (email: string, password: string) => {
+    try {
+      const { data, error } = await signIn(email, password);
+      if (error) {
+        throw error;
+      }
+      if (data.session) {
+        setUser(data.session.user);
+        setSession(data.session);
+        setIsAdmin(data.session.user?.app_metadata?.is_admin === true);
+      }
+      return { data, error: null };
+    } catch (loginError) {
+      console.error('Error logging in:', loginError);
+      const typedError = loginError instanceof Error ? loginError : new Error(String(loginError));
+      setError(typedError);
+      return { data: null, error: typedError };
+    }
+  };
+
+  const signup = async (email: string, password: string) => {
+    try {
+      const { data, error } = await signUp(email, password);
+      if (error) {
+        throw error;
+      }
+      if (data.session) {
+        setUser(data.session.user);
+        setSession(data.session);
+        setIsAdmin(data.session.user?.app_metadata?.is_admin === true);
+      }
+      return { data, error: null };
+    } catch (signupError) {
+      console.error('Error signing up:', signupError);
+      const typedError = signupError instanceof Error ? signupError : new Error(String(signupError));
+      setError(typedError);
+      return { data: null, error: typedError };
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await signOut();
+    } catch (logoutError) {
+      console.error('Error logging out:', logoutError);
+      const typedError = logoutError instanceof Error ? logoutError : new Error(String(logoutError));
+      setError(typedError);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       isAdmin, 
       isLoading, 
-      signOut, 
+      login, 
+      logout, 
+      signup, 
       session, 
       profile, 
       error, 
       refreshSession, 
+      signOut, 
       authStatusChecked 
     }}>
       {children}

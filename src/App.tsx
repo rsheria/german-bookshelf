@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from './context/AuthContext';
 import { bypassRefreshIssue } from './services/refreshBypass';
 import { startSessionKeepalive } from './services/supabase';
+import { initializeLocalAuth, isLoggedIn } from './services/localAuth';
 import styled from 'styled-components';
 
 // Import components
@@ -478,6 +479,54 @@ const App: React.FC = () => {
   // NUCLEAR OPTION: Add emergency mode state
   const [emergencyMode, setEmergencyMode] = useState(false);
   
+  // Initialize local auth as an additional safeguard
+  useEffect(() => {
+    console.log('Initializing local auth safeguard');
+    
+    // Initialize the local auth system
+    initializeLocalAuth();
+    
+    // Set up a global error handler to catch auth issues
+    window.addEventListener('error', (event) => {
+      console.log('Global error caught:', event.error);
+      
+      // If we detect an auth error, activate emergency mode
+      if (event.error && 
+          (String(event.error).includes('auth') || 
+           String(event.error).includes('token') ||
+           String(event.error).includes('session'))) {
+        console.log('Auth-related error detected, activating emergency mode');
+        setEmergencyMode(true);
+      }
+    });
+    
+    // Set up a visibility change handler to refresh auth when tab becomes visible
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Tab became visible, checking auth status');
+        if (isLoggedIn()) {
+          console.log('Local auth detects user is logged in');
+        }
+      }
+    });
+    
+    // Create a watchdog that monitors for content rendering
+    const contentWatchdog = setInterval(() => {
+      // Check if main content is visible
+      const mainContent = document.querySelector('main');
+      const navbar = document.querySelector('nav');
+      
+      if (!mainContent || !navbar) {
+        console.log('Content not rendering properly, activating emergency mode');
+        setEmergencyMode(true);
+      }
+    }, 5000);
+    
+    return () => {
+      clearInterval(contentWatchdog);
+    };
+  }, []);
+
   // Check for emergency mode in localStorage or sessionStorage
   useEffect(() => {
     const storedEmergencyMode = localStorage.getItem('emergency_mode') === 'true' || 
