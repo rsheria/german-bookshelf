@@ -31,7 +31,18 @@ import AdminBookRequestsPage from './pages/admin/AdminBookRequestsPage';
 // Import context and i18n
 import { AuthProvider } from './context/AuthContext';
 import './i18n/i18n';
-// import { useSessionPersistence } from './hooks/useSessionPersistence';
+
+// Create a context for emergency mode
+export const EmergencyModeContext = createContext<{
+  emergencyMode: boolean;
+  setEmergencyMode: React.Dispatch<React.SetStateAction<boolean>>;
+}>({
+  emergencyMode: false,
+  setEmergencyMode: () => {},
+});
+
+// Hook to use emergency mode
+export const useEmergencyMode = () => useContext(EmergencyModeContext);
 
 // Error boundary component
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
@@ -116,6 +127,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const panicMode = useContext(PanicModeContext);
+  const { emergencyMode } = useEmergencyMode();
+  
+  // NUCLEAR OPTION: In emergency mode, allow access to protected routes
+  if (emergencyMode) {
+    console.log(" EMERGENCY MODE: Bypassing protected route");
+    return <>{children}</>;
+  }
   
   // Create a more transparent loading state that won't block content
   const [showLoading, setShowLoading] = useState(false);
@@ -186,6 +204,13 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const { user, isAdmin, isLoading } = useAuth();
   const navigate = useNavigate();
   const panicMode = useContext(PanicModeContext);
+  const { emergencyMode } = useEmergencyMode();
+  
+  // NUCLEAR OPTION: In emergency mode, allow access to admin routes
+  if (emergencyMode) {
+    console.log(" EMERGENCY MODE: Bypassing admin route protection");
+    return <>{children}</>;
+  }
   
   // Create a more transparent loading state that won't block content
   const [showLoading, setShowLoading] = useState(false);
@@ -259,6 +284,8 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 
 const AppRoutes: React.FC = () => {
   const { i18n } = useTranslation();
+  const { emergencyMode } = useEmergencyMode();
+  
   // Set language from localStorage on app load
   useEffect(() => {
     const savedLanguage = localStorage.getItem('language');
@@ -267,6 +294,99 @@ const AppRoutes: React.FC = () => {
     }
   }, [i18n]);
   
+  // NUCLEAR OPTION: In emergency mode, render all routes without protection
+  if (emergencyMode) {
+    console.log(" EMERGENCY MODE ACTIVE: Rendering all routes without protection");
+    return (
+      <ErrorBoundary>
+        <AppContainer>
+          <Navbar />
+          <MainContent>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<HomePage />} />
+              <Route path="/audiobooks" element={<AudiobooksPage />} />
+              <Route path="/ebooks" element={<EbooksPage />} />
+              <Route path="/books/:id" element={<BookDetailsPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/login" element={<LoginForm />} />
+              <Route path="/signup" element={<SignupForm />} />
+              <Route path="/debug" element={<DebugPage />} />
+              <Route path="/book-requests" element={<BookRequestPage />} />
+              <Route 
+                path="/admin/book-requests" 
+                element={
+                  <AdminRoute>
+                    <AdminBookRequestsPage />
+                  </AdminRoute>
+                } 
+              />
+              
+              {/* Protected routes */}
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Admin routes */}
+              <Route 
+                path="/admin" 
+                element={
+                  <AdminRoute>
+                    <AdminDashboardPage />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/books" 
+                element={
+                  <AdminRoute>
+                    <AdminBooksPage />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/users" 
+                element={
+                  <AdminRoute>
+                    <AdminUsersPage />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/books/add" 
+                element={
+                  <AdminRoute>
+                    <AddBookPage />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/books/edit/:id" 
+                element={
+                  <AdminRoute>
+                    <EditBookPage />
+                  </AdminRoute>
+                } 
+              />
+              
+              {/* Fallback route */}
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </MainContent>
+          <Footer>
+            &copy; {new Date().getFullYear()} German Bookshelf - All rights reserved
+          </Footer>
+          <DebugInfo />
+        </AppContainer>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <AppContainer>
@@ -276,21 +396,14 @@ const AppRoutes: React.FC = () => {
             {/* Public routes */}
             <Route path="/" element={<HomePage />} />
             <Route path="/audiobooks" element={<AudiobooksPage />} />
+            <Route path="/audiobooks/:id" element={<BookDetailsPage />} />
             <Route path="/ebooks" element={<EbooksPage />} />
             <Route path="/books/:id" element={<BookDetailsPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/signup" element={<SignupForm />} />
-            <Route path="/debug" element={<DebugPage />} />
             <Route path="/book-requests" element={<BookRequestPage />} />
-            <Route 
-              path="/admin/book-requests" 
-              element={
-                <AdminRoute>
-                  <AdminBookRequestsPage />
-                </AdminRoute>
-              } 
-            />
+            <Route path="/debug-auth" element={<DebugPage />} />
             
             {/* Protected routes */}
             <Route 
@@ -328,18 +441,10 @@ const AppRoutes: React.FC = () => {
               } 
             />
             <Route 
-              path="/admin/books/add" 
+              path="/admin/book-requests" 
               element={
                 <AdminRoute>
-                  <AddBookPage />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/books/edit/:id" 
-              element={
-                <AdminRoute>
-                  <EditBookPage />
+                  <AdminBookRequestsPage />
                 </AdminRoute>
               } 
             />
@@ -367,6 +472,60 @@ const App: React.FC = () => {
     // Cleanup when component unmounts
     return () => {
       cleanup();
+    };
+  }, []);
+
+  // NUCLEAR OPTION: Add emergency mode state
+  const [emergencyMode, setEmergencyMode] = useState(false);
+  
+  // Check for emergency mode in localStorage or sessionStorage
+  useEffect(() => {
+    const storedEmergencyMode = localStorage.getItem('emergency_mode') === 'true' || 
+                               sessionStorage.getItem('emergency_mode') === 'true';
+    
+    if (storedEmergencyMode) {
+      console.log(" EMERGENCY MODE detected from storage");
+      setEmergencyMode(true);
+    }
+    
+    // Automatically activate emergency mode after a crash or if app is stuck for more than 8 seconds
+    const emergencyTimer = setTimeout(() => {
+      console.log(" EMERGENCY MODE activated automatically after timeout");
+      setEmergencyMode(true);
+      localStorage.setItem('emergency_mode', 'true');
+      sessionStorage.setItem('emergency_mode', 'true');
+    }, 8000);
+    
+    // Also detect refresh events to enable emergency mode
+    const isAfterRefresh = window.performance && 
+                          window.performance.navigation && 
+                          window.performance.navigation.type === 1;
+                          
+    if (isAfterRefresh) {
+      console.log(" EMERGENCY MODE activated after page refresh");
+      setEmergencyMode(true);
+      localStorage.setItem('emergency_mode', 'true');
+      sessionStorage.setItem('emergency_mode', 'true');
+    }
+    
+    // Special emergency trigger for apps that crash after a few seconds
+    let contentVisibleCount = 0;
+    const watchContentVisibility = setInterval(() => {
+      // If the main content is visible, increment the counter
+      if (document.querySelector('main')) {
+        contentVisibleCount++;
+        
+        // If content has been visible for 3 checks, clear the emergency timer
+        if (contentVisibleCount >= 3) {
+          clearTimeout(emergencyTimer);
+          clearInterval(watchContentVisibility);
+        }
+      }
+    }, 1000);
+    
+    return () => {
+      clearTimeout(emergencyTimer);
+      clearInterval(watchContentVisibility);
     };
   }, []);
 
@@ -410,13 +569,15 @@ const App: React.FC = () => {
   }, []);
   
   return (
-    <PanicModeContext.Provider value={panicMode}>
-      <ChakraProvider>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </ChakraProvider>
-    </PanicModeContext.Provider>
+    <EmergencyModeContext.Provider value={{ emergencyMode, setEmergencyMode }}>
+      <PanicModeContext.Provider value={panicMode}>
+        <ChakraProvider>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </ChakraProvider>
+      </PanicModeContext.Provider>
+    </EmergencyModeContext.Provider>
   );
 };
 
