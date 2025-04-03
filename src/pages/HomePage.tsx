@@ -122,7 +122,7 @@ const Hero = styled(motion.div)`
   text-align: center;
   position: relative; 
   overflow: hidden; 
-  z-index: ${theme.zIndex.base}; 
+  z-index: 1; 
   
   @media (max-width: 1024px) {
     padding: ${theme.spacing['2xl']} ${theme.spacing.lg};
@@ -230,7 +230,8 @@ const ParticlesContainer = styled.div`
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: -1; 
+  z-index: 0; 
+  pointer-events: none; 
 `;
 
 const FeatureSection = styled.div`
@@ -415,6 +416,8 @@ const HomePage: React.FC = () => {
           </HeroActions>
         </HeroContent>
       </Hero>
+      
+      <div style={{ clear: 'both' }}></div>
       
       <FeatureSection>
         <FeatureCard>

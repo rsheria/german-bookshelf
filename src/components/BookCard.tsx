@@ -48,6 +48,13 @@ const CardWrapper = styled(motion.div)`
   @media (max-width: 768px) {
     perspective: 600px; 
   }
+  
+  /* Ensure proper touch handling on mobile */
+  @media (hover: none) {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+  }
 `;
 
 const Card = styled(motion(Link))` 
@@ -62,6 +69,10 @@ const Card = styled(motion(Link))`
   position: relative;
   transform-style: preserve-3d; 
   will-change: transform, box-shadow; 
+  
+  /* Ensure clickable on mobile */
+  z-index: 1;
+  -webkit-touch-callout: none;
 
   &:focus {
     outline: none;
@@ -272,6 +283,7 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
+  // Reduce rotation on mobile
   const rotateXAmount = isMobile ? 5 : 15;
   const rotateYAmount = isMobile ? 5 : 15;
   
@@ -279,6 +291,7 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
   const rotateY = useTransform(x, [-100, 100], [-rotateYAmount, rotateYAmount]); 
 
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    // Skip 3D effect on mobile (touch devices)
     if (window.matchMedia('(hover: none)').matches) return;
     
     const rect = event.currentTarget.getBoundingClientRect();
@@ -290,11 +303,23 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
     x.set(0);
     y.set(0);
   };
+  
+  // Add a click handler to improve mobile experience
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isMobile) {
+      // Find the link and programmatically click it
+      const link = e.currentTarget.querySelector('a');
+      if (link && link instanceof HTMLAnchorElement) {
+        link.click();
+      }
+    }
+  };
 
   return (
     <CardWrapper
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onClick={handleClick}
     >
       <Card 
         to={`/books/${book.id}`}
