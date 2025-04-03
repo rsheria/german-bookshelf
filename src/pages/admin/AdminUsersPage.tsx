@@ -228,11 +228,13 @@ const Success = styled.div`
 
 interface UserWithEmail extends Profile {
   email?: string;
+  monthly_request_quota: number;
 }
 
 interface EditingUser {
   id: string;
   daily_quota: number;
+  monthly_request_quota: number;
 }
 
 const AdminUsersPage: React.FC = () => {
@@ -364,10 +366,11 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-  const handleEditQuota = (userId: string, currentQuota: number) => {
+  const handleEditQuota = (userId: string, currentQuota: number, monthlyRequestQuota: number) => {
     setEditingUser({
       id: userId,
-      daily_quota: currentQuota
+      daily_quota: currentQuota,
+      monthly_request_quota: monthlyRequestQuota
     });
   };
 
@@ -381,7 +384,7 @@ const AdminUsersPage: React.FC = () => {
       
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ daily_quota: editingUser.daily_quota })
+        .update({ daily_quota: editingUser.daily_quota, monthly_request_quota: editingUser.monthly_request_quota })
         .eq('id', editingUser.id);
       
       if (updateError) {
@@ -391,7 +394,7 @@ const AdminUsersPage: React.FC = () => {
       // Update local state
       setUsers(prev => 
         prev.map(u => 
-          u.id === editingUser.id ? { ...u, daily_quota: editingUser.daily_quota } : u
+          u.id === editingUser.id ? { ...u, daily_quota: editingUser.daily_quota, monthly_request_quota: editingUser.monthly_request_quota } : u
         )
       );
       
@@ -510,6 +513,7 @@ const AdminUsersPage: React.FC = () => {
                 <TableHeader>{t('auth.email')}</TableHeader>
                 <TableHeader>{t('admin.role')}</TableHeader>
                 <TableHeader>{t('profile.quota')}</TableHeader>
+                <TableHeader>{t('profile.requestQuota', 'Monthly Requests')}</TableHeader>
                 <TableHeader>{t('common.actions')}</TableHeader>
               </TableRow>
             </TableHead>
@@ -542,6 +546,24 @@ const AdminUsersPage: React.FC = () => {
                     )}
                   </TableCell>
                   <TableCell>
+                    {editingUser && editingUser.id === userProfile.id ? (
+                      <QuotaInput
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={editingUser.monthly_request_quota}
+                        onChange={(e) => 
+                          setEditingUser({
+                            ...editingUser,
+                            monthly_request_quota: parseInt(e.target.value) || 0
+                          })
+                        }
+                      />
+                    ) : (
+                      userProfile.monthly_request_quota
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <ActionButtons>
                       {editingUser && editingUser.id === userProfile.id ? (
                         <>
@@ -561,7 +583,7 @@ const AdminUsersPage: React.FC = () => {
                       ) : (
                         <EditButton 
                           title={t('admin.editQuota')}
-                          onClick={() => handleEditQuota(userProfile.id, userProfile.daily_quota)}
+                          onClick={() => handleEditQuota(userProfile.id, userProfile.daily_quota, userProfile.monthly_request_quota)}
                         >
                           <FiEdit />
                         </EditButton>

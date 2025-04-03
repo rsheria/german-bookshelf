@@ -258,6 +258,44 @@ const DeleteButton = styled.button`
   }
 `;
 
+const QuotaInfo = styled.div`
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const QuotaText = styled.div`
+  color: #34495e;
+`;
+
+const QuotaBar = styled.div`
+  width: 100%;
+  max-width: 150px;
+  height: 10px;
+  background-color: #ecf0f1;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-left: 1rem;
+`;
+
+const QuotaProgress = styled.div<{ percentage: number; status: 'good' | 'medium' | 'critical' }>`
+  height: 100%;
+  width: ${({ percentage }) => `${percentage}%`};
+  background-color: ${({ status }) => {
+    switch (status) {
+      case 'good': return '#2ecc71';
+      case 'medium': return '#f39c12';
+      case 'critical': return '#e74c3c';
+      default: return '#2ecc71';
+    }
+  }};
+  transition: width 0.3s ease;
+`;
+
 // Interface for book request
 interface BookRequest {
   id: string;
@@ -303,6 +341,7 @@ const BookRequestPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [quotaInfo, setQuotaInfo] = useState<{used: number, max: number, remaining: number, canRequest: boolean} | null>(null);
   
   // Redirect if not logged in
   useEffect(() => {
@@ -329,16 +368,26 @@ const BookRequestPage: React.FC = () => {
         }
         
         setRequests(data || []);
+        
+        // Fetch the user's monthly quota info
+        const { data: quotaData, error: quotaError } = await supabase
+          .rpc('get_user_request_quota', { user_id: user.id });
+          
+        if (quotaError) {
+          console.error('Error fetching quota:', quotaError);
+        } else {
+          setQuotaInfo(quotaData);
+        }
       } catch (err) {
         console.error('Error fetching book requests:', err);
-        setError('Failed to load your book requests. Please try again later.');
+        setError(t('bookRequest.errorFetchingRequests', 'Failed to load your book requests. Please try again later.'));
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchBookRequests();
-  }, [user]);
+  }, [user, t]);
   
   // Handle form input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -350,7 +399,16 @@ const BookRequestPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) return;
+    if (!user) {
+      setError(t('bookRequest.errorNotLoggedIn', 'You must be logged in to request books.'));
+      return;
+    }
+    
+    // Check if user has hit their monthly quota limit
+    if (quotaInfo && !quotaInfo.canRequest) {
+      setError(t('bookRequest.errorQuotaReached', 'You have reached your monthly request limit. Please try again next month.'));
+      return;
+    }
     
     // Validate form
     if (!formData.title.trim()) {
@@ -362,29 +420,39 @@ const BookRequestPage: React.FC = () => {
     setError(null);
     
     try {
-      const { data, error } = await supabase
-        .from('book_requests')
-        .insert([
-          {
-            user_id: user.id,
-            title: formData.title.trim(),
-            author: formData.author.trim() || null,
-            language: formData.language,
-            format: formData.format,
-            description: formData.description.trim() || null,
-            priority: formData.priority,
-            status: 'Pending'
-          }
-        ])
-        .select();
-        
+      // Use the create_book_request RPC function to handle quota limits at the database level
+      const { error } = await supabase
+        .rpc('create_book_request', {
+          p_title: formData.title.trim(),
+          p_author: formData.author.trim() || null,
+          p_language: formData.language,
+          p_format: formData.format,
+          p_description: formData.description.trim() || null,
+          p_priority: formData.priority
+        });
+      
       if (error) {
         throw error;
       }
       
-      // Add the new request to the list
-      if (data && data.length > 0) {
-        setRequests(prev => [data[0], ...prev]);
+      // Refresh the book requests list and quota info
+      const { data: updatedData, error: fetchError } = await supabase
+        .from('book_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (fetchError) {
+        console.error('Error refreshing book requests:', fetchError);
+      } else {
+        setRequests(updatedData || []);
+      }
+      
+      // Refresh quota information
+      const { data: quotaData, error: quotaError } = await supabase
+        .rpc('get_user_request_quota', { user_id: user.id });
+        
+      if (!quotaError) {
+        setQuotaInfo(quotaData);
       }
       
       // Show success message
@@ -495,6 +563,20 @@ const BookRequestPage: React.FC = () => {
           <FiCheckCircle />
           {success}
         </Alert>
+      )}
+      
+      {quotaInfo && (
+        <QuotaInfo>
+          <QuotaText>
+            {t('bookRequest.quota', 'Monthly Quota:')} {quotaInfo.used}/{quotaInfo.max}
+          </QuotaText>
+          <QuotaBar>
+            <QuotaProgress 
+              percentage={(quotaInfo.used / quotaInfo.max) * 100} 
+              status={quotaInfo.canRequest ? 'good' : quotaInfo.remaining > 0 ? 'medium' : 'critical'}
+            />
+          </QuotaBar>
+        </QuotaInfo>
       )}
       
       <Card>

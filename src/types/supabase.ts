@@ -18,10 +18,14 @@ export interface Book {
 export interface Profile {
   id: string;
   username: string;
-  is_admin: boolean;
-  daily_quota: number;
+  full_name?: string;
+  avatar_url?: string;
   created_at: string;
   updated_at: string;
+  daily_quota: number;
+  website?: string;
+  is_admin: boolean;
+  monthly_request_quota: number;
 }
 
 export interface DownloadLog {
