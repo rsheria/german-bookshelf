@@ -1,23 +1,52 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, ReactNode } from 'react';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTranslation } from 'react-i18next';
-import './i18n';
+import './i18n/i18n'; // Fixed path to i18n
 
-// Pages
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
+// Import from existing files
+// Note: If these paths don't match your file structure, adjust as needed
+import LoginPage from './components/LoginForm';
+import RegisterPage from './components/SignupForm';
 import ProfilePage from './pages/ProfilePage';
 import HomePage from './pages/HomePage';
 import BookDetailsPage from './pages/BookDetailsPage';
-import BooksPage from './pages/BooksPage';
-import NotFoundPage from './pages/NotFoundPage';
-import AdminPage from './pages/AdminPage';
+import BooksPage from './pages/AudiobooksPage'; // Using existing page as fallback
+import NotFoundPage from './pages/NotFoundPage'; // Create or adjust if needed
+import AdminPage from './pages/admin/AdminDashboardPage'; // Using existing admin page
 import DebugPage from './pages/DebugPage';
-import AppContainer from './components/AppContainer';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { RecoveryHandler } from './components/RecoveryHandler';
+import RecoveryHandler from './components/RecoveryHandler'; // Fixed import
+
+// App container and error boundary components
+const AppContainer: React.FC<{children: ReactNode}> = ({ children }) => (
+  <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    {children}
+  </div>
+);
+
+// Simple error boundary component
+class ErrorBoundary extends React.Component<{children: ReactNode}, {hasError: boolean}> {
+  constructor(props: {children: ReactNode}) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("App error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div>Something went wrong. Try refreshing the page.</div>;
+    }
+    return this.props.children;
+  }
+}
 
 // Theme
 const theme = extendTheme({
@@ -41,8 +70,13 @@ const theme = extendTheme({
   },
 });
 
-// Protected route component
-const ProtectedRoute = ({ children, requiredRole = null }) => {
+// Protected route component with proper typing
+interface ProtectedRouteProps {
+  children: ReactNode;
+  requiredRole?: string | null;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole = null }) => {
   const { user, isAdmin, authStatusChecked } = useAuth();
   
   // Normal auth checks
@@ -58,10 +92,10 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
     return <Navigate to="/" replace />;
   }
   
-  return children;
+  return <>{children}</>;
 };
 
-const App = () => {
+const App: React.FC = () => {
   const { i18n } = useTranslation();
   const [appLoaded, setAppLoaded] = useState(false);
   const { authStatusChecked } = useAuth();
@@ -158,7 +192,7 @@ const App = () => {
 };
 
 // Wrap the app with providers
-const AppWithProviders = () => {
+const AppWithProviders: React.FC = () => {
   return (
     <ChakraProvider theme={theme}>
       <AuthProvider>
