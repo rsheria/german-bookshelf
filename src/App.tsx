@@ -1,134 +1,67 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { ChakraProvider } from '@chakra-ui/react';
-import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
-
-// Import components
-import Navbar from './components/Navbar';
-import LoginForm from './components/LoginForm';
-import SignupForm from './components/SignupForm';
-
-// Import pages
-import HomePage from './pages/HomePage';
-import AudiobooksPage from './pages/AudiobooksPage';
-import EbooksPage from './pages/EbooksPage';
-import BookDetailsPage from './pages/BookDetailsPage';
-import ProfilePage from './pages/ProfilePage';
-import SearchPage from './pages/SearchPage';
-import AdminDashboardPage from './pages/admin/AdminDashboardPage';
-import AdminBooksPage from './pages/admin/AdminBooksPage';
-import AdminUsersPage from './pages/admin/AdminUsersPage';
-import AddBookPage from './pages/admin/AddBookPage';
-import EditBookPage from './pages/admin/EditBookPage';
-import DebugPage from './pages/DebugPage';
-
-// Import context and i18n
+import React, { useEffect, useState } from 'react';
+import { ChakraProvider, extendTheme } from '@chakra-ui/react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import './i18n/i18n';
+import { useTranslation } from 'react-i18next';
+import './i18n';
 
-// Error boundary component
-class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
-  constructor(props: {children: React.ReactNode}) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+// Pages
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ProfilePage from './pages/ProfilePage';
+import HomePage from './pages/HomePage';
+import BookDetailsPage from './pages/BookDetailsPage';
+import BooksPage from './pages/BooksPage';
+import NotFoundPage from './pages/NotFoundPage';
+import AdminPage from './pages/AdminPage';
+import DebugPage from './pages/DebugPage';
+import AppContainer from './components/AppContainer';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { RecoveryHandler } from './components/RecoveryHandler';
 
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("React Error Boundary caught an error:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ padding: '20px', color: 'red', backgroundColor: '#ffeeee', border: '1px solid red', borderRadius: '5px', margin: '20px' }}>
-          <h2>Something went wrong</h2>
-          <p>Error: {this.state.error?.message}</p>
-          <p>Check the console for more details</p>
-          <button onClick={() => this.setState({ hasError: false })}>Try again</button>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
-const AppContainer = styled.div`
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: #f8f9fa;
-`;
-
-const MainContent = styled.main`
-  flex: 1;
-  padding-bottom: 3rem;
-`;
-
-const Footer = styled.footer`
-  background-color: #2c3e50;
-  color: white;
-  padding: 2rem;
-  text-align: center;
-`;
-
-// Debug component to show environment variables
-const DebugInfo = () => {
-  const [showDebug, setShowDebug] = useState(false);
-  
-  return (
-    <div style={{ position: 'fixed', bottom: '10px', right: '10px', zIndex: 9999 }}>
-      <button onClick={() => setShowDebug(!showDebug)} style={{ padding: '5px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '3px' }}>
-        Debug
-      </button>
-      {showDebug && (
-        <div style={{ backgroundColor: 'rgba(0,0,0,0.8)', color: 'white', padding: '10px', borderRadius: '5px', marginTop: '5px', maxWidth: '500px', overflow: 'auto' }}>
-          <p>VITE_SUPABASE_URL: {import.meta.env.VITE_SUPABASE_URL || 'Not set'}</p>
-          <p>VITE_SUPABASE_ANON_KEY set: {import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Yes' : 'No'}</p>
-          <p>NODE_ENV: {import.meta.env.MODE}</p>
-          <p>Base URL: {import.meta.env.BASE_URL}</p>
-        </div>
-      )}
-    </div>
-  );
-};
+// Theme
+const theme = extendTheme({
+  colors: {
+    brand: {
+      50: '#f0f9ff',
+      100: '#e0f2fe',
+      200: '#bae6fd',
+      300: '#7dd3fc',
+      400: '#38bdf8',
+      500: '#0ea5e9',
+      600: '#0284c7',
+      700: '#0369a1',
+      800: '#075985',
+      900: '#0c4a6e',
+    },
+  },
+  fonts: {
+    heading: '"Nunito", sans-serif',
+    body: '"Nunito", sans-serif',
+  },
+});
 
 // Protected route component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isLoading } = useAuth();
+const ProtectedRoute = ({ children, requiredRole = null }) => {
+  const { user, isAdmin, authStatusChecked } = useAuth();
   
-  if (isLoading) {
+  // Normal auth checks
+  if (!authStatusChecked) {
     return <div>Loading...</div>;
   }
   
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
   
-  return <>{children}</>;
+  if (requiredRole === 'admin' && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
 };
 
-// Admin route component
-const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isAdmin, isLoading } = useAuth();
-  
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-  
-  if (!user || !isAdmin) {
-    return <Navigate to="/" />;
-  }
-  
-  return <>{children}</>;
-};
-
-const AppRoutes: React.FC = () => {
+const App = () => {
   const { i18n } = useTranslation();
   const [appLoaded, setAppLoaded] = useState(false);
   const { authStatusChecked } = useAuth();
@@ -141,10 +74,10 @@ const AppRoutes: React.FC = () => {
     }
   }, [i18n]);
   
-  // Only set appLoaded once authStatusChecked is true
+  // Wait for auth to be checked before showing app
   useEffect(() => {
     if (authStatusChecked) {
-      console.log("Auth status checked, app can now be loaded");
+      console.log('Auth status checked, app can now be loaded');
       setAppLoaded(true);
     }
   }, [authStatusChecked]);
@@ -154,7 +87,7 @@ const AppRoutes: React.FC = () => {
     const safetyTimer = setTimeout(() => {
       console.log("Safety timeout triggered - forcing app to load");
       setAppLoaded(true);
-    }, 3000); // 3 second safety timeout
+    }, 5000); // Increased to 5 second safety timeout for more time
     
     return () => clearTimeout(safetyTimer);
   }, []);
@@ -163,14 +96,16 @@ const AppRoutes: React.FC = () => {
     return (
       <div style={{ 
         display: 'flex', 
-        flexDirection: 'column',
         justifyContent: 'center', 
         alignItems: 'center', 
         height: '100vh',
-        gap: '1rem'
+        flexDirection: 'column',
+        gap: '20px'
       }}>
-        <div>Initializing German Bookshelf...</div>
-        <div>If this takes more than 10 seconds, try the <a href="/debug" style={{color: 'blue', textDecoration: 'underline'}}>Debug Page</a></div>
+        <div>Loading German Bookshelf...</div>
+        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+          <a href="/debug" style={{ textDecoration: 'underline' }}>Debug Page</a>
+        </div>
       </div>
     );
   }
@@ -178,92 +113,59 @@ const AppRoutes: React.FC = () => {
   return (
     <ErrorBoundary>
       <AppContainer>
-        <Navbar />
-        <MainContent>
+        <RecoveryHandler />
+        <Router>
           <Routes>
             {/* Public routes */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/audiobooks" element={<AudiobooksPage />} />
-            <Route path="/ebooks" element={<EbooksPage />} />
-            <Route path="/books/:id" element={<BookDetailsPage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/login" element={<LoginForm />} />
-            <Route path="/signup" element={<SignupForm />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
             <Route path="/debug" element={<DebugPage />} />
             
             {/* Protected routes */}
-            <Route 
-              path="/profile" 
-              element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              } 
-            />
-            
-            {/* Admin routes */}
-            <Route 
-              path="/admin" 
-              element={
-                <AdminRoute>
-                  <AdminDashboardPage />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/books" 
-              element={
-                <AdminRoute>
-                  <AdminBooksPage />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/users" 
-              element={
-                <AdminRoute>
-                  <AdminUsersPage />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/books/add" 
-              element={
-                <AdminRoute>
-                  <AddBookPage />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/books/edit/:id" 
-              element={
-                <AdminRoute>
-                  <EditBookPage />
-                </AdminRoute>
-              } 
-            />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/books" element={
+              <ProtectedRoute>
+                <BooksPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/book/:id" element={
+              <ProtectedRoute>
+                <BookDetailsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminPage />
+              </ProtectedRoute>
+            } />
             
             {/* Fallback route */}
-            <Route path="*" element={<Navigate to="/" />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
-        </MainContent>
-        <Footer>
-          &copy; {new Date().getFullYear()} German Bookshelf - All rights reserved
-        </Footer>
-        <DebugInfo />
+        </Router>
       </AppContainer>
     </ErrorBoundary>
   );
 };
 
-const App: React.FC = () => {
+// Wrap the app with providers
+const AppWithProviders = () => {
   return (
-    <ChakraProvider>
+    <ChakraProvider theme={theme}>
       <AuthProvider>
-        <AppRoutes />
+        <App />
       </AuthProvider>
     </ChakraProvider>
   );
 };
 
-export default App;
+export default AppWithProviders;
