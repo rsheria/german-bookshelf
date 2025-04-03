@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiUser, FiDownload, FiAlertCircle } from 'react-icons/fi';
+import { FiUser, FiDownload, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import { useDownloads } from '../hooks/useDownloads';
@@ -17,6 +17,7 @@ const Container = styled.div`
 const Header = styled.div`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
   margin-bottom: 2rem;
 `;
@@ -44,6 +45,9 @@ const CardTitle = styled.h2`
   margin: 0 0 1.5rem 0;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 `;
 
 const ProfileInfo = styled.div`
@@ -146,6 +150,28 @@ const LoadingState = styled.div`
   color: #666;
 `;
 
+const RefreshButton = styled.button`
+  background: none;
+  border: none;
+  color: #3498db;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  
+  &:hover {
+    background-color: #f0f8ff;
+  }
+`;
+
+// Fallback values for when data isn't loaded properly
+const DEFAULT_QUOTA = 3;
+const FALLBACK_USER = { email: 'user@example.com' };
+const FALLBACK_PROFILE = { username: 'User', daily_quota: DEFAULT_QUOTA };
+
 interface DownloadHistoryItem {
   id: string;
   book: Book;
@@ -160,112 +186,138 @@ const ProfilePage: React.FC = () => {
   const [downloadHistory, setDownloadHistory] = useState<DownloadHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  // Handler to manually refresh data
+  const handleRefresh = () => {
+    setRetryCount(prev => prev + 1);
+    setIsLoading(true);
+    setError(null);
+  };
 
   useEffect(() => {
-    // Redirect if not logged in
+    // Redirect if not logged in and not loading
     if (!authLoading && !user) {
+      console.log("No user found, redirecting to login");
       navigate('/login');
     }
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
     const fetchDownloadHistory = async () => {
-      if (!user) return;
+      // Skip if no user, but don't set error
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
       
       setIsLoading(true);
       setError(null);
       
       try {
-        setIsLoading(true);
-        
-        // Check remaining quota
-        await checkRemainingQuota();
-        
-        // Fetch download history with book details
-        const supabaseClient = supabase;
-        
-        if (!supabaseClient) {
-          throw new Error('Supabase client is not initialized');
+        // Check remaining quota with error handling
+        try {
+          await checkRemainingQuota();
+        } catch (err) {
+          console.warn("Could not check quota, continuing with profile page", err);
+          // Don't set error or return - continue with the rest of the profile
         }
         
+        // Fetch download history with book details
         try {
-          const { data: downloads, error: downloadsError } = await supabaseClient
+          // Check if user exists before fetching
+          if (!user?.id) {
+            console.warn("User ID not available for download history");
+            setDownloadHistory([]);
+            return;
+          }
+
+          // Get download logs
+          const { data: downloads, error: downloadsError } = await supabase
             .from('download_logs')
-            .select(`
-              id,
-              downloaded_at,
-              book_id,
-              user_id
-            `)
+            .select('id, book_id, downloaded_at')
             .eq('user_id', user.id)
             .order('downloaded_at', { ascending: false })
             .limit(10);
-          
+            
           if (downloadsError) {
             console.error('Error fetching download logs:', downloadsError);
-            throw downloadsError;
+            throw new Error(`Failed to fetch download history: ${downloadsError.message}`);
           }
           
+          // Only proceed with book fetching if we have download logs
           if (downloads && downloads.length > 0) {
-            // Fetch books separately to avoid relationship issues
-            const bookIds = downloads.map(dl => dl.book_id);
+            // Get unique book ids
+            const bookIds = [...new Set(downloads.map((item: any) => item.book_id))];
             
-            const { data: booksData, error: booksError } = await supabaseClient
+            // Get book details
+            const { data: booksData, error: booksError } = await supabase
               .from('books')
-              .select('*')
+              .select('id, title, author, cover_url')
               .in('id', bookIds);
               
             if (booksError) {
               console.error('Error fetching books:', booksError);
-              throw booksError;
+              throw new Error(`Failed to fetch book details: ${booksError.message}`);
             }
             
             // Create a map of book ids to book objects
-            const booksMap = (booksData || []).reduce((map: Record<string, Book>, book: Book) => {
-              map[book.id] = book;
+            const booksMap = (booksData || []).reduce((map: Record<string, Book>, book: any) => {
+              map[book.id] = book as Book;
               return map;
             }, {} as Record<string, Book>);
             
             // Combine download logs with book data
             const formattedDownloads = downloads.map((item: { id: string; book_id: string; downloaded_at: string }) => ({
               id: item.id,
-              book: booksMap[item.book_id] || { id: item.book_id, title: 'Unknown Book', author: '', cover_url: '' } as Book,
+              book: booksMap[item.book_id] || { 
+                id: item.book_id, 
+                title: 'Book ' + item.book_id.slice(0, 8), 
+                author: 'Unknown Author', 
+                cover_url: '' 
+              } as Book,
               downloaded_at: item.downloaded_at
             }));
             
             setDownloadHistory(formattedDownloads);
           } else {
+            // No downloads is a valid state
             setDownloadHistory([]);
           }
         } catch (err) {
-          console.error('Error in download history fetching:', err);
-          setError(err instanceof Error ? err.message : 'An unknown error occurred');
-          setDownloadHistory([]);
+          console.error('Error in download history processing:', err);
+          // Set error but continue showing the profile
+          setError('Could not load download history. Profile information is still available.');
         }
       } catch (err) {
-        console.error('Error fetching download history:', err);
-        setError((err as Error).message);
+        console.error('Fatal error in profile page:', err);
+        setError((err as Error).message || 'An unexpected error occurred');
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchDownloadHistory();
-  }, [user, checkRemainingQuota]);
+  }, [user, checkRemainingQuota, retryCount]);
 
   // Format date for display
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    } catch (e) {
+      console.error('Error formatting date:', e);
+      return 'Unknown date';
+    }
   };
 
-  if (authLoading || isLoading) {
+  if (authLoading) {
     return (
       <Container>
         <LoadingState>{t('common.loading')}</LoadingState>
@@ -273,19 +325,26 @@ const ProfilePage: React.FC = () => {
     );
   }
 
-  if (!user || !profile) {
-    return null; // Will redirect to login
-  }
+  // Display the profile even while downloads are loading
+  const displayUser = user || FALLBACK_USER;
+  const displayProfile = profile || FALLBACK_PROFILE;
 
-  const quotaUsed = profile.daily_quota - (remainingQuota || 0);
-  const quotaPercentUsed = (quotaUsed / profile.daily_quota) * 100;
+  // Safely calculate quota
+  const safeRemainingQuota = remainingQuota !== undefined && remainingQuota !== null 
+    ? remainingQuota 
+    : displayProfile.daily_quota;
+  const quotaUsed = Math.max(0, displayProfile.daily_quota - safeRemainingQuota);
+  const quotaPercentUsed = Math.min(100, (quotaUsed / Math.max(1, displayProfile.daily_quota)) * 100);
 
   return (
     <Container>
       <Header>
         <Title>
-          <FiUser /> {t('profile.title')}
+          <FiUser /> {t('profile.title', 'Profile')}
         </Title>
+        <RefreshButton onClick={handleRefresh} disabled={isLoading}>
+          <FiRefreshCw /> {isLoading ? t('common.loading', 'Loading...') : t('common.refresh', 'Refresh')}
+        </RefreshButton>
       </Header>
       
       {error && (
@@ -296,22 +355,22 @@ const ProfilePage: React.FC = () => {
       )}
       
       <Card>
-        <CardTitle>{t('profile.userInfo')}</CardTitle>
+        <CardTitle>{t('profile.userInfo', 'User Information')}</CardTitle>
         <ProfileInfo>
           <InfoItem>
-            <InfoLabel>{t('auth.username')}</InfoLabel>
-            <InfoValue>{profile.username}</InfoValue>
+            <InfoLabel>{t('auth.username', 'Username')}</InfoLabel>
+            <InfoValue>{displayProfile.username}</InfoValue>
           </InfoItem>
           
           <InfoItem>
-            <InfoLabel>{t('auth.email')}</InfoLabel>
-            <InfoValue>{user.email}</InfoValue>
+            <InfoLabel>{t('auth.email', 'Email')}</InfoLabel>
+            <InfoValue>{displayUser.email}</InfoValue>
           </InfoItem>
           
           <InfoItem>
-            <InfoLabel>{t('profile.quota')}</InfoLabel>
+            <InfoLabel>{t('profile.quota', 'Daily Quota')}</InfoLabel>
             <InfoValue>
-              {quotaUsed} / {profile.daily_quota} {t('profile.downloads').toLowerCase()}
+              {quotaUsed} / {displayProfile.daily_quota} {t('profile.downloads', 'Downloads').toLowerCase()}
             </InfoValue>
             <QuotaBar>
               <QuotaProgress percent={quotaPercentUsed} />
@@ -322,10 +381,15 @@ const ProfilePage: React.FC = () => {
       
       <Card>
         <CardTitle>
-          <FiDownload /> {t('profile.downloadHistory')}
+          <span>
+            <FiDownload /> {t('profile.downloadHistory', 'Download History')}
+          </span>
+          {isLoading && <span>Loading...</span>}
         </CardTitle>
         
-        {downloadHistory.length > 0 ? (
+        {isLoading ? (
+          <LoadingState>{t('common.loading', 'Loading...')}</LoadingState>
+        ) : downloadHistory.length > 0 ? (
           <DownloadList>
             {downloadHistory.map((item) => (
               <DownloadItem key={item.id}>
@@ -345,7 +409,7 @@ const ProfilePage: React.FC = () => {
             ))}
           </DownloadList>
         ) : (
-          <EmptyState>{t('profile.noDownloads')}</EmptyState>
+          <EmptyState>{t('profile.noDownloads', 'No download history found')}</EmptyState>
         )}
       </Card>
     </Container>
