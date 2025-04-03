@@ -27,7 +27,7 @@
     "noAccount": "Noch kein Konto?",
     "haveAccount": "Bereits ein Konto?",
     "signupSuccess": "Konto erfolgreich erstellt!",
-    "emailConfirmation": "Konto erstellt! Bitte überprüfen Sie Ihre E-Mail, um Ihre Registrierung zu bestätigen.",
+    "emailConfirmation": "Konto erstellt! Bitte überprüfen Sie Ihre E-Mail und klicken Sie auf den Bestätigungslink, um Ihr Konto zu aktivieren. Danach können Sie sich anmelden.",
     "passwordMismatch": "Passwörter stimmen nicht überein",
     "loginSuccess": "Erfolgreich angemeldet!",
     "logoutSuccess": "Erfolgreich abgemeldet!"

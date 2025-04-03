@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiMail, FiLock, FiUser, FiAlertCircle } from 'react-icons/fi';
+import { FiMail, FiLock, FiUser, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import { supabase, signUp } from '../services/supabase';
 
 const FormContainer = styled.div`
@@ -102,10 +102,13 @@ const SuccessMessage = styled.div`
   gap: 0.5rem;
   background-color: #d4edda;
   color: #155724;
-  padding: 0.75rem;
+  padding: 1rem;
   border-radius: 4px;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #28a745;
+  font-weight: 500;
+  line-height: 1.5;
 `;
 
 const LinkText = styled.div`
@@ -227,6 +230,7 @@ const SignupForm: React.FC = () => {
       
       {success && (
         <SuccessMessage>
+          <FiCheckCircle />
           {success}
         </SuccessMessage>
       )}

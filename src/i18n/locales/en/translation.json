@@ -27,7 +27,7 @@
     "noAccount": "Don't have an account?",
     "haveAccount": "Already have an account?",
     "signupSuccess": "Account created successfully!",
-    "emailConfirmation": "Account created! Please check your email to confirm your registration.",
+    "emailConfirmation": "Account created! Please check your email and click the confirmation link to activate your account. Then you can log in.",
     "passwordMismatch": "Passwords do not match",
     "loginSuccess": "Logged in successfully!",
     "logoutSuccess": "Logged out successfully!"
