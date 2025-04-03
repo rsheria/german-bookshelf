@@ -64,6 +64,14 @@
     "updateProfile": "Update Profile",
     "updateSuccess": "Profile updated successfully!"
   },
+  "ratings": {
+    "title": "Ratings",
+    "yourRating": "Your Rating",
+    "averageRating": "Average Rating",
+    "loginToRate": "Log in to rate this book",
+    "successMessage": "Your rating has been saved!",
+    "errorMessage": "There was an error saving your rating. Please try again."
+  },
   "admin": {
     "dashboard": "Admin Dashboard",
     "books": "Manage Books",

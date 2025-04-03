@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
@@ -323,6 +323,14 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
   const placeholderCover = 'https://via.placeholder.com/300x450?text=No+Cover';
   const isMobile = useMediaQuery('(max-width: 768px)');
   
+  // Add a mock rating for testing based on book ID
+  // This is just for visual testing and should be removed in production
+  const mockRating = useMemo(() => {
+    // Generate a consistent rating between 6.0 and 9.5 based on the book id
+    const hash = book.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return 6 + (hash % 35) / 10; // Gives a value between 6.0 and 9.5
+  }, [book.id]);
+  
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
@@ -394,14 +402,13 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
             )}
           </BookType>
           <Language>{book.language}</Language>
-          {book.rating && (
-            <RatingBadge 
-              rating={book.rating}
-              className={`rating-badge ${getRatingBadgeClass(book.rating)}`}
-            >
-              {book.rating.toFixed(1)}
-            </RatingBadge>
-          )}
+          {/* Use the actual rating if available, otherwise use mock rating for testing */}
+          <RatingBadge 
+            rating={book.rating || mockRating}
+            className={`rating-badge ${getRatingBadgeClass(book.rating || mockRating)}`}
+          >
+            {(book.rating || mockRating).toFixed(1)}
+          </RatingBadge>
         </CoverContainer>
         <BookInfo>
           <Title>{book.title}</Title>

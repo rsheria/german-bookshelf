@@ -5,6 +5,7 @@ import { FiDownload, FiHeadphones, FiBook, FiAlertCircle } from 'react-icons/fi'
 import { Book } from '../types/supabase';
 import { useDownloads } from '../hooks/useDownloads';
 import { useAuth } from '../context/AuthContext';
+import RatingSystem from './RatingSystem';
 
 interface BookDetailsProps {
   book: Book;
@@ -158,6 +159,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
   const { user } = useAuth();
   const { downloadBook, isLoading, error, remainingQuota, checkRemainingQuota } = useDownloads();
   const [showError, setShowError] = useState(false);
+  const [bookRating, setBookRating] = useState<number | undefined>(book.rating);
 
   const handleDownload = async () => {
     if (!user) return;
@@ -217,6 +219,16 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
             <MetaValue>{book.language}</MetaValue>
           </MetaItem>
         </MetaInfo>
+
+        {/* Rating System */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ marginBottom: '0.5rem' }}>{t('ratings.title')}</h3>
+          <RatingSystem 
+            bookId={book.id} 
+            currentRating={bookRating}
+            onRatingChange={(newRating) => setBookRating(newRating)}
+          />
+        </div>
         
         <Description>
           {book.description}

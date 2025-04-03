@@ -64,6 +64,14 @@
     "updateProfile": "Profil aktualisieren",
     "updateSuccess": "Profil erfolgreich aktualisiert!"
   },
+  "ratings": {
+    "title": "Bewertungen",
+    "yourRating": "Ihre Bewertung",
+    "averageRating": "Durchschnittliche Bewertung",
+    "loginToRate": "Melden Sie sich an, um dieses Buch zu bewerten",
+    "successMessage": "Ihre Bewertung wurde gespeichert!",
+    "errorMessage": "Beim Speichern Ihrer Bewertung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+  },
   "admin": {
     "dashboard": "Admin-Dashboard",
     "books": "Bücher verwalten",
