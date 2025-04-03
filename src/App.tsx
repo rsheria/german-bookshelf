@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ChakraProvider } from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
@@ -108,16 +108,21 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (!isLoading && !user) {
+      // If not loading and no user, redirect to login
+      navigate('/login');
+    }
+  }, [user, isLoading, navigate]);
   
   if (isLoading) {
     return <div>Loading...</div>;
   }
   
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-  
-  return <>{children}</>;
+  // Only render children if we have a user
+  return user ? <>{children}</> : null;
 };
 
 // Admin route component
@@ -127,16 +132,27 @@ interface AdminRouteProps {
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const { user, isAdmin, isLoading } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Only redirect if we're not loading and we know the user state
+    if (!isLoading) {
+      if (!user) {
+        // If no user, redirect to login
+        navigate('/login');
+      } else if (!isAdmin) {
+        // If user exists but isn't admin, redirect to homepage
+        navigate('/');
+      }
+    }
+  }, [user, isAdmin, isLoading, navigate]);
   
   if (isLoading) {
     return <div>Loading...</div>;
   }
   
-  if (!user || !isAdmin) {
-    return <Navigate to="/" />;
-  }
-  
-  return <>{children}</>;
+  // Only render children if we have an admin user
+  return (user && isAdmin) ? <>{children}</> : null;
 };
 
 const AppRoutes: React.FC = () => {

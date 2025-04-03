@@ -132,14 +132,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Initialize auth on component mount - once only
   useEffect(() => {
     const initializeAuth = async () => {
+      // Start with loading state
+      setIsLoading(true);
+      
       try {
-        console.log("Auth initialization starting...");
-        
-        // First try standard session retrieval
+        // Just get the current session - simple approach
         const { data } = await supabase.auth.getSession();
         
         if (data?.session) {
-          console.log("Session found via getSession()");
+          // We have a session, set auth state
           setSession(data.session);
           setUser(data.session.user);
           
@@ -147,79 +148,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             await fetchProfile(data.session.user.id);
           }
         } else {
-          console.log("No session found via getSession(), checking localStorage...");
-          
-          // Try to restore from localStorage tokens
-          const accessToken = localStorage.getItem('access_token');
-          const refreshToken = localStorage.getItem('refresh_token');
-          
-          if (accessToken && refreshToken) {
-            try {
-              console.log("Found tokens in localStorage, attempting to restore session...");
-              
-              const { data: sessionData, error } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken
-              });
-              
-              if (error) {
-                console.error("Error restoring session:", error);
-                throw error;
-              }
-              
-              if (sessionData.session) {
-                console.log("Session successfully restored!");
-                setSession(sessionData.session);
-                setUser(sessionData.session.user);
-                
-                if (sessionData.session.user?.id) {
-                  await fetchProfile(sessionData.session.user.id);
-                }
-              } else {
-                console.log("Session restoration returned no session");
-                setSession(null);
-                setUser(null);
-                setProfile(null);
-                setIsAdmin(false);
-              }
-            } catch (e) {
-              console.error("Failed to restore session:", e);
-              setSession(null);
-              setUser(null);
-              setProfile(null);
-              setIsAdmin(false);
-            }
-          } else {
-            console.log("No tokens found in localStorage");
-            setSession(null);
-            setUser(null);
-            setProfile(null);
-            setIsAdmin(false);
-          }
+          // No session, clear auth state
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setIsAdmin(false);
         }
       } catch (error) {
-        console.error("Auth initialization error:", error);
+        console.error("Auth error:", error);
+        // Clear auth state on error
         setSession(null);
         setUser(null);
         setProfile(null);
         setIsAdmin(false);
       } finally {
-        // Always set these to true to ensure the app loads
+        // Always finish loading
         setIsLoading(false);
         setAuthStatusChecked(true);
       }
     };
 
-    // Initialize immediately
+    // Run auth initialization
     initializeAuth();
-    
-    // Set a short timeout as a backup to ensure we always exit loading state
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-      setAuthStatusChecked(true);
-    }, 2000);
-    
-    return () => clearTimeout(timer);
   }, []);
 
   // Set up auth state change listener
