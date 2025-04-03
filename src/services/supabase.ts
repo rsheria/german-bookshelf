@@ -15,7 +15,7 @@ const supabase = createClient<Database>(
       autoRefreshToken: true,
       detectSessionInUrl: true, // Enable redirect detection for auth flows
       storage: localStorage,    // Explicitly use localStorage for best compatibility
-      storageKey: 'sb-auth-token', // Consistent key for storage
+      storageKey: 'supabase.auth.token', // Use consistent storage key
       flowType: 'implicit' // Use implicit flow for better token management
     },
     global: {
@@ -48,7 +48,7 @@ export const manuallyStoreSession = (session: any) => {
   
   try {
     // Store across multiple keys for redundancy
-    localStorage.setItem('sb-auth-token', JSON.stringify(session));
+    localStorage.setItem('supabase.auth.token', JSON.stringify(session));
     localStorage.setItem('sb-refresh-token', session.refresh_token || '');
     localStorage.setItem('sb-access-token', session.access_token || '');
     console.log('Session manually stored for redundancy');
@@ -60,7 +60,7 @@ export const manuallyStoreSession = (session: any) => {
 // Retrieve session from any available storage
 export const getStoredSession = () => {
   try {
-    const storedSession = localStorage.getItem('sb-auth-token');
+    const storedSession = localStorage.getItem('supabase.auth.token');
     if (storedSession) {
       return JSON.parse(storedSession);
     }
@@ -101,7 +101,7 @@ export const signIn = async (email: string, password: string) => {
 export const signOut = async () => {
   try {
     // Clear all stored sessions
-    localStorage.removeItem('sb-auth-token');
+    localStorage.removeItem('supabase.auth.token');
     localStorage.removeItem('sb-refresh-token');
     localStorage.removeItem('sb-access-token');
     

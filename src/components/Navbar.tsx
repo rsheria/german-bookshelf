@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { FiMenu, FiX, FiSearch, FiUser, FiLogOut, FiBook, FiHeadphones, FiPlusCircle } from 'react-icons/fi';
 import styled from 'styled-components';
 import { useAuth } from '../context/AuthContext';
-import { signOut } from '../services/supabase';
 
 const NavContainer = styled.nav`
   display: flex;
@@ -137,7 +136,7 @@ const Overlay = styled.div<{ isOpen: boolean }>`
 
 const Navbar: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');

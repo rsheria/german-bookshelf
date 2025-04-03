@@ -11,6 +11,7 @@ interface AuthContextType {
   error: Error | null;
   isAdmin: boolean;
   refreshSession: () => Promise<void>;
+  signOut: () => Promise<boolean>;
   authStatusChecked: boolean;
 }
 
@@ -129,6 +130,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Handle sign out - completely revamped for reliability
+  const handleSignOut = async () => {
+    try {
+      // Clear all auth state
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setIsAdmin(false);
+      
+      // Clear ALL possible token storage keys
+      localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('sb-refresh-token');
+      localStorage.removeItem('sb-access-token');
+      localStorage.removeItem('sb-auth-token');
+      localStorage.removeItem('sb-auth-token-backup');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user_id');
+      
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Force page reload to clear any in-memory state
+      window.location.href = '/';
+      
+      return true;
+    } catch (error) {
+      console.error("Error signing out:", error);
+      return false;
+    }
+  };
+
   // Initialize auth on component mount - once only
   useEffect(() => {
     const initializeAuth = async () => {
@@ -136,7 +169,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       
       try {
-        // Just get the current session - simple approach
+        // Use our enhanced getSession function to get the current session
         const { data } = await supabase.auth.getSession();
         
         if (data?.session) {
@@ -144,11 +177,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSession(data.session);
           setUser(data.session.user);
           
+          // Manually store the session for better persistence
+          localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
+          
           if (data.session.user?.id) {
             await fetchProfile(data.session.user.id);
           }
         } else {
-          // No session, clear auth state
+          // Try to restore from localStorage as fallback
+          try {
+            const storedSession = localStorage.getItem('supabase.auth.token');
+            if (storedSession) {
+              const parsedSession = JSON.parse(storedSession);
+              
+              // Try to restore the session with setSession
+              const { data: restoredData, error } = await supabase.auth.setSession({
+                access_token: parsedSession.access_token,
+                refresh_token: parsedSession.refresh_token,
+              });
+              
+              if (error) {
+                throw error;
+              }
+              
+              if (restoredData.session) {
+                console.log("Session successfully restored from localStorage");
+                setSession(restoredData.session);
+                setUser(restoredData.session.user);
+                
+                if (restoredData.session.user?.id) {
+                  await fetchProfile(restoredData.session.user.id);
+                }
+                setIsLoading(false);
+                setAuthStatusChecked(true);
+                return;
+              }
+            }
+          } catch (e) {
+            console.error("Error restoring session:", e);
+          }
+          
+          // No session found or restoration failed
           setSession(null);
           setUser(null);
           setProfile(null);
@@ -254,6 +323,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       error, 
       isAdmin, 
       refreshSession: handleRefreshSession,
+      signOut: handleSignOut,
       authStatusChecked 
     }}>
       {children}
