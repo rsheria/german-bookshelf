@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
-import { supabase } from '../services/supabase';
+import { supabase, refreshSession } from '../services/supabase';
 import { Profile } from '../types/supabase';
 
 interface AuthContextType {
@@ -36,83 +36,89 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [error, setError] = useState<Error | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authStatusChecked, setAuthStatusChecked] = useState(false);
+  
+  // Function to fetch user's profile data
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (profileError) {
+        if (profileError.code === 'PGRST116') {
+          console.log("Profile not found, creating a new one...");
+          
+          // Create a default profile
+          try {
+            const { data: newProfile, error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                username: user?.email,
+                is_admin: false,
+                daily_quota: 3
+              })
+              .select()
+              .single();
+            
+            if (insertError) {
+              console.error("Error creating profile:", insertError);
+            } else {
+              console.log("Created new profile:", newProfile);
+              setProfile(newProfile);
+              setIsAdmin(newProfile.is_admin || false);
+            }
+          } catch (err) {
+            console.error("Exception creating profile:", err);
+          }
+        } else {
+          console.error("Profile fetch error:", profileError);
+        }
+      } else if (profileData) {
+        console.log("Profile found:", profileData);
+        setProfile(profileData);
+        setIsAdmin(profileData.is_admin || false);
+      }
+    } catch (err) {
+      console.error("Profile fetch exception:", err);
+    }
+  };
 
   // Function to refresh session and fetch profile
   const handleRefreshSession = async () => {
     try {
       console.log("Refreshing session...");
       
-      // Get current session
-      const { data, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error("Session refresh error:", sessionError);
-        setError(sessionError);
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setIsLoading(false);
-        setAuthStatusChecked(true);
-        return;
-      }
-
-      console.log("Session data:", data?.session ? "Found" : "Not found");
+      // Try to use our enhanced refreshSession function
+      const { data } = await refreshSession();
       
       if (data?.session) {
+        console.log("Session data: Found", data.session ? true : false);
         setSession(data.session);
         setUser(data.session.user);
         
-        try {
-          // Fetch profile data
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.session.user.id)
-            .single();
-          
-          if (profileError) {
-            if (profileError.code === 'PGRST116') {
-              console.log("Profile not found, creating a new one...");
-              
-              // Try to create a profile
-              try {
-                const { data: newProfile, error: insertError } = await supabase
-                  .from('profiles')
-                  .insert({
-                    id: data.session.user.id,
-                    username: data.session.user.email,
-                    is_admin: false,
-                    daily_quota: 3
-                  })
-                  .select()
-                  .single();
-                
-                if (insertError) {
-                  console.error("Error creating profile:", insertError);
-                } else {
-                  console.log("Created new profile:", newProfile);
-                  setProfile(newProfile);
-                  setIsAdmin(newProfile.is_admin || false);
-                }
-              } catch (err) {
-                console.error("Exception creating profile:", err);
-              }
-            } else {
-              console.error("Profile fetch error:", profileError);
-            }
-          } else if (profileData) {
-            console.log("Profile found:", profileData);
-            setProfile(profileData);
-            setIsAdmin(profileData.is_admin || false);
-          }
-        } catch (err) {
-          console.error("Profile fetch exception:", err);
-        }
+        // Fetch profile data
+        await fetchProfile(data.session.user.id);
       } else {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setIsAdmin(false);
+        // Fallback - try getSession instead
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (sessionData?.session) {
+          console.log("Session data: Found (fallback)", sessionData.session ? true : false);
+          setSession(sessionData.session);
+          setUser(sessionData.session.user);
+          
+          // Fetch profile data
+          await fetchProfile(sessionData.session.user.id);
+        } else {
+          console.log("Session data: Not found");
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setIsAdmin(false);
+        }
       }
     } catch (err) {
       console.error('Error in refresh session:', err);
@@ -123,11 +129,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Initialize auth on component mount
+  // Initialize auth on component mount - once only
   useEffect(() => {
     const initializeAuth = async () => {
       setIsLoading(true);
+      
       try {
+        // Check for a persisted session first
+        const persistedSession = localStorage.getItem('supabase.auth.token');
+        if (persistedSession) {
+          try {
+            const parsedSession = JSON.parse(persistedSession);
+            if (parsedSession && !isSessionExpired(parsedSession)) {
+              console.log("Using persisted session");
+              setSession(parsedSession);
+              setUser(parsedSession.user);
+              if (parsedSession.user?.id) {
+                await fetchProfile(parsedSession.user.id);
+              }
+              setIsLoading(false);
+              setAuthStatusChecked(true);
+              return;
+            }
+          } catch (e) {
+            console.error("Error parsing persisted session:", e);
+          }
+        }
+        
+        // If no valid persisted session, try regular refresh
         await handleRefreshSession();
       } catch (error) {
         console.error("Critical auth error:", error);
@@ -136,12 +165,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
+    // Check if a session is expired
+    const isSessionExpired = (session: any): boolean => {
+      if (!session.expires_at) return false;
+      const expiryTime = new Date(session.expires_at * 1000);
+      return expiryTime < new Date();
+    };
+
     // Add a safety timeout to ensure auth always completes
     const safetyTimer = setTimeout(() => {
       console.log("Auth safety timeout triggered - forcing completion");
       setIsLoading(false);
       setAuthStatusChecked(true);
-    }, 2000); // 2 second safety timeout
+    }, 3000); // 3 second safety timeout
 
     initializeAuth();
     
@@ -157,12 +193,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           setIsLoading(true);
-          await handleRefreshSession();
+          
+          if (newSession) {
+            setSession(newSession);
+            setUser(newSession.user);
+            
+            // Save session to localStorage as a backup
+            localStorage.setItem('supabase.auth.token', JSON.stringify(newSession));
+            
+            // Fetch profile
+            if (newSession.user) {
+              await fetchProfile(newSession.user.id);
+            }
+          } else {
+            // Try to refresh
+            await handleRefreshSession();
+          }
+          
+          setIsLoading(false);
         } else if (event === 'SIGNED_OUT') {
           setSession(null);
           setUser(null);
           setProfile(null);
           setIsAdmin(false);
+          
+          // Clear local storage
+          localStorage.removeItem('supabase.auth.token');
+          localStorage.removeItem('supabase.auth.token.v2');
+          
           setIsLoading(false);
         }
       }
@@ -175,9 +233,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Periodic session refresh
   useEffect(() => {
-    const intervalId = setInterval(handleRefreshSession, 5 * 60 * 1000);
+    const intervalId = setInterval(() => {
+      if (session) {
+        handleRefreshSession();
+      }
+    }, 5 * 60 * 1000); // Refresh every 5 minutes
     return () => clearInterval(intervalId);
-  }, []);
+  }, [session]);
 
   return (
     <AuthContext.Provider value={{ 
