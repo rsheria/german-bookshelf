@@ -2,30 +2,30 @@
 const theme = {
   colors: {
     // Core Palette
-    primary: '#0D1B2A',         // Very dark desaturated blue
-    primaryLight: '#1E3A5F',      // Lighter shade for interactions
-    primaryDark: '#07111C',       // Darker shade
-    secondary: '#00F5D4',       // Vibrant Cyan/Teal
-    secondaryLight: '#6AFFEA',    // Lighter cyan
-    secondaryDark: '#00C3A9',     // Darker cyan
-    accent: '#FF007F',          // Bright Magenta/Pink
+    primary: '#1A365D',         // Deep blue (more saturated)
+    primaryLight: '#2C5282',    // Medium blue
+    primaryDark: '#0F2942',     // Very dark blue
+    secondary: '#00B5D8',       // Bright cyan
+    secondaryLight: '#4FD1EA',  // Light cyan
+    secondaryDark: '#0098B7',   // Dark cyan
+    accent: '#ED64A6',          // Vibrant pink
     
     // Neutrals
-    background: '#F7F9FB',      // Very light grey, almost white
-    backgroundAlt: '#EDEFF2',     // Slightly darker grey
+    background: '#F7FAFC',      // Very light cool grey
+    backgroundAlt: '#EDF2F7',   // Light cool grey
     card: '#FFFFFF',            // White cards
-    text: '#1B1B1E',            // Dark grey, almost black
-    textLight: '#6A7178',       // Medium grey
-    border: '#DDE2E7',          // Light grey border
-
+    text: '#2D3748',            // Dark slate grey (better contrast)
+    textLight: '#4A5568',       // Medium slate grey
+    border: '#CBD5E0',          // Cool grey border
+    
     // Functional Colors
-    success: '#28A745',         // Standard green
-    warning: '#FFC107',         // Standard yellow
-    error: '#DC3545',           // Standard red
-
+    success: '#38A169',         // Green
+    warning: '#ED8936',         // Orange
+    error: '#E53E3E',           // Red
+    
     // Gradients
-    primaryGradient: 'linear-gradient(135deg, #1E3A5F 0%, #0D1B2A 100%)',
-    accentGradient: 'linear-gradient(135deg, #FF007F 0%, #00F5D4 100%)',
+    primaryGradient: 'linear-gradient(135deg, #2C5282 0%, #1A365D 100%)',
+    accentGradient: 'linear-gradient(135deg, #ED64A6 0%, #00B5D8 100%)',
   },
   typography: {
     fontFamily: {
@@ -73,12 +73,12 @@ const theme = {
     full: '9999px',
   },
   shadows: {
-    sm: '0 2px 4px rgba(13, 27, 42, 0.08)',                     // Softer, primary color based tint
-    md: '0 5px 10px rgba(13, 27, 42, 0.1)', 
-    lg: '0 10px 20px rgba(13, 27, 42, 0.12)',
-    xl: '0 20px 40px rgba(13, 27, 42, 0.15)',
-    inner: 'inset 0 2px 4px 0 rgba(13, 27, 42, 0.05)',
-    outline: '0 0 0 3px rgba(0, 245, 212, 0.5)', // Accent outline for focus
+    sm: '0 2px 4px rgba(44, 82, 130, 0.08)',                     // Softer, primary color based tint
+    md: '0 5px 10px rgba(44, 82, 130, 0.1)', 
+    lg: '0 10px 20px rgba(44, 82, 130, 0.12)',
+    xl: '0 20px 40px rgba(44, 82, 130, 0.15)',
+    inner: 'inset 0 2px 4px 0 rgba(44, 82, 130, 0.05)',
+    outline: '0 0 0 3px rgba(0, 181, 216, 0.5)', // Accent outline for focus
   },
   transitions: {
     fast: '150ms cubic-bezier(0.4, 0, 0.2, 1)',

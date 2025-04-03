@@ -1,93 +1,261 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiHeadphones, FiSearch } from 'react-icons/fi';
+import { FiHeadphones, FiSearch, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import BookGrid from '../components/BookGrid';
 import { useBooks } from '../hooks/useBooks';
 import { useSessionCheck } from '../hooks/useSessionCheck';
+import theme from '../styles/theme';
+
+const PageWrapper = styled.div`
+  width: 100%;
+  min-height: 100%;
+  background-color: ${props => props.theme.colors.background};
+  padding: ${theme.spacing.xl} 0;
+  
+  body[data-theme='dark'] & {
+    background-color: ${({ theme }) => theme.colors.background};
+  }
+`;
 
 const Container = styled.div`
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0 ${theme.spacing.xl};
+  
+  @media (max-width: 768px) {
+    padding: 0 ${theme.spacing.lg};
+  }
+  
+  @media (max-width: 480px) {
+    padding: 0 ${theme.spacing.md};
+  }
 `;
 
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: ${theme.spacing.xl};
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: ${theme.spacing.md};
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 `;
 
 const Title = styled.h1`
-  font-size: 2rem;
-  color: #2c3e50;
+  font-size: ${theme.typography.fontSize['3xl']};
+  color: ${props => props.theme.colors.primary};
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: ${theme.spacing.sm};
   margin: 0;
+  font-weight: ${theme.typography.fontWeight.bold};
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 60px;
+    height: 3px;
+    background-color: ${props => props.theme.colors.secondary};
+    border-radius: ${theme.borderRadius.full};
+  }
+  
+  body[data-theme='dark'] & {
+    color: ${({ theme }) => theme.colors.primary};
+    
+    &::after {
+      background-color: ${({ theme }) => theme.colors.secondary};
+    }
+  }
 `;
 
 const Controls = styled.div`
   display: flex;
-  gap: 1rem;
+  gap: ${theme.spacing.md};
   flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  @media (max-width: 480px) {
+    flex-direction: column;
+    width: 100%;
+  }
 `;
 
 const SearchBar = styled.div`
   display: flex;
   align-items: center;
-  background-color: #f5f5f5;
-  border-radius: 4px;
-  padding: 0 1rem;
-  width: 250px;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border-radius: ${theme.borderRadius.md};
+  padding: 0 ${theme.spacing.md};
+  width: 280px;
+  border: 1px solid ${props => props.theme.colors.border};
+  transition: all 0.3s ease;
+  
+  &:focus-within {
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 2px ${props => props.theme.colors.primaryLight}20;
+  }
+  
+  body[data-theme='dark'] & {
+    background-color: ${({ theme }) => theme.colors.backgroundAlt};
+    border-color: ${({ theme }) => theme.colors.border};
+    
+    &:focus-within {
+      border-color: ${({ theme }) => theme.colors.primary};
+      box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primaryLight}30;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    width: 100%;
+  }
 `;
 
 const SearchInput = styled.input`
   border: none;
   background: transparent;
-  padding: 0.75rem 0;
+  padding: ${theme.spacing.sm} 0;
   outline: none;
-  font-size: 1rem;
+  font-size: ${theme.typography.fontSize.md};
   width: 100%;
+  color: ${props => props.theme.colors.text};
+  
+  &::placeholder {
+    color: ${props => props.theme.colors.textLight};
+  }
+  
+  body[data-theme='dark'] & {
+    color: ${({ theme }) => theme.colors.text};
+    
+    &::placeholder {
+      color: ${({ theme }) => theme.colors.textLight};
+    }
+  }
 `;
 
 const FilterDropdown = styled.select`
-  padding: 0.75rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  font-size: 1rem;
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  font-size: ${theme.typography.fontSize.md};
   outline: none;
   cursor: pointer;
+  color: ${props => props.theme.colors.text};
+  transition: all 0.3s ease;
+  min-width: 180px;
+  
+  &:focus {
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 2px ${props => props.theme.colors.primaryLight}20;
+  }
+  
+  body[data-theme='dark'] & {
+    background-color: ${({ theme }) => theme.colors.backgroundAlt};
+    border-color: ${({ theme }) => theme.colors.border};
+    color: ${({ theme }) => theme.colors.text};
+    
+    &:focus {
+      border-color: ${({ theme }) => theme.colors.primary};
+      box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primaryLight}30;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    width: 100%;
+  }
 `;
 
 const Pagination = styled.div`
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
-  margin-top: 2rem;
+  gap: ${theme.spacing.sm};
+  margin-top: ${theme.spacing.xl};
+  flex-wrap: wrap;
 `;
 
 const PageButton = styled.button<{ active?: boolean }>`
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: ${({ active }) => (active ? '#3498db' : 'white')};
-  color: ${({ active }) => (active ? 'white' : '#333')};
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${props => props.active ? props.theme.colors.primary : props.theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  background-color: ${props => props.active ? props.theme.colors.primary : props.theme.colors.backgroundAlt};
+  color: ${props => props.active ? 'white' : props.theme.colors.text};
   cursor: pointer;
-  transition: all 0.2s;
-
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  font-weight: ${props => props.active ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal};
+  
   &:hover {
-    background-color: ${({ active }) => (active ? '#2980b9' : '#f5f5f5')};
+    background-color: ${props => props.active ? props.theme.colors.primaryDark : props.theme.colors.backgroundAlt};
+    transform: translateY(-2px);
+    box-shadow: ${theme.shadows.sm};
   }
-
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
   &:disabled {
-    background-color: #f5f5f5;
-    color: #999;
+    background-color: ${props => props.theme.colors.backgroundAlt};
+    color: ${props => props.theme.colors.textLight};
     cursor: not-allowed;
+    border-color: ${props => props.theme.colors.border};
+    transform: none;
+    box-shadow: none;
+  }
+  
+  body[data-theme='dark'] & {
+    background-color: ${props => props.active ? props.theme.colors.primary : props.theme.colors.backgroundAlt};
+    border-color: ${props => props.active ? props.theme.colors.primary : props.theme.colors.border};
+    color: ${props => props.active ? 'white' : props.theme.colors.text};
+    
+    &:hover:not(:disabled) {
+      background-color: ${props => props.active ? props.theme.colors.primaryDark : props.theme.colors.backgroundAlt};
+    }
+    
+    &:disabled {
+      background-color: ${props => props.theme.colors.backgroundAlt};
+      color: ${props => props.theme.colors.textLight};
+      border-color: ${props => props.theme.colors.border};
+    }
+  }
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: ${theme.spacing.xl};
+  color: ${props => props.theme.colors.textLight};
+  
+  h3 {
+    margin-bottom: ${theme.spacing.md};
+    color: ${props => props.theme.colors.text};
+  }
+  
+  p {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  
+  body[data-theme='dark'] & {
+    color: ${({ theme }) => theme.colors.textLight};
+    
+    h3 {
+      color: ${({ theme }) => theme.colors.text};
+    }
   }
 `;
 
@@ -137,7 +305,7 @@ const AudiobooksPage: React.FC = () => {
         onClick={() => setPage(prev => Math.max(0, prev - 1))}
         disabled={page === 0}
       >
-        {t('common.previous')}
+        <FiChevronLeft />
       </PageButton>
     );
     
@@ -164,7 +332,7 @@ const AudiobooksPage: React.FC = () => {
         onClick={() => setPage(prev => Math.min(totalPages - 1, prev + 1))}
         disabled={page >= totalPages - 1}
       >
-        {t('common.next')}
+        <FiChevronRight />
       </PageButton>
     );
     
@@ -172,57 +340,66 @@ const AudiobooksPage: React.FC = () => {
   };
   
   return (
-    <Container>
-      <Header>
-        <Title>
-          <FiHeadphones /> {t('nav.audiobooks')}
-        </Title>
-        
-        <Controls>
-          <SearchBar>
-            <FiSearch style={{ color: '#666', marginRight: '0.5rem' }} />
-            <SearchInput
-              type="text"
-              placeholder={t('nav.search')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </SearchBar>
+    <PageWrapper>
+      <Container>
+        <Header>
+          <Title>
+            <FiHeadphones /> {t('nav.audiobooks')}
+          </Title>
           
-          <FilterDropdown
-            value={genre}
-            onChange={(e) => {
-              setGenre(e.target.value);
-              setPage(0); // Reset to first page on filter change
-            }}
-          >
-            <option value="">{t('books.allGenres')}</option>
-            <option value="Fiction">Fiction</option>
-            <option value="Non-Fiction">Non-Fiction</option>
-            <option value="Science Fiction">Science Fiction</option>
-            <option value="Fantasy">Fantasy</option>
-            <option value="Mystery">Mystery</option>
-            <option value="Thriller">Thriller</option>
-            <option value="Romance">Romance</option>
-            <option value="Biography">Biography</option>
-            <option value="History">History</option>
-            <option value="Self-Help">Self-Help</option>
-          </FilterDropdown>
-        </Controls>
-      </Header>
-      
-      <BookGrid 
-        books={books} 
-        isLoading={isLoading} 
-        error={error} 
-      />
-      
-      {totalPages > 1 && !isLoading && (
-        <Pagination>
-          {renderPagination()}
-        </Pagination>
-      )}
-    </Container>
+          <Controls>
+            <SearchBar>
+              <FiSearch style={{ color: 'currentColor', marginRight: theme.spacing.sm, opacity: 0.7 }} />
+              <SearchInput
+                type="text"
+                placeholder={t('nav.search')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </SearchBar>
+            
+            <FilterDropdown
+              value={genre}
+              onChange={(e) => {
+                setGenre(e.target.value);
+                setPage(0); // Reset to first page on filter change
+              }}
+            >
+              <option value="">{t('books.allGenres')}</option>
+              <option value="Fiction">Fiction</option>
+              <option value="Non-Fiction">Non-Fiction</option>
+              <option value="Science Fiction">Science Fiction</option>
+              <option value="Fantasy">Fantasy</option>
+              <option value="Mystery">Mystery</option>
+              <option value="Thriller">Thriller</option>
+              <option value="Romance">Romance</option>
+              <option value="Biography">Biography</option>
+              <option value="History">History</option>
+              <option value="Self-Help">Self-Help</option>
+            </FilterDropdown>
+          </Controls>
+        </Header>
+        
+        {books && books.length > 0 ? (
+          <BookGrid 
+            books={books} 
+            isLoading={isLoading} 
+            error={error} 
+          />
+        ) : !isLoading && !error && (
+          <EmptyState>
+            <h3>{t('books.noResults')}</h3>
+            <p>{t('books.tryDifferentSearch')}</p>
+          </EmptyState>
+        )}
+        
+        {totalPages > 1 && !isLoading && books && books.length > 0 && (
+          <Pagination>
+            {renderPagination()}
+          </Pagination>
+        )}
+      </Container>
+    </PageWrapper>
   );
 };
 
