@@ -16,6 +16,8 @@ const Container = styled.div`
 
 const Hero = styled.div`
   background: linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primaryDark});
+  background-attachment: fixed;
+  background-size: cover;
   color: white;
   padding: ${theme.spacing['3xl']} ${theme.spacing.xl};
   border-radius: ${theme.borderRadius.lg};

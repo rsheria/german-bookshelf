@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FiMenu, FiX, FiSearch, FiUser, FiLogOut, FiBook, FiHeadphones, FiPlusCircle, FiHome, FiSettings } from 'react-icons/fi';
-import styled, { css } from 'styled-components';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import theme from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
+import { FiMenu, FiX, FiSearch, FiUser, FiLogOut, FiBook, FiHeadphones, FiPlusCircle, FiHome, FiSettings, FiSun, FiMoon } from 'react-icons/fi';
+import styled, { css } from 'styled-components';
 
 const NavContainer = styled.nav<{ scrolled: boolean }>`
   display: flex;
@@ -21,8 +22,8 @@ const NavContainer = styled.nav<{ scrolled: boolean }>`
   transition: all ${theme.transitions.normal};
 `;
 
-const Logo = styled(Link)`
-  font-size: 1.5rem;
+const Logo = styled(Link)<{ scrolled?: boolean }>`
+  font-size: ${props => props.scrolled ? '1.2rem' : '1.5rem'};
   font-weight: ${theme.typography.fontWeight.bold};
   font-family: ${theme.typography.fontFamily.heading};
   color: white;
@@ -30,7 +31,7 @@ const Logo = styled(Link)`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: transform ${theme.transitions.fast};
+  transition: font-size ${theme.transitions.fast}, transform ${theme.transitions.fast};
   
   &:hover {
     transform: scale(1.05);
@@ -201,6 +202,21 @@ const LanguageToggle = styled.button`
   }
 `;
 
+const ThemeToggle = styled.button`
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 0.5rem 0.8rem;
+  border-radius: ${theme.borderRadius.full};
+  cursor: pointer;
+  margin-left: 0.5rem;
+  transition: background-color ${theme.transitions.fast};
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+`;
+
 const Overlay = styled.div<{ isOpen: boolean }>`
   display: ${({ isOpen }) => (isOpen ? 'block' : 'none')};
   position: fixed;
@@ -255,6 +271,8 @@ const Navbar: React.FC = () => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { toggleTheme, isDark } = useTheme();
+  
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [scrolled, setScrolled] = useState(false);
@@ -262,7 +280,7 @@ const Navbar: React.FC = () => {
   // Handle scroll effect
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 30) {
+      if (window.scrollY > 50) {
         setScrolled(true);
       } else {
         setScrolled(false);
@@ -341,7 +359,7 @@ const Navbar: React.FC = () => {
   return (
     <>
       <NavContainer scrolled={scrolled}>
-        <Logo to="/">
+        <Logo to="/" scrolled={scrolled}>
           <FiBook /> {t('app.title')}
         </Logo>
 
@@ -431,6 +449,11 @@ const Navbar: React.FC = () => {
           <LanguageToggle onClick={toggleLanguage}>
             {i18n.language === 'de' ? 'EN' : 'DE'}
           </LanguageToggle>
+
+          <ThemeToggle onClick={toggleTheme}>
+            {isDark ? <FiSun /> : <FiMoon />}
+          </ThemeToggle>
+
         </NavLinks>
       </NavContainer>
       <Overlay isOpen={isOpen} onClick={() => setIsOpen(false)} />

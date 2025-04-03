@@ -10,6 +10,19 @@ interface BookCardProps {
   book: Book;
 }
 
+const CardContainer = styled.div`
+  background: white;
+  border-radius: ${theme.borderRadius.md};
+  box-shadow: ${theme.shadows.sm};
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  &:hover {
+    transform: scale(1.03);
+    box-shadow: ${theme.shadows.lg};
+  }
+`;
+
 const Card = styled(Link)`
   display: flex;
   flex-direction: column;
@@ -174,36 +187,38 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
   const placeholderCover = 'https://via.placeholder.com/300x450?text=No+Cover';
 
   return (
-    <Card to={`/books/${book.id}`}>
-      <CoverContainer>
-        <Cover 
-          className="book-cover"
-          src={book.cover_url || placeholderCover} 
-          alt={`${book.title} cover`}
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = placeholderCover;
-          }}
-        />
-        <BookType>
-          {book.type === 'audiobook' ? (
-            <>
-              <FiHeadphones size={14} /> {t('books.audiobook')}
-            </>
-          ) : (
-            <>
-              <FiBook size={14} /> {t('books.ebook')}
-            </>
-          )}
-        </BookType>
-        <Language>{book.language}</Language>
-      </CoverContainer>
-      <BookInfo>
-        <Title>{book.title}</Title>
-        <Author>{book.author}</Author>
-        <Genre>{book.genre}</Genre>
-      </BookInfo>
-    </Card>
+    <CardContainer>
+      <Card to={`/books/${book.id}`}>
+        <CoverContainer>
+          <Cover 
+            className="book-cover"
+            src={book.cover_url || placeholderCover} 
+            alt={`${book.title} cover`}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = placeholderCover;
+            }}
+          />
+          <BookType>
+            {book.type === 'audiobook' ? (
+              <>
+                <FiHeadphones size={14} /> {t('books.audiobook')}
+              </>
+            ) : (
+              <>
+                <FiBook size={14} /> {t('books.ebook')}
+              </>
+            )}
+          </BookType>
+          <Language>{book.language}</Language>
+        </CoverContainer>
+        <BookInfo>
+          <Title>{book.title}</Title>
+          <Author>{book.author}</Author>
+          <Genre>{book.genre}</Genre>
+        </BookInfo>
+      </Card>
+    </CardContainer>
   );
 };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { ChakraProvider } from '@chakra-ui/react';
+import { ThemeProvider } from './context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './context/AuthContext';
 import { bypassRefreshIssue } from './services/refreshBypass';
@@ -653,12 +653,12 @@ const App: React.FC = () => {
   return (
     <EmergencyModeContext.Provider value={{ emergencyMode, setEmergencyMode }}>
       <PanicModeContext.Provider value={panicMode}>
-        <ChakraProvider theme={theme}>
+        <ThemeProvider>
           <AuthProvider>
             <GlobalStyles />
             <AppRoutes />
           </AuthProvider>
-        </ChakraProvider>
+        </ThemeProvider>
       </PanicModeContext.Provider>
     </EmergencyModeContext.Provider>
   );
