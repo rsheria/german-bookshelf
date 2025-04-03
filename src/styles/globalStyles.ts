@@ -199,6 +199,62 @@ const GlobalStyle = createGlobalStyle`
       box-shadow: ${darkTheme.shadows.md};
     }
   }
+  
+  /* Rating Badge Styling */
+  .rating-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.5rem;
+    border-radius: ${theme.borderRadius.md};
+    font-weight: ${theme.typography.fontWeight.bold};
+    color: white;
+    font-size: ${theme.typography.fontSize.sm};
+    transition: background-color 0.3s ease;
+  }
+
+  .rating-high {
+    background: ${theme.colors.ratingHigh};
+  }
+
+  .rating-medium {
+    background: ${theme.colors.ratingMedium};
+  }
+
+  .rating-low {
+    background: ${theme.colors.ratingLow};
+  }
+  
+  /* Cover Item Styling */
+  .cover-item {
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: ${theme.borderRadius.md};
+    overflow: hidden;
+    transition: transform 0.3s ease;
+    height: 0;
+    padding-bottom: 150%; /* 2:3 aspect ratio for book covers */
+    
+    &:hover {
+      transform: translateY(-5px);
+    }
+    
+    .rating-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }
+  }
+  
+  /* SVG Icon Styling */
+  svg {
+    fill: currentColor;
+    transition: fill 0.3s ease;
+  }
 `;
 
 export default GlobalStyle;

@@ -26,6 +26,11 @@ const darkTheme: DefaultTheme = {
     warning: '#F6AD55',            // Warning orange
     error: '#FC8181',              // Error red/pink
     
+    // Rating Badge Colors (from reference styling)
+    ratingHigh: '#30b340',         // High ratings (8+)
+    ratingMedium: '#84c137',       // Medium ratings (around 7)
+    ratingLow: '#8b9e46',          // Lower ratings (6-6.5)
+    
     // Gradients
     primaryGradient: 'linear-gradient(135deg, #63B3ED 0%, #4299E1 100%)',
     accentGradient: 'linear-gradient(135deg, #D53F8C 0%, #38B2AC 100%)',

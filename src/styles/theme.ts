@@ -23,6 +23,11 @@ const theme = {
     warning: '#ED8936',         // Orange
     error: '#E53E3E',           // Red
     
+    // Rating Badge Colors (from reference styling)
+    ratingHigh: '#30b340',      // High ratings (8+)
+    ratingMedium: '#84c137',    // Medium ratings (around 7)
+    ratingLow: '#8b9e46',       // Lower ratings (6-6.5)
+    
     // Gradients
     primaryGradient: 'linear-gradient(135deg, #2C5282 0%, #1A365D 100%)',
     accentGradient: 'linear-gradient(135deg, #ED64A6 0%, #00B5D8 100%)',

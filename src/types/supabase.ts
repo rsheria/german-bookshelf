@@ -13,6 +13,7 @@ export interface Book {
   file_url?: string;
   created_at: string;
   updated_at?: string;
+  rating?: number; // Rating score for the book (1-10 scale)
 }
 
 export interface Profile {

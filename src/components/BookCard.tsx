@@ -11,6 +11,22 @@ interface BookCardProps {
   book: Book;
 }
 
+// Helper function to determine rating badge class
+const getRatingBadgeClass = (rating: number | undefined) => {
+  if (!rating) return '';
+  if (rating >= 8) return 'rating-high';
+  if (rating >= 7) return 'rating-medium';
+  return 'rating-low';
+};
+
+// Helper function to get background color based on rating
+const getRatingColor = (rating: number | undefined) => {
+  if (!rating) return theme.colors.backgroundAlt;
+  if (rating >= 8) return theme.colors.ratingHigh;
+  if (rating >= 7) return theme.colors.ratingMedium;
+  return theme.colors.ratingLow;
+};
+
 const useMediaQuery = (query: string): boolean => {
   const [matches, setMatches] = useState(false);
 
@@ -195,6 +211,33 @@ const Language = styled(motion.div)`
   }
 `;
 
+const RatingBadge = styled(motion.div)<{ rating: number | undefined }>`
+  position: absolute;
+  bottom: ${theme.spacing.md};
+  right: ${theme.spacing.md};
+  background-color: ${props => getRatingColor(props.rating)};
+  color: white;
+  border-radius: ${theme.borderRadius.md};
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  font-size: ${theme.typography.fontSize.sm};
+  font-weight: ${theme.typography.fontWeight.bold};
+  z-index: 3;
+  box-shadow: ${theme.shadows.sm};
+  transform: translateZ(40px);
+  
+  @media (max-width: 1024px) {
+    bottom: ${theme.spacing.sm};
+    right: ${theme.spacing.sm};
+    padding: ${'4px'} ${theme.spacing.xs};
+    font-size: ${'0.65rem'};
+    transform: translateZ(20px);
+  }
+  
+  @media (max-width: 768px) {
+    transform: translateZ(15px);
+  }
+`;
+
 const BookInfo = styled(motion.div)` 
   padding: ${theme.spacing.lg}; 
   flex-grow: 1;
@@ -351,6 +394,14 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
             )}
           </BookType>
           <Language>{book.language}</Language>
+          {book.rating && (
+            <RatingBadge 
+              rating={book.rating}
+              className={`rating-badge ${getRatingBadgeClass(book.rating)}`}
+            >
+              {book.rating.toFixed(1)}
+            </RatingBadge>
+          )}
         </CoverContainer>
         <BookInfo>
           <Title>{book.title}</Title>
