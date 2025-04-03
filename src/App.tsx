@@ -7,11 +7,13 @@ import { bypassRefreshIssue } from './services/refreshBypass';
 import { startSessionKeepalive } from './services/supabase';
 import { initializeLocalAuth, isLoggedIn } from './services/localAuth';
 import styled from 'styled-components';
+import theme from './styles/theme';
 
 // Import components
 import Navbar from './components/Navbar';
 import LoginForm from './components/LoginForm';
 import SignupForm from './components/SignupForm';
+import Footer from './components/common/Footer';
 
 // Import pages
 import HomePage from './pages/HomePage';
@@ -32,6 +34,7 @@ import AdminBookRequestsPage from './pages/admin/AdminBookRequestsPage';
 // Import context and i18n
 import { AuthProvider } from './context/AuthContext';
 import './i18n/i18n';
+import GlobalStyles from './styles/globalStyles';
 
 // Create a context for emergency mode
 export const EmergencyModeContext = createContext<{
@@ -86,13 +89,6 @@ const AppContainer = styled.div`
 const MainContent = styled.main`
   flex: 1;
   padding-bottom: 3rem;
-`;
-
-const Footer = styled.footer`
-  background-color: #2c3e50;
-  color: white;
-  padding: 2rem;
-  text-align: center;
 `;
 
 // Debug component to show environment variables
@@ -280,6 +276,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
       if (!isLoading && !panicMode) {
         if (!user) {
           // If no user, redirect to login
+          // But only if we're not in panic mode
           navigate('/login', { state: { from: location } });
         } else if (!isAdmin) {
           // If user exists but isn't admin, redirect to homepage
@@ -418,9 +415,7 @@ const AppRoutes: React.FC = () => {
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </MainContent>
-          <Footer>
-            &copy; {new Date().getFullYear()} German Bookshelf - All rights reserved
-          </Footer>
+          <Footer />
           <DebugInfo />
         </AppContainer>
       </ErrorBoundary>
@@ -494,9 +489,7 @@ const AppRoutes: React.FC = () => {
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </MainContent>
-        <Footer>
-          &copy; {new Date().getFullYear()} German Bookshelf - All rights reserved
-        </Footer>
+        <Footer />
         <DebugInfo />
       </AppContainer>
     </ErrorBoundary>
@@ -660,8 +653,9 @@ const App: React.FC = () => {
   return (
     <EmergencyModeContext.Provider value={{ emergencyMode, setEmergencyMode }}>
       <PanicModeContext.Provider value={panicMode}>
-        <ChakraProvider>
+        <ChakraProvider theme={theme}>
           <AuthProvider>
+            <GlobalStyles />
             <AppRoutes />
           </AuthProvider>
         </ChakraProvider>

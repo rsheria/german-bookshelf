@@ -3,57 +3,122 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import BookCard from './BookCard';
 import { Book } from '../types/supabase';
-import { FiLoader } from 'react-icons/fi';
+import { FiLoader, FiAlertCircle, FiBookOpen } from 'react-icons/fi';
+import theme from '../styles/theme';
 
 interface BookGridProps {
   books: Book[];
   isLoading: boolean;
   error: Error | null;
+  title?: string;
+  subtitle?: string;
 }
+
+const Section = styled.section`
+  margin-bottom: ${theme.spacing['2xl']};
+`;
+
+const SectionHeader = styled.div`
+  margin-bottom: ${theme.spacing.xl};
+  text-align: center;
+`;
+
+const Title = styled.h2`
+  font-family: ${theme.typography.fontFamily.heading};
+  font-size: ${theme.typography.fontSize['3xl']};
+  font-weight: ${theme.typography.fontWeight.bold};
+  color: ${theme.colors.primary};
+  margin-bottom: ${theme.spacing.xs};
+  position: relative;
+  display: inline-block;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70px;
+    height: 3px;
+    background-color: ${theme.colors.secondary};
+    border-radius: ${theme.borderRadius.full};
+  }
+`;
+
+const Subtitle = styled.p`
+  font-size: ${theme.typography.fontSize.lg};
+  color: ${theme.colors.textLight};
+  max-width: 600px;
+  margin: ${theme.spacing.lg} auto 0;
+  line-height: ${theme.typography.lineHeight.relaxed};
+`;
 
 const GridContainer = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1.5rem;
-  padding: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: ${theme.spacing.xl};
+  padding: ${theme.spacing.xl};
+  transition: all ${theme.transitions.normal};
 
   @media (max-width: 768px) {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 1rem;
-    padding: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: ${theme.spacing.lg};
+    padding: ${theme.spacing.lg};
   }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: 3rem;
-  color: #666;
+  padding: ${theme.spacing['2xl']};
+  color: ${theme.colors.textLight};
   grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  
+  svg {
+    font-size: 3rem;
+    color: ${theme.colors.primary};
+    opacity: 0.4;
+  }
 `;
 
 const LoadingState = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 3rem;
+  padding: ${theme.spacing['2xl']};
   grid-column: 1 / -1;
-  font-size: 1.5rem;
-  color: #2c3e50;
+  font-size: ${theme.typography.fontSize.xl};
+  color: ${theme.colors.primary};
 `;
 
 const ErrorState = styled.div`
   text-align: center;
-  padding: 2rem;
-  color: #e74c3c;
+  padding: ${theme.spacing.xl};
+  color: ${theme.colors.error};
   grid-column: 1 / -1;
-  border: 1px solid #e74c3c;
-  border-radius: 8px;
-  margin: 1rem;
+  border: 1px solid ${theme.colors.error};
+  border-radius: ${theme.borderRadius.lg};
+  margin: ${theme.spacing.md};
+  background-color: rgba(231, 76, 60, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${theme.spacing.md};
+  
+  svg {
+    font-size: 2.5rem;
+    color: ${theme.colors.error};
+  }
 `;
 
 const Spinner = styled(FiLoader)`
-  animation: spin 1s linear infinite;
-  margin-right: 0.5rem;
+  animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  margin-right: ${theme.spacing.md};
+  font-size: 2rem;
+  color: ${theme.colors.primary};
   
   @keyframes spin {
     from {
@@ -65,44 +130,58 @@ const Spinner = styled(FiLoader)`
   }
 `;
 
-const BookGrid: React.FC<BookGridProps> = ({ books, isLoading, error }) => {
+const BookGrid: React.FC<BookGridProps> = ({ books, isLoading, error, title, subtitle }) => {
   const { t } = useTranslation();
 
-  if (isLoading) {
-    return (
-      <GridContainer>
+  const renderContent = () => {
+    if (isLoading) {
+      return (
         <LoadingState>
           <Spinner />
           {t('common.loading')}
         </LoadingState>
-      </GridContainer>
-    );
-  }
+      );
+    }
 
-  if (error) {
-    return (
-      <GridContainer>
+    if (error) {
+      return (
         <ErrorState>
-          {t('common.error')}: {error.message}
+          <FiAlertCircle />
+          <div>
+            <h3>{t('common.error')}</h3>
+            <p>{error.message}</p>
+          </div>
         </ErrorState>
-      </GridContainer>
-    );
-  }
+      );
+    }
 
-  if (books.length === 0) {
-    return (
-      <GridContainer>
-        <EmptyState>{t('books.noBooks')}</EmptyState>
-      </GridContainer>
-    );
-  }
+    if (books.length === 0) {
+      return (
+        <EmptyState>
+          <FiBookOpen />
+          <h3>{t('books.noBooks')}</h3>
+          <p>{t('books.noBooksSuggestion', 'Try adjusting your filters or check back later for new additions.')}</p>
+        </EmptyState>
+      );
+    }
+
+    return books.map((book) => (
+      <BookCard key={book.id} book={book} />
+    ));
+  };
 
   return (
-    <GridContainer>
-      {books.map((book) => (
-        <BookCard key={book.id} book={book} />
-      ))}
-    </GridContainer>
+    <Section>
+      {(title || subtitle) && (
+        <SectionHeader>
+          {title && <Title>{title}</Title>}
+          {subtitle && <Subtitle>{subtitle}</Subtitle>}
+        </SectionHeader>
+      )}
+      <GridContainer>
+        {renderContent()}
+      </GridContainer>
+    </Section>
   );
 };
 
