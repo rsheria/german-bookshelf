@@ -56,6 +56,16 @@ const NavContainer = styled(motion.nav)`
   position: sticky;
   top: 0;
   z-index: ${theme.zIndex.sticky};
+  
+  @media (max-width: 1024px) {
+    padding-left: ${theme.spacing.lg};
+    padding-right: ${theme.spacing.lg};
+  }
+  
+  @media (max-width: 768px) {
+    padding-left: ${theme.spacing.md};
+    padding-right: ${theme.spacing.md};
+  }
 `;
 
 const Logo = styled(motion(Link))`
@@ -67,6 +77,10 @@ const Logo = styled(motion(Link))`
   display: flex;
   align-items: center;
   gap: ${theme.spacing.sm};
+  
+  @media (max-width: 768px) {
+    font-size: ${theme.typography.fontSize.lg};
+  }
 `;
 
 const NavLinks = styled(motion.div)`
@@ -74,19 +88,30 @@ const NavLinks = styled(motion.div)`
   align-items: center;
   gap: ${theme.spacing.lg};
 
-  @media (max-width: 768px) {
-    position: fixed;
-    top: 0;
-    right: 0;
-    height: 100vh;
-    width: 300px;
-    flex-direction: column;
-    background-color: ${theme.colors.primaryDark};
-    padding: ${theme.spacing.xl} ${theme.spacing.lg};
-    padding-top: ${theme.spacing['3xl']};
-    z-index: ${theme.zIndex.modal};
-    box-shadow: ${theme.shadows.xl};
-    overflow-y: auto;
+  &.desktop-navlinks {
+    @media (max-width: 768px) {
+      display: none !important; /* Override inline style */
+    }
+  }
+
+  &.mobile-navlinks {
+    display: none; /* Hide by default */
+    
+    @media (max-width: 768px) {
+      display: flex; /* Will be shown via framer-motion */
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100vh;
+      width: min(300px, 80vw); /* Responsive width */
+      flex-direction: column;
+      background-color: ${theme.colors.primaryDark};
+      padding: ${theme.spacing.xl} ${theme.spacing.lg};
+      padding-top: ${theme.spacing['3xl']};
+      z-index: ${theme.zIndex.modal};
+      box-shadow: ${theme.shadows.xl};
+      overflow-y: auto;
+    }
   }
 `;
 
@@ -107,14 +132,20 @@ const NavLinkStyled = styled(motion(Link))<{ $isActive?: boolean }>`
   border-radius: ${theme.borderRadius.lg};
   position: relative;
   overflow: hidden;
-
+  
   ${props => props.$isActive && activeStyles}
+
+  @media (max-width: 1024px) {
+    padding: ${theme.spacing.xs} ${theme.spacing.sm};
+    font-size: ${theme.typography.fontSize.sm};
+    gap: ${theme.spacing.xs};
+  }
 
   @media (max-width: 768px) {
     width: 100%;
     padding: ${theme.spacing.md} ${theme.spacing.lg};
     margin-bottom: ${theme.spacing.sm};
-    font-size: ${theme.typography.fontSize.lg};
+    font-size: ${theme.typography.fontSize.md};
   }
 `;
 
@@ -134,10 +165,16 @@ const SearchBar = styled(motion.div)`
     box-shadow: ${theme.shadows.outline};
   }
 
+  @media (max-width: 1024px) {
+    margin-right: ${theme.spacing.sm};
+    padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  }
+
   @media (max-width: 768px) {
     width: 100%;
     margin: ${theme.spacing.lg} 0;
     order: -1;
+    padding: ${theme.spacing.sm} ${theme.spacing.md};
   }
 `;
 
@@ -153,6 +190,10 @@ const SearchInput = styled.input`
 
   &::placeholder {
     color: rgba(255, 255, 255, 0.6);
+  }
+  
+  @media (max-width: 1024px) {
+    width: 140px;
   }
 
   @media (max-width: 768px) {
@@ -175,6 +216,12 @@ const IconWrapper = styled(motion.button)`
 
   &:hover {
     background: rgba(255, 255, 255, 0.2);
+  }
+  
+  @media (max-width: 1024px) {
+    padding: ${theme.spacing.xs};
+    margin-left: ${theme.spacing.xs};
+    font-size: 0.9rem;
   }
 `;
 
@@ -359,88 +406,91 @@ const Navbar: React.FC = () => {
 
   return (
     <>
-      <NavContainer
-        animate={scrolled ? "scrolled" : "top"}
+      <NavContainer 
+        animate={scrolled ? "scrolled" : "top"} 
         variants={navVariants}
-        initial={false}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
+        initial={false} // Don't animate initial load based on scroll
+        transition={{ duration: 0.3, ease: "easeInOut" }} // Add transition spec
       >
-        <Logo
-          to="/"
+        <Logo 
+          to="/" 
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.98 }}
         >
           <FiBook /> {t('app.title')}
         </Logo>
 
-        <MenuButton
-          onClick={() => setIsOpen(!isOpen)}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-        >
+        <MenuButton 
+           onClick={() => setIsOpen(!isOpen)}
+           whileHover={{ scale: 1.1 }}
+           whileTap={{ scale: 0.9 }}
+         >
           {isOpen ? <FiX /> : <FiMenu />}
         </MenuButton>
 
-        <NavLinks style={{ display: 'flex' }} className="desktop-navlinks">
-          <SearchBar layout>
-            <FiSearch style={{ marginRight: theme.spacing.sm, color: 'rgba(255, 255, 255, 0.7)'}} />
-            <form onSubmit={handleSearch} style={{ display: 'contents' }}>
-              <SearchInput
-                type="text"
-                placeholder={t('nav.search')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </form>
-          </SearchBar>
+        {/* Desktop Nav Links (Hidden on Mobile) */} 
+        <NavLinks className="desktop-navlinks">
+           {/* Search Bar moved inside for better layout control */} 
+           <SearchBar layout>
+             <FiSearch style={{ marginRight: theme.spacing.sm, color: 'rgba(255, 255, 255, 0.7)'}} />
+             <form onSubmit={handleSearch} style={{ display: 'contents' }}>
+               <SearchInput
+                 type="text"
+                 placeholder={t('nav.search')}
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+               />
+             </form>
+           </SearchBar>
 
-          <MotionLink to="/" $isActive={isActiveLink('/')}> <FiHome /> {t('nav.home')} </MotionLink>
-          <MotionLink to="/audiobooks" $isActive={isActiveLink('/audiobooks')}> <FiHeadphones /> {t('nav.audiobooks')} </MotionLink>
-          <MotionLink to="/ebooks" $isActive={isActiveLink('/ebooks')}> <FiBook /> {t('nav.ebooks')} </MotionLink>
+           <MotionLink to="/" $isActive={isActiveLink('/')}> <FiHome /> {t('nav.home')} </MotionLink>
+           <MotionLink to="/audiobooks" $isActive={isActiveLink('/audiobooks')}> <FiHeadphones /> {t('nav.audiobooks')} </MotionLink>
+           <MotionLink to="/ebooks" $isActive={isActiveLink('/ebooks')}> <FiBook /> {t('nav.ebooks')} </MotionLink>
 
-          {user ? (
-            <>
-              <MotionLink to="/profile" $isActive={isActiveLink('/profile')}> <FiUser /> {t('nav.profile')} </MotionLink>
-              <MotionLink to="/book-requests" $isActive={isActiveLink('/book-requests')}> <FiPlusCircle /> {t('nav.bookRequests', 'Request Books')} </MotionLink>
-              {isAdmin && (
-                <MotionLink to="/admin" $isActive={isActiveLink('/admin')}> <FiSettings /> {t('nav.admin')} </MotionLink>
-              )}
-              <MotionLink to="#" onClick={handleLogout}> <FiLogOut /> {t('nav.logout')} </MotionLink>
-            </>
-          ) : (
-            <>
-              <MotionLink to="/login" $isActive={isActiveLink('/login')}> <FiUser /> {t('nav.login')} </MotionLink>
-              <MotionLink to="/signup" $isActive={isActiveLink('/signup')}> <FiPlusCircle /> {t('nav.signup')} </MotionLink>
-            </>
-          )}
+           {user ? (
+             <>
+               <MotionLink to="/profile" $isActive={isActiveLink('/profile')}> <FiUser /> {t('nav.profile')} </MotionLink>
+               <MotionLink to="/book-requests" $isActive={isActiveLink('/book-requests')}> <FiPlusCircle /> {t('nav.bookRequests', 'Request Books')} </MotionLink>
+               {isAdmin && (
+                 <MotionLink to="/admin" $isActive={isActiveLink('/admin')}> <FiSettings /> {t('nav.admin')} </MotionLink>
+               )}
+               {/* Use MotionLink for consistency, but it acts like a button */}
+               <MotionLink to="#" onClick={handleLogout}> <FiLogOut /> {t('nav.logout')} </MotionLink>
+             </>
+           ) : (
+             <>
+               <MotionLink to="/login" $isActive={isActiveLink('/login')}> <FiUser /> {t('nav.login')} </MotionLink>
+               <MotionLink to="/signup" $isActive={isActiveLink('/signup')}> <FiPlusCircle /> {t('nav.signup')} </MotionLink>
+             </>
+           )}
 
-          <LanguageToggle onClick={toggleLanguage} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-            {i18n.language === 'de' ? 'EN' : 'DE'}
-          </LanguageToggle>
+           <LanguageToggle onClick={toggleLanguage} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+             {i18n.language === 'de' ? 'EN' : 'DE'}
+           </LanguageToggle>
 
-          <ThemeToggle onClick={toggleTheme} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-            {isDark ? <FiSun /> : <FiMoon />}
-          </ThemeToggle>
+           <ThemeToggle onClick={toggleTheme} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+             {isDark ? <FiSun /> : <FiMoon />}
+           </ThemeToggle>
         </NavLinks>
       </NavContainer>
 
+      {/* Mobile Menu (Animated with AnimatePresence) */} 
       <AnimatePresence>
         {isOpen && (
           <>
-            <Overlay
+            <Overlay 
               variants={overlayVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
-              onClick={() => setIsOpen(false)}
+              onClick={() => setIsOpen(false)} 
             />
-            <NavLinks
+            <NavLinks 
               variants={mobileMenuVariants}
               initial="closed"
               animate="open"
               exit="closed"
               className="mobile-navlinks"
-              style={{ display: 'flex' }}
             >
               <CloseButton
                 onClick={() => setIsOpen(false)}

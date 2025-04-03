@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
@@ -10,6 +10,24 @@ import theme from '../styles/theme';
 interface BookCardProps {
   book: Book;
 }
+
+const useMediaQuery = (query: string): boolean => {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) {
+      setMatches(media.matches);
+    }
+    
+    const listener = () => setMatches(media.matches);
+    media.addEventListener('change', listener);
+    
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+
+  return matches;
+};
 
 const cardVariants = {
   hover: {
@@ -26,6 +44,10 @@ const cardVariants = {
 
 const CardWrapper = styled(motion.div)`
   perspective: 1000px; 
+  
+  @media (max-width: 768px) {
+    perspective: 600px; 
+  }
 `;
 
 const Card = styled(motion(Link))` 
@@ -59,6 +81,10 @@ const CoverContainer = styled.div`
   overflow: hidden;
   border-radius: ${theme.borderRadius.lg} ${theme.borderRadius.lg} 0 0; 
   transform: translateZ(20px); 
+  
+  @media (max-width: 768px) {
+    transform: translateZ(10px); 
+  }
 
   &::after { 
     content: '';
@@ -93,6 +119,12 @@ const Cover = styled.img`
   ${Card}:hover & {
     transform: scale(1.1); 
   }
+  
+  @media (hover: none) {
+    ${Card}:hover & {
+      transform: none;
+    }
+  }
 `;
 
 const BookType = styled(motion.div)` 
@@ -110,7 +142,19 @@ const BookType = styled(motion.div)`
   gap: 4px;
   z-index: 3; 
   box-shadow: ${theme.shadows.sm};
-  transform: translateZ(40px); 
+  transform: translateZ(40px);
+  
+  @media (max-width: 1024px) {
+    top: ${theme.spacing.sm};
+    right: ${theme.spacing.sm};
+    padding: ${'4px'} ${theme.spacing.xs};
+    font-size: ${'0.65rem'};
+    transform: translateZ(20px);
+  }
+  
+  @media (max-width: 768px) {
+    transform: translateZ(15px);
+  }
 `;
 
 const Language = styled(motion.div)` 
@@ -125,7 +169,19 @@ const Language = styled(motion.div)`
   font-weight: ${theme.typography.fontWeight.semibold};
   z-index: 3; 
   box-shadow: ${theme.shadows.sm};
-  transform: translateZ(40px); 
+  transform: translateZ(40px);
+  
+  @media (max-width: 1024px) {
+    top: ${theme.spacing.sm};
+    left: ${theme.spacing.sm};
+    padding: ${'4px'} ${theme.spacing.xs};
+    font-size: ${'0.65rem'};
+    transform: translateZ(20px);
+  }
+  
+  @media (max-width: 768px) {
+    transform: translateZ(15px);
+  }
 `;
 
 const BookInfo = styled(motion.div)` 
@@ -137,7 +193,16 @@ const BookInfo = styled(motion.div)`
   border-radius: 0 0 ${theme.borderRadius.lg} ${theme.borderRadius.lg}; 
   position: relative;
   z-index: 2;
-  transform: translateZ(10px); 
+  transform: translateZ(10px);
+  
+  @media (max-width: 1024px) {
+    padding: ${theme.spacing.md};
+  }
+  
+  @media (max-width: 768px) {
+    padding: ${theme.spacing.sm};
+    transform: translateZ(5px);
+  }
 `;
 
 const Title = styled.h3`
@@ -150,7 +215,17 @@ const Title = styled.h3`
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  color: ${theme.colors.primaryDark}; 
+  color: ${theme.colors.primaryDark};
+  
+  @media (max-width: 1024px) {
+    font-size: ${theme.typography.fontSize.md};
+    margin: 0 0 ${theme.spacing.xs} 0;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: ${'0.7rem'};
+    margin: 0 0 ${theme.spacing.xs} 0;
+  }
 `;
 
 const Author = styled.p`
@@ -160,6 +235,16 @@ const Author = styled.p`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  
+  @media (max-width: 1024px) {
+    font-size: ${theme.typography.fontSize.xs};
+    margin: 0 0 ${theme.spacing.sm} 0;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: ${'0.65rem'};
+    margin: 0 0 ${theme.spacing.xs} 0;
+  }
 `;
 
 const Genre = styled.span`
@@ -172,19 +257,30 @@ const Genre = styled.span`
   margin-top: auto; 
   color: ${theme.colors.primary};
   font-weight: ${theme.typography.fontWeight.medium};
+  
+  @media (max-width: 1024px) {
+    padding: ${'4px'} ${theme.spacing.sm};
+    font-size: ${'0.65rem'};
+  }
 `;
 
 const BookCard: React.FC<BookCardProps> = ({ book }) => {
   const { t } = useTranslation();
   const placeholderCover = 'https://via.placeholder.com/300x450?text=No+Cover';
-
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
-  const rotateX = useTransform(y, [-100, 100], [15, -15]); 
-  const rotateY = useTransform(x, [-100, 100], [-15, 15]); 
+  const rotateXAmount = isMobile ? 5 : 15;
+  const rotateYAmount = isMobile ? 5 : 15;
+  
+  const rotateX = useTransform(y, [-100, 100], [rotateXAmount, -rotateXAmount]); 
+  const rotateY = useTransform(x, [-100, 100], [-rotateYAmount, rotateYAmount]); 
 
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    if (window.matchMedia('(hover: none)').matches) return;
+    
     const rect = event.currentTarget.getBoundingClientRect();
     x.set(event.clientX - rect.left - rect.width / 2);
     y.set(event.clientY - rect.top - rect.height / 2);
@@ -221,11 +317,11 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
           <BookType>
             {book.type === 'audiobook' ? (
               <>
-                <FiHeadphones size={14} /> {t('books.audiobook')}
+                <FiHeadphones size={isMobile ? 10 : 14} /> {t('books.audiobook')}
               </>
             ) : (
               <>
-                <FiBook size={14} /> {t('books.ebook')}
+                <FiBook size={isMobile ? 10 : 14} /> {t('books.ebook')}
               </>
             )}
           </BookType>
