@@ -509,7 +509,7 @@ const AdminBookRequestsPage: React.FC = () => {
     
     try {
       // Use the admin_update_book_request function instead of direct update
-      const { data, error } = await supabase
+      const { error } = await supabase
         .rpc('admin_update_book_request', {
           request_id: selectedRequest.id,
           new_status: editFormData.status,
