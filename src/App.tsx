@@ -119,15 +119,20 @@ const DebugInfo: React.FC = () => {
 // Create a context for panic mode
 const PanicModeContext = createContext(false);
 
-// ScrollToTop component to handle scroll position on navigation
-const ScrollToTop: React.FC = () => {
-  const { pathname } = useLocation();
+// Create a dedicated routes file to avoid hook ordering issues
+const getScrollToTop = () => {
+  // Separate component function to avoid React hooks ordering issues
+  function ScrollToTopComponent() {
+    const { pathname } = useLocation();
+    
+    useEffect(() => {
+      window.scrollTo(0, 0);
+    }, [pathname]);
+    
+    return null;
+  }
   
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-  
-  return null;
+  return <ScrollToTopComponent />;
 };
 
 // Protected route component
@@ -136,76 +141,86 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, isLoading } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation(); 
-  const panicMode = useContext(PanicModeContext);
-  const { emergencyMode } = useEmergencyMode();
-  
-  // NUCLEAR OPTION: In emergency mode, allow access to protected routes
-  if (emergencyMode) {
-    console.log(" EMERGENCY MODE: Bypassing protected route");
-    return <>{children}</>;
-  }
-  
-  // Create a more transparent loading state that won't block content
-  const [showLoading, setShowLoading] = useState(false);
-  
-  // Force the route to render after 2.5 seconds regardless of auth state
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      // If we're still loading after 2.5 seconds, force exit loading state
+  // Create a separate hook-compliant component
+  function ProtectedRouteInternal() {
+    const { user, isLoading } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const panicMode = useContext(PanicModeContext);
+    const { emergencyMode } = useEmergencyMode();
+    
+    // NUCLEAR OPTION: In emergency mode, allow access to protected routes
+    if (emergencyMode) {
+      console.log(" EMERGENCY MODE: Bypassing protected route");
+      return <>{children}</>;
+    }
+    
+    // Create a more transparent loading state that won't block content
+    const [showLoading, setShowLoading] = useState(false);
+    
+    // Force the route to render after 2.5 seconds regardless of auth state
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        // If we're still loading after 2.5 seconds, force exit loading state
+        if (isLoading) {
+          console.log("Force exiting loading state after timeout");
+          setShowLoading(false);
+        }
+      }, 2500);
+      
+      return () => clearTimeout(timer);
+    }, [isLoading]);
+    
+    // Only show loading after a delay to prevent flicker
+    useEffect(() => {
+      let timer: NodeJS.Timeout;
       if (isLoading) {
-        console.log("Force exiting loading state after timeout");
+        timer = setTimeout(() => {
+          setShowLoading(true);
+        }, 500);
+      } else {
         setShowLoading(false);
       }
-    }, 2500);
+      
+      return () => {
+        if (timer) clearTimeout(timer);
+      };
+    }, [isLoading]);
     
-    return () => clearTimeout(timer);
-  }, [isLoading]);
-  
-  // Only show loading after a delay to prevent flicker
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (isLoading) {
-      timer = setTimeout(() => {
-        setShowLoading(true);
-      }, 500);
-    } else {
-      setShowLoading(false);
+    useEffect(() => {
+      if (!isLoading && !user && !panicMode) {
+        // If not loading and no user, redirect to login
+        // But only if we're not in panic mode
+        navigate('/login', { state: { from: location } }); 
+      }
+    }, [user, isLoading, navigate, panicMode, location]);
+    
+    // PANIC MODE: If panic mode is active, just render content regardless of auth
+    if (panicMode) {
+      console.log(" PANIC MODE ACTIVE - Displaying content regardless of auth state");
+      return <>{children}</>;
     }
     
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [isLoading]);
-  
-  useEffect(() => {
-    if (!isLoading && !user && !panicMode) {
-      // If not loading and no user, redirect to login
-      // But only if we're not in panic mode
-      navigate('/login', { state: { from: location } }); 
+    // Fast bypass: if we've been loading for over 2.5 seconds, just show content
+    if (isLoading && !showLoading) {
+      return <>{children}</>;
     }
-  }, [user, isLoading, navigate, panicMode, location]);
-  
-  // PANIC MODE: If panic mode is active, just render content regardless of auth
-  if (panicMode) {
-    console.log(" PANIC MODE ACTIVE - Displaying content regardless of auth state");
-    return <>{children}</>;
+    
+    // Normal loading state - only show if we've been loading for a while
+    if (isLoading && showLoading) {
+      return <div>Loading...</div>;
+    }
+    
+    // Only render children if we have a user
+    return user ? <>{children}</> : null;
   }
   
-  // Fast bypass: if we've been loading for over 2.5 seconds, just show content
-  if (isLoading && !showLoading) {
-    return <>{children}</>;
-  }
-  
-  // Normal loading state - only show if we've been loading for a while
-  if (isLoading && showLoading) {
-    return <div>Loading...</div>;
-  }
-  
-  // Only render children if we have a user
-  return user ? <>{children}</> : null;
+  // Create a final component that separates hooks from the main component
+  return (
+    <ErrorBoundary>
+      <ProtectedRouteInternal />
+    </ErrorBoundary>
+  );
 };
 
 // Admin route component
@@ -214,86 +229,96 @@ interface AdminRouteProps {
 }
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-  const { user, isAdmin, isLoading } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation(); 
-  const panicMode = useContext(PanicModeContext);
-  const { emergencyMode } = useEmergencyMode();
-  
-  // NUCLEAR OPTION: In emergency mode, allow access to admin routes
-  if (emergencyMode) {
-    console.log(" EMERGENCY MODE: Bypassing admin route protection");
-    return <>{children}</>;
-  }
-  
-  // Create a more transparent loading state that won't block content
-  const [showLoading, setShowLoading] = useState(false);
-  
-  // Force the route to render after 2.5 seconds regardless of auth state
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      // If we're still loading after 2.5 seconds, force exit loading state
-      if (isLoading) {
-        console.log("Force exiting admin loading state after timeout");
-        setShowLoading(false);
-      }
-    }, 2500);
+  // Create a separate hook-compliant component
+  function AdminRouteInternal() {
+    const { user, isAdmin, isLoading } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const panicMode = useContext(PanicModeContext);
+    const { emergencyMode } = useEmergencyMode();
     
-    return () => clearTimeout(timer);
-  }, [isLoading]);
-  
-  // Only show loading after a delay to prevent flicker
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (isLoading) {
-      timer = setTimeout(() => {
-        setShowLoading(true);
-      }, 500);
-    } else {
-      setShowLoading(false);
-    }
-    
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [isLoading]);
-  
-  useEffect(() => {
-    // Only redirect if we're not loading, we know the user state, and we're not in panic mode
-    if (!isLoading && !panicMode) {
-      if (!user) {
-        // If no user, redirect to login
-        navigate('/login', { state: { from: location } });
-      } else if (!isAdmin) {
-        // If user exists but isn't admin, redirect to homepage
-        navigate('/', { state: { from: location } });
-      }
-    }
-  }, [user, isAdmin, isLoading, navigate, panicMode, location]);
-  
-  // PANIC MODE: If panic mode is active, just render content regardless of auth
-  if (panicMode) {
-    console.log(" PANIC MODE ACTIVE - Displaying admin content regardless of auth state");
-    return <>{children}</>;
-  }
-  
-  // Fast bypass: if we've been loading for over 2.5 seconds, just show content
-  if (isLoading && !showLoading) {
-    // Check localStorage for admin status to help with bypass
-    const adminStatus = localStorage.getItem('user_is_admin');
-    if (adminStatus === 'true') {
+    // NUCLEAR OPTION: In emergency mode, allow access to admin routes
+    if (emergencyMode) {
+      console.log(" EMERGENCY MODE: Bypassing admin route protection");
       return <>{children}</>;
     }
-    return <>{children}</>;
+    
+    // Create a more transparent loading state that won't block content
+    const [showLoading, setShowLoading] = useState(false);
+    
+    // Force the route to render after 2.5 seconds regardless of auth state
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        // If we're still loading after 2.5 seconds, force exit loading state
+        if (isLoading) {
+          console.log("Force exiting admin loading state after timeout");
+          setShowLoading(false);
+        }
+      }, 2500);
+      
+      return () => clearTimeout(timer);
+    }, [isLoading]);
+    
+    // Only show loading after a delay to prevent flicker
+    useEffect(() => {
+      let timer: NodeJS.Timeout;
+      if (isLoading) {
+        timer = setTimeout(() => {
+          setShowLoading(true);
+        }, 500);
+      } else {
+        setShowLoading(false);
+      }
+      
+      return () => {
+        if (timer) clearTimeout(timer);
+      };
+    }, [isLoading]);
+    
+    useEffect(() => {
+      // Only redirect if we're not loading, we know the user state, and we're not in panic mode
+      if (!isLoading && !panicMode) {
+        if (!user) {
+          // If no user, redirect to login
+          navigate('/login', { state: { from: location } });
+        } else if (!isAdmin) {
+          // If user exists but isn't admin, redirect to homepage
+          navigate('/', { state: { from: location } });
+        }
+      }
+    }, [user, isAdmin, isLoading, navigate, panicMode, location]);
+    
+    // PANIC MODE: If panic mode is active, just render content regardless of auth
+    if (panicMode) {
+      console.log(" PANIC MODE ACTIVE - Displaying admin content regardless of auth state");
+      return <>{children}</>;
+    }
+    
+    // Fast bypass: if we've been loading for over 2.5 seconds, just show content
+    if (isLoading && !showLoading) {
+      // Check localStorage for admin status to help with bypass
+      const adminStatus = localStorage.getItem('user_is_admin');
+      if (adminStatus === 'true') {
+        return <>{children}</>;
+      }
+      return <>{children}</>;
+    }
+    
+    // Normal loading state - only show if we've been loading for a while
+    if (isLoading && showLoading) {
+      return <div>Loading...</div>;
+    }
+    
+    // Only render children if we have an admin user
+    return (user && isAdmin) ? <>{children}</> : null;
   }
   
-  // Normal loading state - only show if we've been loading for a while
-  if (isLoading && showLoading) {
-    return <div>Loading...</div>;
-  }
-  
-  // Only render children if we have an admin user
-  return (user && isAdmin) ? <>{children}</> : null;
+  // Create a final component that separates hooks from the main component
+  return (
+    <ErrorBoundary>
+      <AdminRouteInternal />
+    </ErrorBoundary>
+  );
 };
 
 const AppRoutes: React.FC = () => {
@@ -316,7 +341,7 @@ const AppRoutes: React.FC = () => {
         <AppContainer>
           <Navbar />
           <MainContent>
-            <ScrollToTop />
+            {getScrollToTop()}
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<HomePage />} />
@@ -407,7 +432,7 @@ const AppRoutes: React.FC = () => {
       <AppContainer>
         <Navbar />
         <MainContent>
-          <ScrollToTop />
+          {getScrollToTop()}
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<HomePage />} />
