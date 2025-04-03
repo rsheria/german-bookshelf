@@ -407,33 +407,33 @@ const AdminBookRequestsPage: React.FC = () => {
   }, [user, authLoading, isAdmin, navigate]);
   
   // Fetch all book requests
-  useEffect(() => {
-    const fetchBookRequests = async () => {
-      if (!user) return;
-      
-      setIsLoading(true);
-      
-      try {
-        // Use the admin view to get requests with user info
-        const { data, error } = await supabase
-          .from('admin_book_requests')
-          .select('*')
-          .order('created_at', { ascending: false });
-          
-        if (error) {
-          throw error;
-        }
-        
-        setRequests(data || []);
-        setFilteredRequests(data || []);
-      } catch (err) {
-        console.error('Error fetching book requests:', err);
-        setError('Failed to load book requests. Please try again later.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchBookRequests = async () => {
+    if (!user) return;
     
+    setIsLoading(true);
+    
+    try {
+      // Use the admin view to get requests with user info
+      const { data, error } = await supabase
+        .from('admin_book_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        throw error;
+      }
+      
+      setRequests(data || []);
+      setFilteredRequests(data || []);
+    } catch (err) {
+      console.error('Error fetching book requests:', err);
+      setError('Failed to load book requests. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     fetchBookRequests();
   }, [user]);
   
@@ -508,39 +508,41 @@ const AdminBookRequestsPage: React.FC = () => {
     if (!selectedRequest) return;
     
     try {
-      const updateData: any = {
-        status: editFormData.status,
-        admin_notes: editFormData.admin_notes.trim() || null,
-        updated_at: new Date().toISOString()
-      };
-      
-      // Set fulfilled_at if status is being changed to Fulfilled
-      if (editFormData.status === 'Fulfilled' && selectedRequest.status !== 'Fulfilled') {
-        updateData.fulfilled_at = new Date().toISOString();
-      } else if (editFormData.status !== 'Fulfilled') {
-        updateData.fulfilled_at = null;
-      }
-      
-      const { error } = await supabase
-        .from('book_requests')
-        .update(updateData)
-        .eq('id', selectedRequest.id);
+      // Use the admin_update_book_request function instead of direct update
+      const { data, error } = await supabase
+        .rpc('admin_update_book_request', {
+          request_id: selectedRequest.id,
+          new_status: editFormData.status,
+          new_admin_notes: editFormData.admin_notes.trim() || null
+        });
         
       if (error) {
         throw error;
       }
       
-      // Update local state
+      // Determine the fulfilled_at date based on status
+      const fulfilled_at = editFormData.status === 'Fulfilled' ? new Date().toISOString() : null;
+      
+      // Update local state with the changes
       setRequests(prev => 
         prev.map(request => 
           request.id === selectedRequest.id 
-            ? { ...request, ...updateData } 
+            ? { 
+                ...request, 
+                status: editFormData.status,
+                admin_notes: editFormData.admin_notes.trim() || null,
+                fulfilled_at: fulfilled_at,
+                updated_at: new Date().toISOString()
+              } 
             : request
         )
       );
       
       setSuccess('Request updated successfully!');
       handleCloseModal();
+      
+      // Refresh the data to ensure we have the latest changes
+      fetchBookRequests();
     } catch (err) {
       console.error('Error updating book request:', err);
       setError('Failed to update the request. Please try again later.');
