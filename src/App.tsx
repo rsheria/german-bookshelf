@@ -7,7 +7,6 @@ import { bypassRefreshIssue } from './services/refreshBypass';
 import { startSessionKeepalive } from './services/supabase';
 import { initializeLocalAuth, isLoggedIn } from './services/localAuth';
 import styled from 'styled-components';
-import theme from './styles/theme';
 
 // Import components
 import Navbar from './components/Navbar';

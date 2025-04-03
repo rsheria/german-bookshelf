@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FiMail, FiLock, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import { FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import { storeCredentials } from '../services/refreshBypass';
 import { useAuth } from '../context/AuthContext';
 import Input from './common/Input';
@@ -71,8 +71,7 @@ const LoginForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setError('');
     if (!email || !password) {
       setError('Please fill in both fields.');
@@ -80,30 +79,19 @@ const LoginForm: React.FC = () => {
     }
     setIsLoading(true);
     try {
-      const { data, error } = await login(email, password);
-
+      const { error } = await login(email, password);
       if (error) {
-        setError(error.message);
-        return;
-      }
-
-      if (data && data.session) {
-        console.log('Login successful');
-        
-        // Store credentials securely for refresh recovery
+        setError(error.message || 'Login failed');
+      } else {
         storeCredentials(email, password);
-        
-        // Show success message
         setIsSuccess(true);
-        
-        // Navigate to the home page after a delay for the user to see the success message
         setTimeout(() => {
           navigate('/');
         }, 1500);
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || 'Login failed');
+      setError(err.message || 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
     }
@@ -115,7 +103,7 @@ const LoginForm: React.FC = () => {
       
       {error && (
         <ErrorMessage>
-          <FiAlertCircle />
+          <FiAlertCircle /> 
           {error}
         </ErrorMessage>
       )}

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useState, useContext } from 'react';
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 
 import theme from '../styles/theme';
@@ -17,7 +17,7 @@ const ThemeContext = createContext<ThemeContextProps>({
 export const useTheme = () => useContext(ThemeContext);
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export const ThemeProvider = ({ children }: Props) => {
