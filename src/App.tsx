@@ -28,6 +28,7 @@ import AdminBookRequestsPage from './pages/admin/AdminBookRequestsPage';
 // Import context and i18n
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './i18n/i18n';
+import { useSessionPersistence } from './hooks/useSessionPersistence';
 
 // Error boundary component
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
@@ -142,6 +143,9 @@ const AppRoutes: React.FC = () => {
   const { i18n } = useTranslation();
   const [appLoaded, setAppLoaded] = useState(false);
   const { authStatusChecked } = useAuth();
+  
+  // Apply session persistence hook to ensure login state survives refreshes
+  useSessionPersistence();
   
   // Set language from localStorage on app load
   useEffect(() => {

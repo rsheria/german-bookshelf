@@ -403,18 +403,29 @@ const BookRequestPage: React.FC = () => {
       if (!user) return;
       
       setIsLoading(true);
+      setError(null);
       
       try {
+        console.log("Fetching book requests for user", user.id);
+        
+        // First try with RLS-enabled table
         const { data, error } = await supabase
           .from('book_requests')
           .select('*')
           .order('created_at', { ascending: false });
           
         if (error) {
+          console.error("Error fetching from book_requests:", error);
           throw error;
         }
         
-        setRequests(data || []);
+        if (data) {
+          console.log(`Found ${data.length} book requests`);
+          setRequests(data);
+        } else {
+          console.log("No book requests found - data is null");
+          setRequests([]);
+        }
         
         // Fetch the user's monthly quota info
         const { data: quotaData, error: quotaError } = await supabase
@@ -423,18 +434,49 @@ const BookRequestPage: React.FC = () => {
         if (quotaError) {
           console.error('Error fetching quota:', quotaError);
         } else {
+          console.log("Quota info:", quotaData);
           setQuotaInfo(quotaData);
         }
       } catch (err) {
         console.error('Error fetching book requests:', err);
-        setError(t('bookRequest.errorFetchingRequests', 'Failed to load your book requests. Please try again later.'));
+        
+        // Fallback attempt - get from admin view
+        try {
+          console.log("Attempting fallback using admin_book_requests view");
+          const { data: adminData, error: adminError } = await supabase
+            .from('admin_book_requests')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+            
+          if (adminError) {
+            console.error("Admin fallback failed:", adminError);
+            setError(t('bookRequest.errorFetchingRequests', 'Failed to load your book requests. Please try again later.'));
+          } else if (adminData) {
+            console.log(`Found ${adminData.length} book requests via admin view`);
+            setRequests(adminData);
+          }
+        } catch (fallbackErr) {
+          console.error("Fallback attempt failed:", fallbackErr);
+          setError(t('bookRequest.errorFetchingRequests', 'Failed to load your book requests. Please try again later.'));
+        }
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchBookRequests();
-  }, [user, t]);
+    
+    // Set up a refetch interval to handle stale data
+    const intervalId = setInterval(() => {
+      if (user && !isShowingForm) {
+        console.log("Refreshing book requests data...");
+        fetchBookRequests();
+      }
+    }, 30000); // Refresh every 30 seconds when on the requests tab
+    
+    return () => clearInterval(intervalId);
+  }, [user, t, isShowingForm]);
   
   // Handle form input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {

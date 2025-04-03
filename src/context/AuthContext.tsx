@@ -133,38 +133,89 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       setIsLoading(true);
+      console.log("Initializing auth state...");
       
       try {
-        // Check for a persisted session first
-        const persistedSession = localStorage.getItem('supabase.auth.token');
+        // First try getting the current session directly
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (sessionData?.session) {
+          console.log("✅ Active session found from supabase.auth.getSession()");
+          setSession(sessionData.session);
+          setUser(sessionData.session.user);
+          
+          // Store session redundantly to ensure persistence
+          localStorage.setItem('supabase.auth.token', JSON.stringify(sessionData.session));
+          localStorage.setItem('sb-auth-token-backup', JSON.stringify(sessionData.session));
+          
+          if (sessionData.session.user?.id) {
+            await fetchProfile(sessionData.session.user.id);
+          }
+          setIsLoading(false);
+          setAuthStatusChecked(true);
+          return;
+        }
+        
+        // If no current session, try our persisted session
+        console.log("No active session, checking local storage...");
+        const persistedSession = localStorage.getItem('supabase.auth.token') || 
+                                 localStorage.getItem('sb-auth-token') ||
+                                 localStorage.getItem('sb-auth-token-backup');
+                                 
         if (persistedSession) {
           try {
             const parsedSession = JSON.parse(persistedSession);
+            console.log("Found persisted session, checking if valid...");
+            
             if (parsedSession && !isSessionExpired(parsedSession)) {
-              console.log("Using persisted session");
-              setSession(parsedSession);
-              setUser(parsedSession.user);
-              if (parsedSession.user?.id) {
-                await fetchProfile(parsedSession.user.id);
+              console.log("✅ Using valid persisted session");
+              
+              // Try to restore the session with supabase
+              try {
+                await supabase.auth.setSession({
+                  access_token: parsedSession.access_token,
+                  refresh_token: parsedSession.refresh_token || '',
+                });
+                console.log("Session restored successfully");
+                
+                // Get the restored session
+                const { data: restoredData } = await supabase.auth.getSession();
+                if (restoredData?.session) {
+                  setSession(restoredData.session);
+                  setUser(restoredData.session.user);
+                  
+                  // Update storage with fresh session
+                  localStorage.setItem('supabase.auth.token', JSON.stringify(restoredData.session));
+                  localStorage.setItem('sb-auth-token-backup', JSON.stringify(restoredData.session));
+                  
+                  if (restoredData.session.user?.id) {
+                    await fetchProfile(restoredData.session.user.id);
+                  }
+                  setIsLoading(false);
+                  setAuthStatusChecked(true);
+                  return;
+                }
+              } catch (e) {
+                console.error("❌ Error restoring session:", e);
               }
-              setIsLoading(false);
-              setAuthStatusChecked(true);
-              return;
+            } else {
+              console.log("⚠️ Persisted session is expired or invalid");
             }
           } catch (e) {
-            console.error("Error parsing persisted session:", e);
+            console.error("❌ Error parsing persisted session:", e);
           }
         }
         
-        // If no valid persisted session, try regular refresh
+        // Last resort - try regular refresh
+        console.log("Trying session refresh as last resort...");
         await handleRefreshSession();
       } catch (error) {
-        console.error("Critical auth error:", error);
+        console.error("❌ Critical auth error:", error);
         setIsLoading(false);
         setAuthStatusChecked(true);
       }
     };
-
+    
     // Check if a session is expired
     const isSessionExpired = (session: any): boolean => {
       if (!session.expires_at) return false;
@@ -200,6 +251,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             
             // Save session to localStorage as a backup
             localStorage.setItem('supabase.auth.token', JSON.stringify(newSession));
+            localStorage.setItem('sb-auth-token-backup', JSON.stringify(newSession));
             
             // Fetch profile
             if (newSession.user) {
@@ -220,6 +272,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Clear local storage
           localStorage.removeItem('supabase.auth.token');
           localStorage.removeItem('supabase.auth.token.v2');
+          localStorage.removeItem('sb-auth-token-backup');
           
           setIsLoading(false);
         }
