@@ -172,19 +172,43 @@ const SignupForm: React.FC = () => {
             daily_quota: 3 // Default daily quota
           });
 
+        // Handle the specific duplicate key error more gracefully
         if (profileError) {
-          throw profileError;
+          // Check if it's the duplicate key error
+          if (profileError.message && profileError.message.includes('duplicate key value violates unique constraint')) {
+            // This is expected in some cases - the user was already created
+            console.log('Profile already exists, this is likely due to email confirmation flow');
+            // Set a success message instead of throwing an error
+            setSuccess(t('auth.signupSuccess') || 'Signup successful! Please check your email to confirm your account.');
+            
+            // Redirect to login page after a short delay
+            setTimeout(() => {
+              navigate('/login');
+            }, 3000);
+            return;
+          } else {
+            // It's a different error, so throw it
+            throw profileError;
+          }
         }
 
-        setSuccess(t('auth.signupSuccess'));
+        setSuccess(t('auth.signupSuccess') || 'Signup successful! Please check your email to confirm your account.');
         
         // Redirect to login page after a short delay
         setTimeout(() => {
           navigate('/login');
-        }, 2000);
+        }, 3000);
       }
     } catch (err) {
-      setError((err as Error).message);
+      // More user-friendly error messages
+      if ((err as Error).message.includes('duplicate key value violates unique constraint')) {
+        setSuccess(t('auth.emailConfirmation') || 'Account created! Please check your email to confirm your registration.');
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
+      } else {
+        setError((err as Error).message);
+      }
     } finally {
       setIsLoading(false);
     }
