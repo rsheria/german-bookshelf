@@ -122,17 +122,21 @@ const Hero = styled(motion.div)`
   text-align: center;
   position: relative; 
   overflow: hidden; 
-  z-index: 1; 
+  max-height: 80vh; /* Limit maximum height */
+  min-height: 400px; /* Ensure minimum height */
+  z-index: 1;
   
   @media (max-width: 1024px) {
     padding: ${theme.spacing['2xl']} ${theme.spacing.lg};
     margin-bottom: ${theme.spacing.xl};
+    min-height: 350px;
   }
   
   @media (max-width: 768px) {
     padding: ${theme.spacing.xl} ${theme.spacing.md};
     margin-bottom: ${theme.spacing.lg};
     border-radius: ${theme.borderRadius.lg};
+    min-height: 300px;
   }
 `;
 
@@ -230,8 +234,15 @@ const ParticlesContainer = styled.div`
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 0; 
-  pointer-events: none; 
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+`;
+
+const ContentWrapper = styled.div`
+  width: 100%;
+  position: relative;
+  z-index: 2;
 `;
 
 const FeatureSection = styled.div`
@@ -419,67 +430,69 @@ const HomePage: React.FC = () => {
       
       <div style={{ clear: 'both' }}></div>
       
-      <FeatureSection>
-        <FeatureCard>
-          <FeatureIcon>
-            <FiHeadphones />
-          </FeatureIcon>
-          <FeatureTitle>{t('home.features.audiobooks.title', 'Premium Audiobooks')}</FeatureTitle>
-          <FeatureDescription>
-            {t('home.features.audiobooks.description', 'Listen to high-quality German audiobooks narrated by native speakers to improve your pronunciation and listening skills.')}
-          </FeatureDescription>
-        </FeatureCard>
+      <ContentWrapper>
+        <FeatureSection>
+          <FeatureCard>
+            <FeatureIcon>
+              <FiHeadphones />
+            </FeatureIcon>
+            <FeatureTitle>{t('home.features.audiobooks.title', 'Premium Audiobooks')}</FeatureTitle>
+            <FeatureDescription>
+              {t('home.features.audiobooks.description', 'Listen to high-quality German audiobooks narrated by native speakers to improve your pronunciation and listening skills.')}
+            </FeatureDescription>
+          </FeatureCard>
+          
+          <FeatureCard>
+            <FeatureIcon>
+              <FiBook />
+            </FeatureIcon>
+            <FeatureTitle>{t('home.features.ebooks.title', 'Extensive E-Book Collection')}</FeatureTitle>
+            <FeatureDescription>
+              {t('home.features.ebooks.description', 'Access a vast library of German e-books across various genres and difficulty levels to enhance your reading skills.')}
+            </FeatureDescription>
+          </FeatureCard>
+          
+          <FeatureCard>
+            <FeatureIcon>
+              <FiGlobe />
+            </FeatureIcon>
+            <FeatureTitle>{t('home.features.learning.title', 'Language Learning')}</FeatureTitle>
+            <FeatureDescription>
+              {t('home.features.learning.description', 'Immerse yourself in authentic German content and accelerate your language learning journey with our carefully curated collection.')}
+            </FeatureDescription>
+          </FeatureCard>
+        </FeatureSection>
         
-        <FeatureCard>
-          <FeatureIcon>
-            <FiBook />
-          </FeatureIcon>
-          <FeatureTitle>{t('home.features.ebooks.title', 'Extensive E-Book Collection')}</FeatureTitle>
-          <FeatureDescription>
-            {t('home.features.ebooks.description', 'Access a vast library of German e-books across various genres and difficulty levels to enhance your reading skills.')}
-          </FeatureDescription>
-        </FeatureCard>
+        <HomeSection>
+          <BookGrid 
+            books={latestAudiobooks} 
+            isLoading={isLoadingAudiobooks} 
+            error={audiobooksError}
+            title={t('nav.audiobooks')}
+            subtitle={t('home.latestAudiobooks', 'Discover our latest German audiobooks to improve your listening skills')}
+          />
+          <div style={{ textAlign: 'center', marginTop: theme.spacing.md, position: 'relative', zIndex: 2 }}>
+            <ViewAllLink to="/audiobooks">
+              {t('common.viewAll')} <FiChevronRight />
+            </ViewAllLink>
+          </div>
+        </HomeSection>
         
-        <FeatureCard>
-          <FeatureIcon>
-            <FiGlobe />
-          </FeatureIcon>
-          <FeatureTitle>{t('home.features.learning.title', 'Language Learning')}</FeatureTitle>
-          <FeatureDescription>
-            {t('home.features.learning.description', 'Immerse yourself in authentic German content and accelerate your language learning journey with our carefully curated collection.')}
-          </FeatureDescription>
-        </FeatureCard>
-      </FeatureSection>
-      
-      <HomeSection>
-        <BookGrid 
-          books={latestAudiobooks} 
-          isLoading={isLoadingAudiobooks} 
-          error={audiobooksError}
-          title={t('nav.audiobooks')}
-          subtitle={t('home.latestAudiobooks', 'Discover our latest German audiobooks to improve your listening skills')}
-        />
-        <div style={{ textAlign: 'center', marginTop: theme.spacing.md }}>
-          <ViewAllLink to="/audiobooks">
-            {t('common.viewAll')} <FiChevronRight />
-          </ViewAllLink>
-        </div>
-      </HomeSection>
-      
-      <HomeSection>
-        <BookGrid 
-          books={latestEbooks} 
-          isLoading={isLoadingEbooks} 
-          error={ebooksError}
-          title={t('nav.ebooks')}
-          subtitle={t('home.latestEbooks', 'Explore our newest German e-books for all reading levels')}
-        />
-        <div style={{ textAlign: 'center', marginTop: theme.spacing.md }}>
-          <ViewAllLink to="/ebooks">
-            {t('common.viewAll')} <FiChevronRight />
-          </ViewAllLink>
-        </div>
-      </HomeSection>
+        <HomeSection>
+          <BookGrid 
+            books={latestEbooks} 
+            isLoading={isLoadingEbooks} 
+            error={ebooksError}
+            title={t('nav.ebooks')}
+            subtitle={t('home.latestEbooks', 'Explore our newest German e-books for all reading levels')}
+          />
+          <div style={{ textAlign: 'center', marginTop: theme.spacing.md, position: 'relative', zIndex: 2 }}>
+            <ViewAllLink to="/ebooks">
+              {t('common.viewAll')} <FiChevronRight />
+            </ViewAllLink>
+          </div>
+        </HomeSection>
+      </ContentWrapper>
     </Container>
   );
 };
