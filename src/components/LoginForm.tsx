@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiMail, FiLock, FiAlertCircle } from 'react-icons/fi';
-import { signIn } from '../services/supabase';
+import { supabase } from '../services/supabase';
 
 const FormContainer = styled.div`
   max-width: 400px;
@@ -127,12 +127,19 @@ const LoginForm: React.FC = () => {
     setError(null);
 
     try {
-      const { error } = await signIn(email, password);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
         throw error;
       }
       
+      // Store session in localStorage for better persistence
+      if (data?.session) {
+        localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
+        console.log('Session saved after login');
+      }
+      
+      // Redirect to homepage after successful login
       navigate('/');
     } catch (err) {
       setError((err as Error).message);
