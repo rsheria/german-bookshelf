@@ -51,22 +51,22 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE download_logs ENABLE ROW LEVEL SECURITY;
 
 -- IMPORTANT: Create a PUBLIC policy for profiles - this is critical for fixing the profile page issue
-CREATE POLICY "Public profiles access" 
+CREATE POLICY IF NOT EXISTS "Public profiles access" 
   ON profiles FOR SELECT 
   USING (true);
 
 -- Create a policy to allow authenticated users to update any profile
-CREATE POLICY "Authenticated users can update profiles" 
+CREATE POLICY IF NOT EXISTS "Authenticated users can update profiles" 
   ON profiles FOR UPDATE 
   USING (auth.role() = 'authenticated');
 
 -- PUBLIC Books policies (anyone can read)
-CREATE POLICY "Anyone can read books"
+CREATE POLICY IF NOT EXISTS "Anyone can read books"
   ON books FOR SELECT
   USING (true);
 
 -- Admin book management policies
-CREATE POLICY "Only admins can insert books"
+CREATE POLICY IF NOT EXISTS "Only admins can insert books"
   ON books FOR INSERT
   WITH CHECK (
     EXISTS (
@@ -75,7 +75,7 @@ CREATE POLICY "Only admins can insert books"
     )
   );
 
-CREATE POLICY "Only admins can update books"
+CREATE POLICY IF NOT EXISTS "Only admins can update books"
   ON books FOR UPDATE
   USING (
     EXISTS (
@@ -84,7 +84,7 @@ CREATE POLICY "Only admins can update books"
     )
   );
 
-CREATE POLICY "Only admins can delete books"
+CREATE POLICY IF NOT EXISTS "Only admins can delete books"
   ON books FOR DELETE
   USING (
     EXISTS (
@@ -94,11 +94,11 @@ CREATE POLICY "Only admins can delete books"
   );
 
 -- PUBLIC Download logs policies (this is critical for the profile page)
-CREATE POLICY "Public download logs access"
+CREATE POLICY IF NOT EXISTS "Public download logs access"
   ON download_logs FOR SELECT
   USING (true);
 
-CREATE POLICY "Users can insert their own download logs"
+CREATE POLICY IF NOT EXISTS "Users can insert their own download logs"
   ON download_logs FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
