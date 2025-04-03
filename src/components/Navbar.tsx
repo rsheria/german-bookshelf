@@ -156,8 +156,29 @@ const Navbar: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await signOut();
-    navigate('/');
+    try {
+      // Force clear all session storage first
+      localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('sb-session');
+      localStorage.removeItem('sb-access-token');
+      localStorage.removeItem('sb-refresh-token');
+      localStorage.removeItem('user_is_admin');
+      localStorage.removeItem('user_logged_in');
+      
+      // Clear any other storage that might be keeping sessions
+      sessionStorage.clear();
+      
+      // Then try to sign out from auth
+      await signOut();
+      
+      // Force page reload to clear any in-memory state
+      console.log("Forcing page reload after logout");
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Even if there's an error, force reload to try to clear state
+      window.location.href = '/';
+    }
   };
 
   return (
