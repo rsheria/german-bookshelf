@@ -1,60 +1,10 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Deutsche Bücherei</title>
-    <style>
-      /* Global loading fix */
-      body {
-        margin: 0;
-        padding: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      }
-      /* Emergency loading fix - never get stuck in loading */
-      [role="progressbar"], .loading-spinner, .chakra-spinner {
-        animation-duration: 1s !important;
-        animation-iteration-count: 3 !important;
-      }
-      /* Force content to show after 2 seconds regardless of loading state */
-      #root {
-        visibility: visible !important;
-        opacity: 1 !important;
-      }
-    </style>
-    <script>
-      // Emergency loading fix - force app to render after 2 seconds
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          // Force all loaders to disappear
-          var loaders = document.querySelectorAll('[role="progressbar"], .loading-spinner, .chakra-spinner');
-          loaders.forEach(function(loader) {
-            if (loader) loader.style.display = 'none';
-          });
-          
-          // Force all content to be visible
-          var mainContent = document.querySelector('#root');
-          if (mainContent) {
-            mainContent.style.visibility = 'visible';
-            mainContent.style.opacity = '1';
-          }
-          
-          // Clear any loading text
-          var loadingText = document.querySelectorAll('*');
-          loadingText.forEach(function(el) {
-            if (el.innerText && el.innerText.toLowerCase().includes('loading')) {
-              el.style.display = 'none';
-            }
-            if (el.innerText && el.innerText.toLowerCase().includes('laden')) {
-              el.style.display = 'none';
-            }
-          });
-          
-          console.log("EMERGENCY LOADING FIX APPLIED");
-        }, 2000);
-      });
-    </script>
+    <title>German Bookshelf</title>
   </head>
   <body>
     <div id="root"></div>
