@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { FiMenu, FiX, FiSearch, FiUser, FiLogOut, FiBook, FiHeadphones, FiPlusCircle } from 'react-icons/fi';
 import styled from 'styled-components';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../services/supabase';
 
 const NavContainer = styled.nav`
   display: flex;
@@ -136,7 +137,7 @@ const Overlay = styled.div<{ isOpen: boolean }>`
 
 const Navbar: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -155,9 +156,23 @@ const Navbar: React.FC = () => {
     }
   };
 
-  const handleLogout = async () => {
+  // EMERGENCY LOGOUT FUNCTION - Works even when auth state is broken after refresh
+  const forceLogout = () => {
+    console.log("EMERGENCY LOGOUT: Forcibly clearing all auth state");
+    
     try {
-      // Force clear all session storage first
+      // 1. Directly call Supabase signOut without going through context
+      supabase.auth.signOut().catch(e => console.error("Supabase direct logout error:", e));
+    } catch (e) {
+      console.error("Failed direct Supabase logout:", e);
+    }
+    
+    try {
+      // 2. Clear ALL possible storage
+      localStorage.clear(); // Clear everything in localStorage
+      sessionStorage.clear();
+      
+      // 3. Clear specific auth-related items to be sure
       localStorage.removeItem('supabase.auth.token');
       localStorage.removeItem('sb-session');
       localStorage.removeItem('sb-access-token');
@@ -165,20 +180,24 @@ const Navbar: React.FC = () => {
       localStorage.removeItem('user_is_admin');
       localStorage.removeItem('user_logged_in');
       
-      // Clear any other storage that might be keeping sessions
-      sessionStorage.clear();
-      
-      // Then try to sign out from auth
-      await signOut();
-      
-      // Force page reload to clear any in-memory state
-      console.log("Forcing page reload after logout");
-      window.location.href = '/';
-    } catch (error) {
-      console.error('Error during logout:', error);
-      // Even if there's an error, force reload to try to clear state
-      window.location.href = '/';
+      // 4. Clear any Supabase-specific storage that could be causing issues
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('supabase') || key.includes('sb-'))) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to clear storage:", e);
     }
+    
+    // 5. Force navigation to login page with special parameter to ensure clean state
+    window.location.href = '/login?force_clean=true';
+  };
+
+  const handleLogout = async () => {
+    // Use the emergency logout function to ensure it works even after refresh
+    forceLogout();
   };
 
   return (
