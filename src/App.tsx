@@ -8,6 +8,7 @@ import styled from 'styled-components';
 import Navbar from './components/Navbar';
 import LoginForm from './components/LoginForm';
 import SignupForm from './components/SignupForm';
+import RecoveryHandler from './components/RecoveryHandler';
 
 // Import pages
 import HomePage from './pages/HomePage';
@@ -277,6 +278,7 @@ const App: React.FC = () => {
     <ChakraProvider>
       <AuthProvider>
         <AppRoutes />
+        <RecoveryHandler />
       </AuthProvider>
     </ChakraProvider>
   );

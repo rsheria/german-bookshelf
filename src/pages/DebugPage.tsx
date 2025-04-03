@@ -68,8 +68,17 @@ const DebugPage: React.FC = () => {
   const [authStatus, setAuthStatus] = useState<any>(null);
   const [testResult, setTestResult] = useState<string>("");
   const [message, setMessage] = useState<{ text: string, isError: boolean } | null>(null);
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
 
   useEffect(() => {
+    // Check if we're in recovery mode
+    const recoveryMode = localStorage.getItem('app_recovery_mode') === 'true';
+    setIsRecoveryMode(recoveryMode);
+    
+    if (recoveryMode) {
+      setMessage({ text: 'Recovery Mode Active - Performing diagnostic checks', isError: false });
+    }
+    
     // Gather environment variables
     const vars: Record<string, string> = {};
     vars['VITE_SUPABASE_URL'] = import.meta.env.VITE_SUPABASE_URL || 'Not set';
@@ -159,6 +168,26 @@ const DebugPage: React.FC = () => {
         message.isError ? 
         <ErrorMessage>{message.text}</ErrorMessage> : 
         <SuccessMessage>{message.text}</SuccessMessage>
+      )}
+      
+      {isRecoveryMode && (
+        <Section style={{backgroundColor: '#fff3cd', border: '1px solid #ffeeba'}}>
+          <SectionTitle>⚠️ Recovery Mode Active</SectionTitle>
+          <p>The app is running in recovery mode after detecting issues. Use these tools to fix your session:</p>
+          <div style={{marginTop: '1rem'}}>
+            <Button onClick={signOutAndClearCache} style={{backgroundColor: '#dc3545'}}>
+              Complete Reset & Sign Out
+            </Button>
+            <Button onClick={() => {
+              localStorage.removeItem('app_recovery_mode');
+              localStorage.removeItem('recovery_session_id');
+              setMessage({text: 'Recovery mode deactivated, reloading...', isError: false});
+              setTimeout(() => window.location.href = '/', 1500);
+            }}>
+              Exit Recovery Mode
+            </Button>
+          </div>
+        </Section>
       )}
       
       <div>
