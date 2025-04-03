@@ -29,7 +29,7 @@ const particlesOptions = {
         enable: true,
         mode: "repulse",
       },
-      resize: true,
+      resize: { enable: true },
     },
     modes: {
       push: {
@@ -83,7 +83,7 @@ const particlesOptions = {
     },
   },
   detectRetina: true,
-};
+} as const;
 
 const containerVariants = {
   hidden: { opacity: 0 },
