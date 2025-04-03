@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { createSupabaseClient, getSession } from '../services/supabase';
+import { supabase, getSession } from '../services/supabase';
 
 const Container = styled.div`
   max-width: 800px;
@@ -104,7 +104,6 @@ const DebugPage: React.FC = () => {
   const testSupabaseConnection = async () => {
     setTestResult("Testing connection...");
     try {
-      const supabase = createSupabaseClient();
       if (!supabase) {
         throw new Error('Supabase client could not be created');
       }
@@ -135,7 +134,6 @@ const DebugPage: React.FC = () => {
 
   const signOutAndClearCache = async () => {
     try {
-      const supabase = createSupabaseClient();
       if (supabase) {
         await supabase.auth.signOut();
       }

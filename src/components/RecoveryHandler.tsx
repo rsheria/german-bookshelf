@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { createSupabaseClient } from '../services/supabase';
+import { supabase } from '../services/supabase';
 
 // Recovery button that appears when app gets stuck
 const RecoveryButton = styled.button`
@@ -101,7 +101,6 @@ const RecoveryHandler: React.FC = () => {
     if (inRecoveryMode) {
       const checkSupabase = async () => {
         try {
-          const supabase = createSupabaseClient();
           if (!supabase) {
             console.error('Failed to initialize Supabase in recovery mode');
             return;

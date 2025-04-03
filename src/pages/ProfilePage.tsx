@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiUser, FiDownload, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import { createSupabaseClient } from '../services/supabase';
+import { supabase } from '../services/supabase';
 import { useDownloads } from '../hooks/useDownloads';
 import { Book } from '../types/supabase';
 
@@ -182,14 +182,14 @@ const ProfilePage: React.FC = () => {
         await checkRemainingQuota();
         
         // Fetch download history with book details
-        const supabase = createSupabaseClient();
+        const supabaseClient = supabase;
         
-        if (!supabase) {
+        if (!supabaseClient) {
           throw new Error('Supabase client is not initialized');
         }
         
         try {
-          const { data: downloads, error: downloadsError } = await supabase
+          const { data: downloads, error: downloadsError } = await supabaseClient
             .from('download_logs')
             .select(`
               id,
@@ -210,7 +210,7 @@ const ProfilePage: React.FC = () => {
             // Fetch books separately to avoid relationship issues
             const bookIds = downloads.map(dl => dl.book_id);
             
-            const { data: booksData, error: booksError } = await supabase
+            const { data: booksData, error: booksError } = await supabaseClient
               .from('books')
               .select('*')
               .in('id', bookIds);
@@ -221,13 +221,13 @@ const ProfilePage: React.FC = () => {
             }
             
             // Create a map of book ids to book objects
-            const booksMap = (booksData || []).reduce((map, book) => {
+            const booksMap = (booksData || []).reduce((map: Record<string, Book>, book: Book) => {
               map[book.id] = book;
               return map;
             }, {} as Record<string, Book>);
             
             // Combine download logs with book data
-            const formattedDownloads = downloads.map(item => ({
+            const formattedDownloads = downloads.map((item: { id: string; book_id: string; downloaded_at: string }) => ({
               id: item.id,
               book: booksMap[item.book_id] || { id: item.book_id, title: 'Unknown Book', author: '', cover_url: '' } as Book,
               downloaded_at: item.downloaded_at
