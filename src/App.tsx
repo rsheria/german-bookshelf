@@ -113,15 +113,33 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   // Create a more transparent loading state that won't block content
   const [showLoading, setShowLoading] = useState(false);
   
+  // Force the route to render after 2.5 seconds regardless of auth state
   useEffect(() => {
-    // Set a timer to show loading only if it takes too long
     const timer = setTimeout(() => {
+      // If we're still loading after 2.5 seconds, force exit loading state
       if (isLoading) {
-        setShowLoading(true);
+        console.log("Force exiting loading state after timeout");
+        setShowLoading(false);
       }
-    }, 500); // Only show loading if it takes more than 500ms
+    }, 2500);
     
     return () => clearTimeout(timer);
+  }, [isLoading]);
+  
+  // Only show loading after a delay to prevent flicker
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isLoading) {
+      timer = setTimeout(() => {
+        setShowLoading(true);
+      }, 500);
+    } else {
+      setShowLoading(false);
+    }
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [isLoading]);
   
   useEffect(() => {
@@ -131,16 +149,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
   }, [user, isLoading, navigate]);
   
-  // If loading, either show content if we have it or a minimal loading indicator
-  if (isLoading) {
-    // If we're still loading but we have user data from localStorage, render content
-    const adminStatus = localStorage.getItem('user_is_admin');
-    if (adminStatus === 'true' || localStorage.getItem('supabase.auth.token')) {
-      return <>{children}</>;
-    }
-    
-    // Only show loading if it's been a while
-    return showLoading ? <div>Loading...</div> : <>{children}</>;
+  // Fast bypass: if we've been loading for over 2.5 seconds, just show content
+  if (isLoading && !showLoading) {
+    return <>{children}</>;
+  }
+  
+  // Normal loading state - only show if we've been loading for a while
+  if (isLoading && showLoading) {
+    return <div>Loading...</div>;
   }
   
   // Only render children if we have a user
@@ -159,15 +175,33 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   // Create a more transparent loading state that won't block content
   const [showLoading, setShowLoading] = useState(false);
   
+  // Force the route to render after 2.5 seconds regardless of auth state
   useEffect(() => {
-    // Set a timer to show loading only if it takes too long
     const timer = setTimeout(() => {
+      // If we're still loading after 2.5 seconds, force exit loading state
       if (isLoading) {
-        setShowLoading(true);
+        console.log("Force exiting admin loading state after timeout");
+        setShowLoading(false);
       }
-    }, 500); // Only show loading if it takes more than 500ms
+    }, 2500);
     
     return () => clearTimeout(timer);
+  }, [isLoading]);
+  
+  // Only show loading after a delay to prevent flicker
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isLoading) {
+      timer = setTimeout(() => {
+        setShowLoading(true);
+      }, 500);
+    } else {
+      setShowLoading(false);
+    }
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [isLoading]);
   
   useEffect(() => {
@@ -183,17 +217,19 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     }
   }, [user, isAdmin, isLoading, navigate]);
   
-  // If loading, try to show content if we can
-  if (isLoading) {
-    // Check localStorage for admin status to avoid flickering
+  // Fast bypass: if we've been loading for over 2.5 seconds, just show content
+  if (isLoading && !showLoading) {
+    // Check localStorage for admin status to help with bypass
     const adminStatus = localStorage.getItem('user_is_admin');
     if (adminStatus === 'true') {
-      // If we have saved admin status, show the admin page
       return <>{children}</>;
     }
-    
-    // Only show loading if it's been a while
-    return showLoading ? <div>Loading...</div> : <>{children}</>;
+    return <>{children}</>;
+  }
+  
+  // Normal loading state - only show if we've been loading for a while
+  if (isLoading && showLoading) {
+    return <div>Loading...</div>;
   }
   
   // Only render children if we have an admin user
