@@ -21,17 +21,15 @@ CREATE POLICY "Admin can update any profile"
     )
   );
 
--- Make sure profiles have a proper primary key constraint
-ALTER TABLE profiles 
-  DROP CONSTRAINT IF EXISTS profiles_pkey;
-
-ALTER TABLE profiles
-  ADD PRIMARY KEY (id);
-
--- Reset any broken foreign key constraints
+-- Reset any broken foreign key constraints FIRST (order matters!)
 ALTER TABLE download_logs 
   DROP CONSTRAINT IF EXISTS download_logs_user_id_fkey;
 
+-- Now we can safely modify the primary key if needed
+-- (but we'll skip this part since it's already set up correctly)
+-- DO NOT try to drop and recreate the primary key, as other tables depend on it
+
+-- Recreate the foreign key constraint
 ALTER TABLE download_logs 
   ADD CONSTRAINT download_logs_user_id_fkey 
   FOREIGN KEY (user_id) 
