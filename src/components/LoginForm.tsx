@@ -133,10 +133,23 @@ const LoginForm: React.FC = () => {
         throw error;
       }
       
-      // Store session in localStorage for better persistence
+      // Store session properly for persistence across browsers/tabs
       if (data?.session) {
-        localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
-        console.log('Session saved after login');
+        // Store using the correct key format for Supabase
+        const key = `sb-${import.meta.env.VITE_SUPABASE_URL.split('//')[1].split('.')[0]}-auth-token`;
+        localStorage.setItem(key, JSON.stringify({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+          expires_at: data.session.expires_at,
+          expires_in: data.session.expires_in,
+          token_type: 'bearer',
+          user: data.session.user
+        }));
+        
+        // Also store backup
+        localStorage.setItem('sb-auth-token', JSON.stringify(data.session));
+        
+        console.log('Session saved properly after login');
       }
       
       // Redirect to homepage after successful login

@@ -152,72 +152,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       // Start with loading state
       setIsLoading(true);
-      console.log("AUTH INIT STARTED!");
+      console.log("AUTH INIT STARTED");
       
       try {
-        // Check for stored admin status first
+        // First check for admin status in localStorage for immediate UI response
         const savedAdminStatus = localStorage.getItem('user_is_admin');
         if (savedAdminStatus === 'true') {
           console.log("FOUND STORED ADMIN STATUS - SETTING TO TRUE");
           setIsAdmin(true);
         }
         
-        // Use our enhanced getSession function to get the current session
+        // Get current session from Supabase - this should work with the properly configured client
         const { data } = await supabase.auth.getSession();
         
         if (data?.session) {
-          console.log("VALID SESSION FOUND!");
-          // We have a session, set auth state
+          console.log("VALID SESSION FOUND FROM SUPABASE");
           setSession(data.session);
           setUser(data.session.user);
           
-          // Manually store the session for better persistence
-          localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
-          
           if (data.session.user?.id) {
-            await fetchProfile(data.session.user.id);
-            console.log("PROFILE FETCHED SUCCESSFULLY!");
+            const profile = await fetchProfile(data.session.user.id);
+            if (profile && profile.is_admin) {
+              console.log("USER IS ADMIN FROM PROFILE");
+              localStorage.setItem('user_is_admin', 'true');
+            }
           }
         } else {
-          // Try to restore from localStorage as fallback
-          try {
-            console.log("NO SESSION FOUND, TRYING LOCALSTORAGE");
-            const storedSession = localStorage.getItem('supabase.auth.token');
-            if (storedSession) {
-              console.log("STORED SESSION FOUND, ATTEMPTING RESTORATION");
-              const parsedSession = JSON.parse(storedSession);
-              
-              // Try to restore the session with setSession
-              const { data: restoredData, error } = await supabase.auth.setSession({
-                access_token: parsedSession.access_token,
-                refresh_token: parsedSession.refresh_token,
-              });
-              
-              if (error) {
-                console.error("SESSION RESTORATION ERROR:", error);
-                throw error;
-              }
-              
-              if (restoredData.session) {
-                console.log("SESSION RESTORED SUCCESSFULLY!");
-                setSession(restoredData.session);
-                setUser(restoredData.session.user);
-                
-                if (restoredData.session.user?.id) {
-                  await fetchProfile(restoredData.session.user.id);
-                  console.log("PROFILE FETCHED AFTER SESSION RESTORATION!");
-                }
-                setIsLoading(false);
-                setAuthStatusChecked(true);
-                return;
-              }
-            }
-          } catch (e) {
-            console.error("Error restoring session:", e);
-          }
-          
-          // No session found or restoration failed
-          console.log("NO SESSION OR RESTORATION FAILED");
+          // Clear auth state if no session found
+          console.log("NO SESSION FOUND, CLEARING AUTH STATE");
           setSession(null);
           setUser(null);
           setProfile(null);
@@ -234,7 +196,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Always finish loading
         setIsLoading(false);
         setAuthStatusChecked(true);
-        console.log("AUTH INIT COMPLETE!");
+        console.log("AUTH INIT COMPLETE");
       }
     };
 
@@ -244,62 +206,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Set up auth state change listener
   useEffect(() => {
+    console.log("SETTING UP AUTH LISTENER");
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, newSession: Session | null) => {
         console.log('Auth state changed:', event, newSession ? 'Session exists' : 'No session');
         
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          setIsLoading(true);
+          console.log("SIGN IN OR TOKEN REFRESH EVENT");
           
           if (newSession) {
             setSession(newSession);
             setUser(newSession.user);
             
-            // Save session to localStorage for refresh persistence
-            try {
-              localStorage.setItem('supabase.auth.token', JSON.stringify(newSession));
-              
-              // Store tokens separately for more reliable restoration
-              localStorage.setItem('access_token', newSession.access_token);
-              localStorage.setItem('refresh_token', newSession.refresh_token);
-              localStorage.setItem('user_id', newSession.user.id);
-              
-              console.log('Session explicitly saved to localStorage for refresh persistence');
-            } catch (e) {
-              console.error('Error saving session to localStorage', e);
-            }
-            
-            // Fetch profile
             if (newSession.user) {
-              await fetchProfile(newSession.user.id);
+              const profile = await fetchProfile(newSession.user.id);
+              if (profile && profile.is_admin) {
+                console.log("USER IS ADMIN FROM PROFILE");
+                localStorage.setItem('user_is_admin', 'true');
+              }
             }
-          } else {
-            // Try to refresh
-            await handleRefreshSession();
           }
-          
-          setIsLoading(false);
         } else if (event === 'SIGNED_OUT') {
+          console.log("SIGN OUT EVENT");
           setSession(null);
           setUser(null);
           setProfile(null);
           setIsAdmin(false);
-          
-          // Clear local storage
-          localStorage.removeItem('supabase.auth.token');
-          localStorage.removeItem('supabase.auth.token.v2');
-          localStorage.removeItem('sb-auth-token-backup');
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('user_id');
-          
-          setIsLoading(false);
+          localStorage.removeItem('user_is_admin');
         }
       }
     );
 
     return () => {
+      console.log("CLEANING UP AUTH LISTENER");
       subscription.unsubscribe();
     };
   }, []);

@@ -13,9 +13,9 @@ const supabase = createClient<Database>(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true, // Enable redirect detection for auth flows
+      detectSessionInUrl: false, // Disable URL detection which can cause issues
       storage: localStorage,    // Explicitly use localStorage for best compatibility
-      storageKey: 'supabase.auth.token', // Use consistent storage key
+      storageKey: 'sb-auth-token', // Use standard key that Supabase expects
       flowType: 'implicit' // Use implicit flow for better token management
     },
     global: {
@@ -47,11 +47,20 @@ export const manuallyStoreSession = (session: any) => {
   if (!session) return;
   
   try {
-    // Store across multiple keys for redundancy
-    localStorage.setItem('supabase.auth.token', JSON.stringify(session));
-    localStorage.setItem('sb-refresh-token', session.refresh_token || '');
-    localStorage.setItem('sb-access-token', session.access_token || '');
-    console.log('Session manually stored for redundancy');
+    // Store session using the correct key format for Supabase
+    const key = `sb-${supabaseUrl.split('//')[1].split('.')[0]}-auth-token`;
+    localStorage.setItem(key, JSON.stringify({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+      expires_at: session.expires_at,
+      expires_in: session.expires_in,
+      token_type: 'bearer',
+      user: session.user
+    }));
+    
+    // Also store in our own consistent location
+    localStorage.setItem('sb-auth-token', JSON.stringify(session));
+    console.log('Session manually stored in multiple locations for redundancy');
   } catch (error) {
     console.error('Error saving session redundantly:', error);
   }
@@ -60,13 +69,23 @@ export const manuallyStoreSession = (session: any) => {
 // Retrieve session from any available storage
 export const getStoredSession = () => {
   try {
-    const storedSession = localStorage.getItem('supabase.auth.token');
+    // Try to get the session from the Supabase standard location first
+    const key = `sb-${supabaseUrl.split('//')[1].split('.')[0]}-auth-token`;
+    let storedSession = localStorage.getItem(key);
+    
     if (storedSession) {
       return JSON.parse(storedSession);
     }
+    
+    // Fall back to our custom storage location
+    storedSession = localStorage.getItem('sb-auth-token');
+    if (storedSession) {
+      return JSON.parse(storedSession);
+    }
+    
     return null;
   } catch (error) {
-    console.error('Error retrieving redundant session:', error);
+    console.error('Error retrieving session:', error);
     return null;
   }
 };
@@ -100,12 +119,25 @@ export const signIn = async (email: string, password: string) => {
 
 export const signOut = async () => {
   try {
-    // Clear all stored sessions
-    localStorage.removeItem('supabase.auth.token');
+    // Call Supabase signOut first to invalidate the token server-side
+    const result = await supabase.auth.signOut();
+    
+    // Then clear all possible storage locations
+    // Clear the Supabase standard token
+    const key = `sb-${supabaseUrl.split('//')[1].split('.')[0]}-auth-token`;
+    localStorage.removeItem(key);
+    
+    // Clear our backup storage
+    localStorage.removeItem('sb-auth-token');
+    
+    // Clear any other tokens we might have stored
     localStorage.removeItem('sb-refresh-token');
     localStorage.removeItem('sb-access-token');
+    localStorage.removeItem('supabase.auth.token');
+    localStorage.removeItem('user_is_admin');
     
-    return await supabase.auth.signOut();
+    console.log('All session tokens cleared');
+    return result;
   } catch (error) {
     console.error('Sign out error:', error);
     return { error: { message: 'Sign out failed' } };
