@@ -138,6 +138,7 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation(); 
   const panicMode = useContext(PanicModeContext);
   const { emergencyMode } = useEmergencyMode();
   
@@ -183,9 +184,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     if (!isLoading && !user && !panicMode) {
       // If not loading and no user, redirect to login
       // But only if we're not in panic mode
-      navigate('/login');
+      navigate('/login', { state: { from: location } }); 
     }
-  }, [user, isLoading, navigate, panicMode]);
+  }, [user, isLoading, navigate, panicMode, location]);
   
   // PANIC MODE: If panic mode is active, just render content regardless of auth
   if (panicMode) {
@@ -215,6 +216,7 @@ interface AdminRouteProps {
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const { user, isAdmin, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation(); 
   const panicMode = useContext(PanicModeContext);
   const { emergencyMode } = useEmergencyMode();
   
@@ -261,13 +263,13 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     if (!isLoading && !panicMode) {
       if (!user) {
         // If no user, redirect to login
-        navigate('/login');
+        navigate('/login', { state: { from: location } });
       } else if (!isAdmin) {
         // If user exists but isn't admin, redirect to homepage
-        navigate('/');
+        navigate('/', { state: { from: location } });
       }
     }
-  }, [user, isAdmin, isLoading, navigate, panicMode]);
+  }, [user, isAdmin, isLoading, navigate, panicMode, location]);
   
   // PANIC MODE: If panic mode is active, just render content regardless of auth
   if (panicMode) {
