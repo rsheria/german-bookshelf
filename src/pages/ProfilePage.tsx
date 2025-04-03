@@ -374,26 +374,27 @@ const ProfilePage: React.FC = () => {
         }
         
         // Fetch user download history
-        // First get the user_id from the profiles table
-        const { data: profiles, error: profileError } = await supabase
+        // The user ID from auth is directly used as the profile ID
+        const userId = user.id;
+        
+        // Verify the profile exists (optional check)
+        const { data: profileCheck, error: profileError } = await supabase
           .from('profiles')
           .select('id')
-          .eq('auth_id', user.id)
+          .eq('id', userId)
           .single();
           
         if (profileError) {
           throw new Error(`Error fetching profile: ${profileError.message}`);
         }
         
-        if (!profiles) {
+        if (!profileCheck) {
           throw new Error('Profile not found');
         }
         
-        const userId = profiles.id;
-        
         // Then get the download history
         const { data, error: historyError } = await supabase
-          .from('downloads')
+          .from('download_logs')
           .select(`
             id,
             downloaded_at,
