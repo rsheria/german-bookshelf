@@ -1,12 +1,108 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { FiHeadphones, FiBook, FiChevronRight, FiBookOpen, FiSearch, FiGlobe } from 'react-icons/fi';
+import { motion } from 'framer-motion';
+import Particles, { initParticlesEngine } from '@tsparticles/react';
+import { loadFull } from "tsparticles"; 
+import type { Engine } from "@tsparticles/engine"; 
 import BookGrid from '../components/BookGrid';
 import { useBooks } from '../hooks/useBooks';
 import Button from '../components/common/Button';
 import theme from '../styles/theme';
+
+const particlesOptions = {
+  background: {
+    color: {
+      value: theme.colors.primaryDark,
+    },
+  },
+  fpsLimit: 60,
+  interactivity: {
+    events: {
+      onClick: {
+        enable: true,
+        mode: "push",
+      },
+      onHover: {
+        enable: true,
+        mode: "repulse",
+      },
+      resize: true,
+    },
+    modes: {
+      push: {
+        quantity: 2,
+      },
+      repulse: {
+        distance: 100,
+        duration: 0.4,
+      },
+    },
+  },
+  particles: {
+    color: {
+      value: theme.colors.secondary,
+    },
+    links: {
+      color: theme.colors.secondaryLight,
+      distance: 150,
+      enable: true,
+      opacity: 0.3,
+      width: 1,
+    },
+    collisions: {
+      enable: false,
+    },
+    move: {
+      direction: "none",
+      enable: true,
+      outModes: {
+        default: "bounce",
+      },
+      random: true,
+      speed: 1.5,
+      straight: false,
+    },
+    number: {
+      density: {
+        enable: true,
+        area: 800,
+      },
+      value: 50,
+    },
+    opacity: {
+      value: 0.4,
+    },
+    shape: {
+      type: "circle",
+    },
+    size: {
+      value: { min: 1, max: 3 },
+    },
+  },
+  detectRetina: true,
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.2,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" }
+  },
+};
 
 const Container = styled.div`
   max-width: 1200px;
@@ -14,44 +110,39 @@ const Container = styled.div`
   padding: ${theme.spacing.md};
 `;
 
-const Hero = styled.div`
-  background: linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primaryDark});
-  background-attachment: fixed;
-  background-size: cover;
+const Hero = styled(motion.div)` 
   color: white;
   padding: ${theme.spacing['3xl']} ${theme.spacing.xl};
-  border-radius: ${theme.borderRadius.lg};
+  border-radius: ${theme.borderRadius.xl}; 
   margin-bottom: ${theme.spacing['2xl']};
   text-align: center;
-  position: relative;
-  overflow: hidden;
-  box-shadow: ${theme.shadows.lg};
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
-    animation: rotate 40s linear infinite;
-    pointer-events: none;
-  }
-  
-  @keyframes rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
+  position: relative; 
+  overflow: hidden; 
+  z-index: ${theme.zIndex.base}; 
 `;
 
-const HeroTitle = styled.h1`
+const ParticlesContainer = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1; 
+`;
+
+const HeroContent = styled(motion.div)` 
+  position: relative; 
+  z-index: 1;
+`;
+
+const HeroTitle = styled(motion.h1)`
   font-size: ${theme.typography.fontSize['5xl']};
   font-family: ${theme.typography.fontFamily.heading};
   font-weight: ${theme.typography.fontWeight.bold};
   margin: 0 0 ${theme.spacing.md} 0;
   position: relative;
   display: inline-block;
+  color: white; 
 
   &::after {
     content: '';
@@ -61,7 +152,7 @@ const HeroTitle = styled.h1`
     transform: translateX(-50%);
     width: 80px;
     height: 4px;
-    background-color: ${theme.colors.secondary};
+    background: ${theme.colors.secondary}; 
     border-radius: ${theme.borderRadius.full};
   }
 
@@ -70,19 +161,20 @@ const HeroTitle = styled.h1`
   }
 `;
 
-const HeroSubtitle = styled.p`
+const HeroSubtitle = styled(motion.p)`
   font-size: ${theme.typography.fontSize.xl};
   max-width: 700px;
   margin: ${theme.spacing.lg} auto;
   opacity: 0.9;
   line-height: ${theme.typography.lineHeight.relaxed};
+  color: ${theme.colors.background}; 
 
   @media (max-width: 768px) {
     font-size: ${theme.typography.fontSize.lg};
   }
 `;
 
-const HeroActions = styled.div`
+const HeroActions = styled(motion.div)` 
   display: flex;
   gap: ${theme.spacing.md};
   justify-content: center;
@@ -172,8 +264,16 @@ const ViewAllLink = styled(Link)`
 
 const HomePage: React.FC = () => {
   const { t } = useTranslation();
-  
-  // Fetch latest audiobooks
+  const [init, setInit] = useState(false);
+
+  useEffect(() => {
+    initParticlesEngine(async (engine: Engine) => {
+      await loadFull(engine);
+    }).then(() => {
+      setInit(true);
+    });
+  }, []);
+
   const { 
     books: latestAudiobooks, 
     isLoading: isLoadingAudiobooks, 
@@ -182,8 +282,7 @@ const HomePage: React.FC = () => {
     type: 'audiobook',
     limit: 6
   });
-  
-  // Fetch latest ebooks
+
   const { 
     books: latestEbooks, 
     isLoading: isLoadingEbooks, 
@@ -195,24 +294,32 @@ const HomePage: React.FC = () => {
 
   return (
     <Container>
-      <Hero>
-        <HeroTitle>{t('app.title')}</HeroTitle>
-        <HeroSubtitle>{t('app.tagline')}</HeroSubtitle>
-        <HeroActions>
-          <Button 
-            leftIcon={<FiSearch />} 
-            size="lg"
-          >
-            {t('home.exploreBooks', 'Explore Books')}
-          </Button>
-          <Button 
-            leftIcon={<FiBookOpen />} 
-            variant="outline" 
-            size="lg"
-          >
-            {t('home.howItWorks', 'How It Works')}
-          </Button>
-        </HeroActions>
+      <Hero initial="hidden" animate="visible" variants={containerVariants}>
+        {init && (
+          <ParticlesContainer>
+            <Particles id="tsparticles" options={particlesOptions} />
+          </ParticlesContainer>
+        )}
+        
+        <HeroContent>
+          <HeroTitle variants={itemVariants}>{t('app.title')}</HeroTitle>
+          <HeroSubtitle variants={itemVariants}>{t('app.tagline')}</HeroSubtitle>
+          <HeroActions variants={itemVariants}>
+            <Button 
+              leftIcon={<FiSearch />} 
+              size="lg"
+            >
+              {t('home.exploreBooks', 'Explore Books')}
+            </Button>
+            <Button 
+              leftIcon={<FiBookOpen />} 
+              variant="outline" 
+              size="lg"
+            >
+              {t('home.howItWorks', 'How It Works')}
+            </Button>
+          </HeroActions>
+        </HeroContent>
       </Hero>
       
       <FeatureSection>

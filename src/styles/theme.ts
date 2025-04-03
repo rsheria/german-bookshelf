@@ -1,86 +1,100 @@
-// Premium Design System for German Bookshelf
+// High-End Modern Design System for German Bookshelf
 const theme = {
   colors: {
-    primary: '#1a365d',       // Deep blue
-    primaryLight: '#2c5282',  // Lighter blue for hover states
-    primaryDark: '#0d2b4c',   // Darker blue for active states
-    secondary: '#e67e22',     // Warm orange
-    secondaryLight: '#f39c12', // Lighter orange
-    secondaryDark: '#d35400', // Darker orange
-    accent: '#3498db',        // Highlight blue
-    success: '#2ecc71',       // Green for success states
-    warning: '#f1c40f',       // Yellow for warning states
-    error: '#e74c3c',         // Red for error states
-    background: '#f8f9fa',    // Light background
-    backgroundAlt: '#e9ecef', // Alternative background
-    card: '#ffffff',          // Card background
-    text: '#2c3e50',          // Main text color
-    textLight: '#7f8c8d',     // Secondary text color
-    border: '#dfe6e9',        // Border color
+    // Core Palette
+    primary: '#0D1B2A',         // Very dark desaturated blue
+    primaryLight: '#1E3A5F',      // Lighter shade for interactions
+    primaryDark: '#07111C',       // Darker shade
+    secondary: '#00F5D4',       // Vibrant Cyan/Teal
+    secondaryLight: '#6AFFEA',    // Lighter cyan
+    secondaryDark: '#00C3A9',     // Darker cyan
+    accent: '#FF007F',          // Bright Magenta/Pink
+    
+    // Neutrals
+    background: '#F7F9FB',      // Very light grey, almost white
+    backgroundAlt: '#EDEFF2',     // Slightly darker grey
+    card: '#FFFFFF',            // White cards
+    text: '#1B1B1E',            // Dark grey, almost black
+    textLight: '#6A7178',       // Medium grey
+    border: '#DDE2E7',          // Light grey border
+
+    // Functional Colors
+    success: '#28A745',         // Standard green
+    warning: '#FFC107',         // Standard yellow
+    error: '#DC3545',           // Standard red
+
+    // Gradients
+    primaryGradient: 'linear-gradient(135deg, #1E3A5F 0%, #0D1B2A 100%)',
+    accentGradient: 'linear-gradient(135deg, #FF007F 0%, #00F5D4 100%)',
   },
   typography: {
     fontFamily: {
-      heading: "'Playfair Display', serif",
-      body: "'Open Sans', sans-serif"
+      heading: "'Poppins', sans-serif", // Modern sans-serif
+      body: "'Poppins', sans-serif"       // Consistent modern sans-serif
     },
     fontSize: {
-      xs: '0.75rem',     // 12px
-      sm: '0.875rem',    // 14px
-      md: '1rem',        // 16px
+      xs: '0.8rem',      // 12.8px
+      sm: '0.9rem',      // 14.4px
+      md: '1rem',        // 16px (base)
       lg: '1.125rem',    // 18px
-      xl: '1.25rem',     // 20px
-      '2xl': '1.5rem',   // 24px
-      '3xl': '1.875rem', // 30px
-      '4xl': '2.25rem',  // 36px
-      '5xl': '3rem',     // 48px
+      xl: '1.3rem',      // 20.8px
+      '2xl': '1.6rem',   // 25.6px
+      '3xl': '2rem',     // 32px
+      '4xl': '2.5rem',   // 40px
+      '5xl': '3.2rem',   // 51.2px
     },
     fontWeight: {
+      light: 300,
       normal: 400,
-      medium: 500,
+      medium: 500, // Use medium more often for emphasis
       semibold: 600,
       bold: 700,
     },
     lineHeight: {
-      tight: 1.2,
-      normal: 1.5,
-      relaxed: 1.8,
+      tight: 1.25,
+      normal: 1.6,
+      relaxed: 1.9,
     }
   },
   spacing: {
-    xs: '0.25rem',     // 4px
-    sm: '0.5rem',      // 8px
-    md: '1rem',        // 16px
-    lg: '1.5rem',      // 24px
-    xl: '2rem',        // 32px
-    '2xl': '3rem',     // 48px
-    '3xl': '4rem',     // 64px
+    xs: '0.3rem',    // ~5px
+    sm: '0.6rem',    // ~10px
+    md: '1rem',      // 16px
+    lg: '1.5rem',    // 24px
+    xl: '2.2rem',    // ~35px
+    '2xl': '3.2rem', // ~51px
+    '3xl': '4.5rem', // ~72px
   },
   borderRadius: {
-    sm: '0.125rem',    // 2px
-    md: '0.25rem',     // 4px
-    lg: '0.5rem',      // 8px
-    xl: '1rem',        // 16px
-    full: '9999px',    // Fully rounded
+    sm: '4px',
+    md: '8px',       // Slightly larger default radius
+    lg: '12px', 
+    xl: '20px',
+    full: '9999px',
   },
   shadows: {
-    sm: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
-    md: '0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06)',
-    lg: '0 10px 15px rgba(0,0,0,0.07), 0 4px 6px rgba(0,0,0,0.05)',
-    xl: '0 20px 25px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.04)',
-    inner: 'inset 0 2px 4px 0 rgba(0,0,0,0.06)',
+    sm: '0 2px 4px rgba(13, 27, 42, 0.08)',                     // Softer, primary color based tint
+    md: '0 5px 10px rgba(13, 27, 42, 0.1)', 
+    lg: '0 10px 20px rgba(13, 27, 42, 0.12)',
+    xl: '0 20px 40px rgba(13, 27, 42, 0.15)',
+    inner: 'inset 0 2px 4px 0 rgba(13, 27, 42, 0.05)',
+    outline: '0 0 0 3px rgba(0, 245, 212, 0.5)', // Accent outline for focus
   },
   transitions: {
     fast: '150ms cubic-bezier(0.4, 0, 0.2, 1)',
-    normal: '300ms cubic-bezier(0.4, 0, 0.2, 1)',
+    normal: '300ms cubic-bezier(0.4, 0, 0.2, 1)', // Standard ease-in-out
     slow: '500ms cubic-bezier(0.4, 0, 0.2, 1)',
+    bounce: '300ms cubic-bezier(0.175, 0.885, 0.32, 1.275)' // Bouncy effect
   },
   zIndex: {
     base: 1,
-    dropdown: 10,
-    sticky: 100,
-    fixed: 200,
-    modal: 300,
-    tooltip: 400,
+    dropdown: 1000,
+    sticky: 1100,
+    fixed: 1200,
+    modalBackdrop: 1300,
+    modal: 1400,
+    popover: 1500,
+    tooltip: 1600,
   }
 };
 

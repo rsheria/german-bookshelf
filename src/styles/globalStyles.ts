@@ -1,21 +1,24 @@
 import { createGlobalStyle } from 'styled-components';
 import theme from './theme';
 
-const GlobalStyles = createGlobalStyle`
+const GlobalStyle = createGlobalStyle`
   /* Import premium fonts */
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap');
   @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
   
-  * {
+  *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
   }
   
   body {
-    background-color: ${theme.colors.background};
-    color: ${theme.colors.text};
     font-family: ${theme.typography.fontFamily.body};
+    font-weight: ${theme.typography.fontWeight.normal};
+    line-height: ${theme.typography.lineHeight.normal};
+    color: ${theme.colors.text};
+    background-color: ${theme.colors.background};
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transition: background-color 0.3s ease, color 0.3s ease;
@@ -25,14 +28,15 @@ const GlobalStyles = createGlobalStyle`
   html {
     font-size: ${theme.typography.fontSize.md};
     line-height: ${theme.typography.lineHeight.normal};
+    scroll-behavior: smooth;
   }
   
   h1, h2, h3, h4, h5, h6 {
     font-family: ${theme.typography.fontFamily.heading};
     font-weight: ${theme.typography.fontWeight.bold};
     line-height: ${theme.typography.lineHeight.tight};
-    color: ${theme.colors.primary};
     margin-bottom: ${theme.spacing.md};
+    color: ${theme.colors.primary};
   }
   
   h1 {
@@ -65,18 +69,20 @@ const GlobalStyles = createGlobalStyle`
   }
   
   a {
-    color: ${theme.colors.secondary};
+    color: ${theme.colors.accent};
     text-decoration: none;
     transition: color ${theme.transitions.fast};
     
     &:hover {
       color: ${theme.colors.secondaryDark};
+      text-decoration: underline;
     }
   }
   
   button {
-    font-family: ${theme.typography.fontFamily.body};
+    font-family: inherit;
     cursor: pointer;
+    outline: none;
   }
   
   img {
@@ -84,22 +90,24 @@ const GlobalStyles = createGlobalStyle`
     height: auto;
   }
   
-  /* Custom scroll bar */
+  /* Custom Scrollbar Styling (for Webkit browsers) */
   ::-webkit-scrollbar {
-    width: 8px;
+    width: 10px;
   }
-  
+
   ::-webkit-scrollbar-track {
     background: ${theme.colors.backgroundAlt};
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    background: ${theme.colors.primaryLight};
     border-radius: ${theme.borderRadius.full};
   }
-  
+
+  ::-webkit-scrollbar-thumb {
+    background-color: ${theme.colors.primaryLight};
+    border-radius: ${theme.borderRadius.full};
+    border: 2px solid ${theme.colors.backgroundAlt}; // Creates padding around thumb
+  }
+
   ::-webkit-scrollbar-thumb:hover {
-    background: ${theme.colors.primary};
+    background-color: ${theme.colors.primary};
   }
   
   /* Focus styles for accessibility */
@@ -117,4 +125,4 @@ const GlobalStyles = createGlobalStyle`
   }
 `;
 
-export default GlobalStyles;
+export default GlobalStyle;
