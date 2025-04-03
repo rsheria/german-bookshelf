@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiMail, FiLock, FiAlertCircle } from 'react-icons/fi';
-import { supabase } from '../services/supabase';
+import { FiMail, FiLock, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import { storeCredentials } from '../services/refreshBypass';
+import { useAuth } from '../context/AuthContext';
 
 const FormContainer = styled.div`
   max-width: 400px;
@@ -97,6 +97,21 @@ const ErrorMessage = styled.div`
   font-size: 0.9rem;
 `;
 
+const SuccessMessage = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #d4edda;
+  color: #155724;
+  padding: 1rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #28a745;
+  font-weight: 500;
+  line-height: 1.5;
+`;
+
 const LinkText = styled.div`
   text-align: center;
   margin-top: 1.5rem;
@@ -117,21 +132,22 @@ const StyledLink = styled(Link)`
 const LoginForm: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { login } = useAuth(); // Use our improved auth context
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<boolean>(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError(null);
+    setSuccess(false);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Use our improved login function from context
+      const { data, error } = await login(email, password);
 
       if (error) {
         setError(error.message);
@@ -144,14 +160,13 @@ const LoginForm: React.FC = () => {
         // Store credentials securely for refresh recovery
         storeCredentials(email, password);
         
-        // Save the session to localStorage for persistence
-        localStorage.setItem('supabase.auth.token', JSON.stringify({
-          currentSession: data.session,
-          expiresAt: Math.floor(new Date(data.session.expires_at || '').getTime() / 1000),
-        }));
+        // Show success message
+        setSuccess(true);
         
-        // Navigate to the home page after successful login
-        navigate('/');
+        // Navigate to the home page after a delay for the user to see the success message
+        setTimeout(() => {
+          navigate('/');
+        }, 1500);
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -170,6 +185,13 @@ const LoginForm: React.FC = () => {
           <FiAlertCircle />
           {error}
         </ErrorMessage>
+      )}
+      
+      {success && (
+        <SuccessMessage>
+          <FiCheckCircle />
+          {t('auth.loginSuccess')}
+        </SuccessMessage>
       )}
       
       <Form onSubmit={handleSubmit}>
@@ -205,7 +227,7 @@ const LoginForm: React.FC = () => {
           </InputWrapper>
         </FormGroup>
         
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading || success}>
           {isLoading ? t('common.loading') : t('auth.loginButton')}
         </Button>
       </Form>

@@ -295,9 +295,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
       if (data.session) {
+        // Successfully logged in - set all state immediately
         setUser(data.session.user);
         setSession(data.session);
-        setIsAdmin(data.session.user?.app_metadata?.is_admin === true);
+        
+        // Set admin status
+        const isUserAdmin = data.session.user?.app_metadata?.is_admin === true;
+        setIsAdmin(isUserAdmin);
+        
+        // Immediately save to local auth system
+        setUserFromSupabase(data.session.user, isUserAdmin);
+        
+        // Show success toast or notification here if needed
+        console.log('Login successful - all auth states updated');
+        
+        // Try to fetch profile in the background
+        try {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.session.user.id)
+            .single();
+            
+          if (profileData) {
+            setProfile(profileData);
+          }
+        } catch (profileError) {
+          console.error('Error fetching profile after login:', profileError);
+        }
       }
       return { data, error: null };
     } catch (loginError) {
