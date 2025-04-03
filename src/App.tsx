@@ -22,6 +22,8 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AddBookPage from './pages/admin/AddBookPage';
 import EditBookPage from './pages/admin/EditBookPage';
 import DebugPage from './pages/DebugPage';
+import BookRequestPage from './pages/BookRequestPage';
+import AdminBookRequestsPage from './pages/admin/AdminBookRequestsPage';
 
 // Import context and i18n
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -198,6 +200,15 @@ const AppRoutes: React.FC = () => {
             <Route path="/login" element={<LoginForm />} />
             <Route path="/signup" element={<SignupForm />} />
             <Route path="/debug" element={<DebugPage />} />
+            <Route path="/book-requests" element={<BookRequestPage />} />
+            <Route 
+              path="/admin/book-requests" 
+              element={
+                <AdminRoute>
+                  <AdminBookRequestsPage />
+                </AdminRoute>
+              } 
+            />
             
             {/* Protected routes */}
             <Route 
