@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 
 import theme from '../styles/theme';
@@ -21,9 +21,25 @@ interface Props {
 }
 
 export const ThemeProvider = ({ children }: Props) => {
-  const [isDark, setIsDark] = useState(false);
+  // Initialize theme from localStorage, default to light theme
+  const [isDark, setIsDark] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme === 'dark';
+  });
 
-  const toggleTheme = () => setIsDark(prev => !prev);
+  // Toggle theme and save to localStorage
+  const toggleTheme = () => {
+    setIsDark(prev => {
+      const newThemeValue = !prev;
+      localStorage.setItem('theme', newThemeValue ? 'dark' : 'light');
+      return newThemeValue;
+    });
+  };
+
+  // Apply theme to body element for global styling
+  useEffect(() => {
+    document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
 
   const currentTheme = isDark ? darkTheme : theme;
 

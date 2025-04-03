@@ -339,7 +339,6 @@ const AppRoutes: React.FC = () => {
           <MainContent>
             {getScrollToTop()}
             <Routes>
-              {/* Public routes */}
               <Route path="/" element={<HomePage />} />
               <Route path="/audiobooks" element={<AudiobooksPage />} />
               <Route path="/ebooks" element={<EbooksPage />} />
@@ -347,70 +346,15 @@ const AppRoutes: React.FC = () => {
               <Route path="/search" element={<SearchPage />} />
               <Route path="/login" element={<LoginForm />} />
               <Route path="/signup" element={<SignupForm />} />
-              <Route path="/debug" element={<DebugPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="/book-requests" element={<BookRequestPage />} />
-              <Route 
-                path="/admin/book-requests" 
-                element={
-                  <AdminRoute>
-                    <AdminBookRequestsPage />
-                  </AdminRoute>
-                } 
-              />
-              
-              {/* Protected routes */}
-              <Route 
-                path="/profile" 
-                element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              {/* Admin routes */}
-              <Route 
-                path="/admin" 
-                element={
-                  <AdminRoute>
-                    <AdminDashboardPage />
-                  </AdminRoute>
-                } 
-              />
-              <Route 
-                path="/admin/books" 
-                element={
-                  <AdminRoute>
-                    <AdminBooksPage />
-                  </AdminRoute>
-                } 
-              />
-              <Route 
-                path="/admin/users" 
-                element={
-                  <AdminRoute>
-                    <AdminUsersPage />
-                  </AdminRoute>
-                } 
-              />
-              <Route 
-                path="/admin/books/add" 
-                element={
-                  <AdminRoute>
-                    <AddBookPage />
-                  </AdminRoute>
-                } 
-              />
-              <Route 
-                path="/admin/books/edit/:id" 
-                element={
-                  <AdminRoute>
-                    <EditBookPage />
-                  </AdminRoute>
-                } 
-              />
-              
-              {/* Fallback route */}
+              <Route path="/admin" element={<AdminDashboardPage />} />
+              <Route path="/admin/books" element={<AdminBooksPage />} />
+              <Route path="/admin/books/add" element={<AddBookPage />} />
+              <Route path="/admin/books/edit/:id" element={<EditBookPage />} />
+              <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/admin/book-requests" element={<AdminBookRequestsPage />} />
+              <Route path="/debug" element={<DebugPage />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </MainContent>
@@ -428,19 +372,13 @@ const AppRoutes: React.FC = () => {
         <MainContent>
           {getScrollToTop()}
           <Routes>
-            {/* Public routes */}
             <Route path="/" element={<HomePage />} />
             <Route path="/audiobooks" element={<AudiobooksPage />} />
-            <Route path="/audiobooks/:id" element={<BookDetailsPage />} />
             <Route path="/ebooks" element={<EbooksPage />} />
             <Route path="/books/:id" element={<BookDetailsPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/signup" element={<SignupForm />} />
-            <Route path="/book-requests" element={<BookRequestPage />} />
-            <Route path="/debug-auth" element={<DebugPage />} />
-            
-            {/* Protected routes */}
             <Route 
               path="/profile" 
               element={
@@ -449,8 +387,14 @@ const AppRoutes: React.FC = () => {
                 </ProtectedRoute>
               } 
             />
-            
-            {/* Admin routes */}
+            <Route 
+              path="/book-requests" 
+              element={
+                <ProtectedRoute>
+                  <BookRequestPage />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/admin" 
               element={
@@ -464,6 +408,22 @@ const AppRoutes: React.FC = () => {
               element={
                 <AdminRoute>
                   <AdminBooksPage />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/books/add" 
+              element={
+                <AdminRoute>
+                  <AddBookPage />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/books/edit/:id" 
+              element={
+                <AdminRoute>
+                  <EditBookPage />
                 </AdminRoute>
               } 
             />
@@ -483,8 +443,7 @@ const AppRoutes: React.FC = () => {
                 </AdminRoute>
               } 
             />
-            
-            {/* Fallback route */}
+            <Route path="/debug" element={<DebugPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </MainContent>

@@ -1,5 +1,6 @@
 import { createGlobalStyle } from 'styled-components';
 import theme from './theme';
+import darkTheme from './darkTheme';
 
 const GlobalStyle = createGlobalStyle`
   /* Import premium fonts */
@@ -17,12 +18,17 @@ const GlobalStyle = createGlobalStyle`
     font-family: ${theme.typography.fontFamily.body};
     font-weight: ${theme.typography.fontWeight.normal};
     line-height: ${theme.typography.lineHeight.normal};
-    color: ${theme.colors.text};
     background-color: ${theme.colors.background};
+    color: ${theme.colors.text};
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transition: background-color 0.3s ease, color 0.3s ease;
     scroll-behavior: smooth;
+    
+    &[data-theme='dark'] {
+      background-color: ${darkTheme.colors.background};
+      color: ${darkTheme.colors.text};
+    }
   }
   
   html {
@@ -37,6 +43,10 @@ const GlobalStyle = createGlobalStyle`
     line-height: ${theme.typography.lineHeight.tight};
     margin-bottom: ${theme.spacing.md};
     color: ${theme.colors.primary};
+    
+    body[data-theme='dark'] & {
+      color: ${darkTheme.colors.primary};
+    }
   }
   
   h1 {
@@ -73,9 +83,17 @@ const GlobalStyle = createGlobalStyle`
     text-decoration: none;
     transition: color ${theme.transitions.fast};
     
+    body[data-theme='dark'] & {
+      color: ${darkTheme.colors.accent};
+    }
+    
     &:hover {
       color: ${theme.colors.secondaryDark};
       text-decoration: underline;
+      
+      body[data-theme='dark'] & {
+        color: ${darkTheme.colors.secondaryDark};
+      }
     }
   }
   
@@ -97,23 +115,39 @@ const GlobalStyle = createGlobalStyle`
 
   ::-webkit-scrollbar-track {
     background: ${theme.colors.backgroundAlt};
-    border-radius: ${theme.borderRadius.full};
+    
+    body[data-theme='dark'] & {
+      background: ${darkTheme.colors.backgroundAlt};
+    }
   }
 
   ::-webkit-scrollbar-thumb {
     background-color: ${theme.colors.primaryLight};
     border-radius: ${theme.borderRadius.full};
-    border: 2px solid ${theme.colors.backgroundAlt}; // Creates padding around thumb
+    border: 2px solid ${theme.colors.backgroundAlt};
+    
+    body[data-theme='dark'] & {
+      background-color: ${darkTheme.colors.primaryLight};
+      border: 2px solid ${darkTheme.colors.backgroundAlt};
+    }
   }
 
   ::-webkit-scrollbar-thumb:hover {
     background-color: ${theme.colors.primary};
+    
+    body[data-theme='dark'] & {
+      background-color: ${darkTheme.colors.primary};
+    }
   }
   
   /* Focus styles for accessibility */
   :focus {
     outline: 3px solid ${theme.colors.accent};
     outline-offset: 2px;
+    
+    body[data-theme='dark'] & {
+      outline: 3px solid ${darkTheme.colors.accent};
+    }
   }
   
   /* Container for consistent page width */
