@@ -257,18 +257,18 @@ const extractPublishedDate = (html: string): string | undefined => {
 };
 
 // Helper function to extract publisher
-const extractPublisher = (html: string): string | undefined => {
+const extractPublisher = (html: string): string | null => {
   // Look for publisher information
   const publisherMatch = html.match(/Verlag: ([^;]+)|Publisher: ([^;]+)/i);
   if (publisherMatch) {
     return (publisherMatch[1] || publisherMatch[2]).trim();
   }
   
-  return undefined;
+  return null;
 };
 
 // Helper function to clean up text
-const cleanupText = (text: string | null): string => {
+const cleanupText = (text: string | null | undefined): string => {
   if (!text) return '';
   
   // Remove HTML tags
