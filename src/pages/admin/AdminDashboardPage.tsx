@@ -431,11 +431,11 @@ const AdminDashboardPage: React.FC = () => {
         </ActionButton>
         
         <ActionButton onClick={() => navigate('/admin/users')}>
-          <FiUsers /> {t('admin.manageUsers')}
+          <FiUsers /> {t('admin.manageUsers', 'Manage Users')}
         </ActionButton>
         
         <ActionButton onClick={() => navigate('/admin/books/add')} className="secondary">
-          <FiBook /> {t('admin.addBook')}
+          <FiBook /> {t('admin.addBook', 'Add Book')}
         </ActionButton>
 
         <ActionButton onClick={() => navigate('/admin/book-requests')}>
@@ -445,7 +445,7 @@ const AdminDashboardPage: React.FC = () => {
       
       <SectionTitle>
         <FiBarChart2 style={{ marginRight: '0.5rem' }} />
-        {t('admin.analytics')}
+        {t('admin.analytics', 'Analytics')}
       </SectionTitle>
       
       <TimeRangeSelector>
@@ -454,19 +454,19 @@ const AdminDashboardPage: React.FC = () => {
           $active={timeRange === 'week'} 
           onClick={() => setTimeRange('week')}
         >
-          {t('admin.weekView')}
+          {t('admin.weekView', 'Week')}
         </TimeButton>
         <TimeButton 
           $active={timeRange === 'month'} 
           onClick={() => setTimeRange('month')}
         >
-          {t('admin.monthView')}
+          {t('admin.monthView', 'Month')}
         </TimeButton>
         <TimeButton 
           $active={timeRange === 'year'} 
           onClick={() => setTimeRange('year')}
         >
-          {t('admin.yearView')}
+          {t('admin.yearView', 'Year')}
         </TimeButton>
       </TimeRangeSelector>
       
@@ -474,7 +474,7 @@ const AdminDashboardPage: React.FC = () => {
         <ChartCard>
           <h3>
             <FiTrendingUp style={{ marginRight: '0.5rem' }} />
-            {t('admin.downloadTrends')}
+            {t('admin.downloadTrends', 'Download Trends')}
           </h3>
           <Line 
             data={downloadTrend} 
@@ -504,7 +504,7 @@ const AdminDashboardPage: React.FC = () => {
         <ChartCard>
           <h3>
             <FiPieChart style={{ marginRight: '0.5rem' }} />
-            {t('admin.bookTypeDistribution')}
+            {t('admin.bookTypeDistribution', 'Book Type Distribution')}
           </h3>
           <div style={{ maxHeight: '300px', display: 'flex', justifyContent: 'center' }}>
             <Pie 
@@ -523,16 +523,16 @@ const AdminDashboardPage: React.FC = () => {
         </ChartCard>
       </AnalyticsGrid>
       
-      <SectionTitle>{t('admin.recentDownloads')}</SectionTitle>
+      <SectionTitle>{t('admin.recentDownloads', 'Recent Downloads')}</SectionTitle>
       
       <TableContainer>
         <Table>
           <TableHead>
             <TableRow>
-              <TableHeader>{t('books.title')}</TableHeader>
-              <TableHeader>{t('books.type')}</TableHeader>
-              <TableHeader>{t('auth.username')}</TableHeader>
-              <TableHeader>{t('admin.downloadDate')}</TableHeader>
+              <TableHeader>{t('books.title', 'Title')}</TableHeader>
+              <TableHeader>{t('books.type', 'Type')}</TableHeader>
+              <TableHeader>{t('auth.username', 'Username')}</TableHeader>
+              <TableHeader>{t('admin.downloadDate', 'Download Date')}</TableHeader>
             </TableRow>
           </TableHead>
           <tbody>
@@ -541,8 +541,8 @@ const AdminDashboardPage: React.FC = () => {
                 <TableCell>{download.books?.title}</TableCell>
                 <TableCell>
                   {download.books?.type === 'audiobook' 
-                    ? t('books.audiobook') 
-                    : t('books.ebook')}
+                    ? t('books.audiobook', 'Audiobook') 
+                    : t('books.ebook', 'E-book')}
                 </TableCell>
                 <TableCell>{download.profiles?.username}</TableCell>
                 <TableCell>{formatDate(download.downloaded_at)}</TableCell>
@@ -552,7 +552,7 @@ const AdminDashboardPage: React.FC = () => {
             {recentDownloads.length === 0 && (
               <TableRow>
                 <TableCell colSpan={4} style={{ textAlign: 'center' }}>
-                  {t('admin.noRecentDownloads')}
+                  {t('admin.noRecentDownloads', 'No recent downloads')}
                 </TableCell>
               </TableRow>
             )}

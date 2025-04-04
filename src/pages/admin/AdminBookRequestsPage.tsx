@@ -662,7 +662,7 @@ const AdminBookRequestsPage: React.FC = () => {
   
   // Handle delete request
   const handleDeleteRequest = async (id: string) => {
-    if (!confirm(t('admin.confirmDelete', 'Are you sure you want to delete this request? This action cannot be undone.'))) {
+    if (!confirm(t('Are you sure you want to delete this request? This action cannot be undone.', 'Are you sure you want to delete this request? This action cannot be undone.'))) {
       return;
     }
     
@@ -714,7 +714,7 @@ const AdminBookRequestsPage: React.FC = () => {
   if (authLoading || isLoading) {
     return (
       <AdminContainer>
-        <LoadingState>{t('common.loading', 'Loading...')}</LoadingState>
+        <LoadingState>{t('Loading...', 'Loading...')}</LoadingState>
       </AdminContainer>
     );
   }
@@ -723,7 +723,7 @@ const AdminBookRequestsPage: React.FC = () => {
     <AdminContainer>
       <AdminHeader>
         <AdminTitle>
-          <FiBookOpen style={{ marginRight: '0.5rem' }} /> {t('admin.bookRequestsTitle', 'Manage Book Requests')}
+          <FiBookOpen style={{ marginRight: '0.5rem' }} /> {t('Manage Book Requests', 'Manage Book Requests')}
         </AdminTitle>
       </AdminHeader>
       
@@ -747,37 +747,37 @@ const AdminBookRequestsPage: React.FC = () => {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="all">{t('admin.statusAll', 'All Statuses')}</option>
-            <option value="Pending">{t('admin.statusPending', 'Pending')}</option>
-            <option value="Approved">{t('admin.statusApproved', 'Approved')}</option>
-            <option value="Fulfilled">{t('admin.statusFulfilled', 'Fulfilled')}</option>
-            <option value="Rejected">{t('admin.statusRejected', 'Rejected')}</option>
+            <option value="all">{t('All Statuses', 'All Statuses')}</option>
+            <option value="Pending">{t('Pending', 'Pending')}</option>
+            <option value="Approved">{t('Approved', 'Approved')}</option>
+            <option value="Fulfilled">{t('Fulfilled', 'Fulfilled')}</option>
+            <option value="Rejected">{t('Rejected', 'Rejected')}</option>
           </FilterSelect>
           
           <FilterSelect
             value={formatFilter}
             onChange={(e) => setFormatFilter(e.target.value)}
           >
-            <option value="all">{t('admin.formatAll', 'All Formats')}</option>
-            <option value="Book">{t('admin.formatBook', 'Book')}</option>
-            <option value="Audiobook">{t('admin.formatAudiobook', 'Audiobook')}</option>
-            <option value="Either">{t('admin.formatEither', 'Either')}</option>
+            <option value="all">{t('All Formats', 'All Formats')}</option>
+            <option value="Book">{t('Book', 'Book')}</option>
+            <option value="Audiobook">{t('Audiobook', 'Audiobook')}</option>
+            <option value="Either">{t('Either', 'Either')}</option>
           </FilterSelect>
           
           <FilterSelect
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
           >
-            <option value="all">{t('admin.priorityAll', 'All Priorities')}</option>
-            <option value="Low">{t('admin.priorityLow', 'Low')}</option>
-            <option value="Medium">{t('admin.priorityMedium', 'Medium')}</option>
-            <option value="High">{t('admin.priorityHigh', 'High')}</option>
+            <option value="all">{t('All Priorities', 'All Priorities')}</option>
+            <option value="Low">{t('Low', 'Low')}</option>
+            <option value="Medium">{t('Medium', 'Medium')}</option>
+            <option value="High">{t('High', 'High')}</option>
           </FilterSelect>
           
           <SearchBar>
             <SearchInput
               type="text"
-              placeholder={t('admin.searchRequests', 'Search requests...')}
+              placeholder={t('Search requests...', 'Search requests...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -786,7 +786,7 @@ const AdminBookRequestsPage: React.FC = () => {
             </IconButton>
           </SearchBar>
           
-          <IconButton onClick={handleResetFilters} title={t('admin.resetFilters', 'Reset filters')}>
+          <IconButton onClick={handleResetFilters} title={t('Reset filters', 'Reset filters')}>
             <FiRefreshCw />
           </IconButton>
         </FiltersContainer>
@@ -794,21 +794,21 @@ const AdminBookRequestsPage: React.FC = () => {
         {filteredRequests.length === 0 ? (
           <EmptyState>
             {searchQuery || statusFilter !== 'all' || formatFilter !== 'all' || priorityFilter !== 'all'
-              ? t('admin.noMatchingRequests', 'No matching requests found')
-              : t('admin.noRequests', 'No book requests yet')}
+              ? t('No matching requests found', 'No matching requests found')
+              : t('No book requests yet', 'No book requests yet')}
           </EmptyState>
         ) : (
           <>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableHeader>{t('admin.title', 'Title')}</TableHeader>
-                  <TableHeader>{t('admin.format', 'Format')}</TableHeader>
-                  <TableHeader>{t('admin.requester', 'Requester')}</TableHeader>
-                  <TableHeader>{t('admin.status', 'Status')}</TableHeader>
-                  <TableHeader>{t('admin.priority', 'Priority')}</TableHeader>
-                  <TableHeader>{t('admin.requested', 'Requested')}</TableHeader>
-                  <TableHeader>{t('admin.actions', 'Actions')}</TableHeader>
+                  <TableHeader>{t('Title', 'Title')}</TableHeader>
+                  <TableHeader>{t('Format', 'Format')}</TableHeader>
+                  <TableHeader>{t('Requester', 'Requester')}</TableHeader>
+                  <TableHeader>{t('Status', 'Status')}</TableHeader>
+                  <TableHeader>{t('Priority', 'Priority')}</TableHeader>
+                  <TableHeader>{t('Requested', 'Requested')}</TableHeader>
+                  <TableHeader>{t('Actions', 'Actions')}</TableHeader>
                 </TableRow>
               </TableHead>
               <tbody>
@@ -838,14 +838,14 @@ const AdminBookRequestsPage: React.FC = () => {
                         <IconButton 
                           className="edit" 
                           onClick={() => handleEditClick(request)}
-                          title={t('admin.edit', 'Edit')}
+                          title={t('Edit', 'Edit')}
                         >
                           <FiEdit />
                         </IconButton>
                         <IconButton 
                           className="delete" 
                           onClick={() => handleDeleteRequest(request.id)}
-                          title={t('admin.delete', 'Delete')}
+                          title={t('Delete', 'Delete')}
                         >
                           <FiTrash2 />
                         </IconButton>
@@ -898,7 +898,7 @@ const AdminBookRequestsPage: React.FC = () => {
         <Modal>
           <ModalContent>
             <ModalHeader>
-              <ModalTitle>{t('admin.editRequest', 'Edit Request')}</ModalTitle>
+              <ModalTitle>{t('Edit Request', 'Edit Request')}</ModalTitle>
               <CloseButton onClick={handleCloseModal}>
                 <FiX />
               </CloseButton>
@@ -906,70 +906,70 @@ const AdminBookRequestsPage: React.FC = () => {
             
             <RequestDetails>
               <DetailItem>
-                <DetailLabel>{t('admin.title', 'Title')}:</DetailLabel>
+                <DetailLabel>{t('Title', 'Title')}:</DetailLabel>
                 <DetailValue>{selectedRequest.title}</DetailValue>
               </DetailItem>
               {selectedRequest.author && (
                 <DetailItem>
-                  <DetailLabel>{t('admin.author', 'Author')}:</DetailLabel>
+                  <DetailLabel>{t('Author', 'Author')}:</DetailLabel>
                   <DetailValue>{selectedRequest.author}</DetailValue>
                 </DetailItem>
               )}
               <DetailItem>
-                <DetailLabel>{t('admin.format', 'Format')}:</DetailLabel>
+                <DetailLabel>{t('Format', 'Format')}:</DetailLabel>
                 <DetailValue>{selectedRequest.format}</DetailValue>
               </DetailItem>
               <DetailItem>
-                <DetailLabel>{t('admin.language', 'Language')}:</DetailLabel>
+                <DetailLabel>{t('Language', 'Language')}:</DetailLabel>
                 <DetailValue>{selectedRequest.language}</DetailValue>
               </DetailItem>
               {selectedRequest.description && (
                 <DetailItem>
-                  <DetailLabel>{t('admin.description', 'Description')}:</DetailLabel>
+                  <DetailLabel>{t('Description', 'Description')}:</DetailLabel>
                   <DetailValue>{selectedRequest.description}</DetailValue>
                 </DetailItem>
               )}
               <DetailItem>
-                <DetailLabel>{t('admin.requester', 'Requester')}:</DetailLabel>
+                <DetailLabel>{t('Requester', 'Requester')}:</DetailLabel>
                 <DetailValue>
                   {selectedRequest.requester_username || 'Unknown'}
                 </DetailValue>
               </DetailItem>
               <DetailItem>
-                <DetailLabel>{t('admin.requested', 'Requested')}:</DetailLabel>
+                <DetailLabel>{t('Requested', 'Requested')}:</DetailLabel>
                 <DetailValue>{formatDate(selectedRequest.created_at)}</DetailValue>
               </DetailItem>
             </RequestDetails>
             
             <FormGroup>
-              <Label htmlFor="status">{t('admin.status', 'Status')}</Label>
+              <Label htmlFor="status">{t('Status', 'Status')}</Label>
               <Select
                 id="status"
                 name="status"
                 value={editFormData.status}
                 onChange={handleEditFormChange}
               >
-                <option value="Pending">{t('admin.statusPending', 'Pending')}</option>
-                <option value="Approved">{t('admin.statusApproved', 'Approved')}</option>
-                <option value="Fulfilled">{t('admin.statusFulfilled', 'Fulfilled')}</option>
-                <option value="Rejected">{t('admin.statusRejected', 'Rejected')}</option>
+                <option value="Pending">{t('Pending', 'Pending')}</option>
+                <option value="Approved">{t('Approved', 'Approved')}</option>
+                <option value="Fulfilled">{t('Fulfilled', 'Fulfilled')}</option>
+                <option value="Rejected">{t('Rejected', 'Rejected')}</option>
               </Select>
             </FormGroup>
             
             <FormGroup>
-              <Label htmlFor="admin_notes">{t('admin.notes', 'Admin Notes')}</Label>
+              <Label htmlFor="admin_notes">{t('Admin Notes', 'Admin Notes')}</Label>
               <Textarea
                 id="admin_notes"
                 name="admin_notes"
                 value={editFormData.admin_notes}
                 onChange={handleEditFormChange}
-                placeholder={t('admin.notesPlaceholder', 'Add notes about this request (only visible to admins)')}
+                placeholder={t('Add notes about this request (only visible to admins)', 'Add notes about this request (only visible to admins)')}
               />
             </FormGroup>
             
             <Button $variant="primary" onClick={handleUpdateRequest}>
               <FiCheck />
-              {t('admin.updateRequest', 'Update Request')}
+              {t('Update Request', 'Update Request')}
             </Button>
           </ModalContent>
         </Modal>
