@@ -93,19 +93,19 @@ const TimeRangeSelector = styled.div`
 `;
 
 interface TimeButtonProps {
-  active?: boolean;
+  $active?: boolean;
 }
 
 const TimeButton = styled.button<TimeButtonProps>`
   padding: 0.5rem 1rem;
-  border: 1px solid ${(props) => props.active 
+  border: 1px solid ${(props) => props.$active 
     ? props.theme.colors.primary 
     : props.theme.colors.border};
   border-radius: ${(props) => props.theme.borderRadius.md};
-  background-color: ${(props) => props.active 
+  background-color: ${(props) => props.$active 
     ? props.theme.colors.primary 
     : 'transparent'};
-  color: ${(props) => props.active 
+  color: ${(props) => props.$active 
     ? 'white' 
     : props.theme.colors.text};
   cursor: pointer;
@@ -113,7 +113,7 @@ const TimeButton = styled.button<TimeButtonProps>`
   font-size: ${(props) => props.theme.typography.fontSize.sm};
   
   &:hover {
-    background-color: ${(props) => props.active 
+    background-color: ${(props) => props.$active 
       ? props.theme.colors.primaryDark 
       : props.theme.colors.backgroundAlt};
     transform: translateY(-2px);
@@ -451,19 +451,19 @@ const AdminDashboardPage: React.FC = () => {
       <TimeRangeSelector>
         <FiCalendar style={{ color: '#8C8C96' }} />
         <TimeButton 
-          active={timeRange === 'week'} 
+          $active={timeRange === 'week'} 
           onClick={() => setTimeRange('week')}
         >
           {t('admin.weekView')}
         </TimeButton>
         <TimeButton 
-          active={timeRange === 'month'} 
+          $active={timeRange === 'month'} 
           onClick={() => setTimeRange('month')}
         >
           {t('admin.monthView')}
         </TimeButton>
         <TimeButton 
-          active={timeRange === 'year'} 
+          $active={timeRange === 'year'} 
           onClick={() => setTimeRange('year')}
         >
           {t('admin.yearView')}

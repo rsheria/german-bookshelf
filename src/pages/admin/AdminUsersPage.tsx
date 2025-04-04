@@ -116,14 +116,14 @@ const IconButton = styled.button`
   }
 `;
 
-const ToggleAdminButton = styled.button<{ isAdmin: boolean }>`
+const SafeToggleAdminButton = styled.button<{ $isAdmin: boolean }>`
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   border-radius: ${props => props.theme.borderRadius.md};
   border: none;
-  background-color: ${props => props.isAdmin 
+  background-color: ${props => props.$isAdmin 
     ? props.theme.colors.danger 
     : props.theme.colors.success};
   color: white;
@@ -1068,7 +1068,13 @@ const AdminUsersPage: React.FC = () => {
                   <Bar data={userGrowthData} options={{ maintainAspectRatio: false }} />
                 */}
                 <div style={{ textAlign: 'center', paddingTop: '80px', color: '#666' }}>
-                  {t('admin.chartPlaceholder')}
+                  {t('admin.chartPlaceholder')} 
+                  <div>
+                    {t('admin.dataPoints')}: {userGrowthData.labels.join(', ')}
+                  </div>
+                  <div>
+                    {t('admin.values')}: {userGrowthData.datasets[0].data.join(', ')}
+                  </div>
                 </div>
               </ChartContainer>
             )}
@@ -1340,8 +1346,8 @@ const AdminUsersPage: React.FC = () => {
                         
                         {/* Don't allow toggling admin status for current user */}
                         {userProfile.id !== user.id && (
-                          <ToggleAdminButton 
-                            isAdmin={userProfile.is_admin}
+                          <SafeToggleAdminButton 
+                            $isAdmin={userProfile.is_admin}
                             onClick={() => handleToggleAdmin(userProfile.id, userProfile.is_admin)}
                           >
                             {userProfile.is_admin ? (
@@ -1353,7 +1359,7 @@ const AdminUsersPage: React.FC = () => {
                                 <FiCheck /> {t('admin.makeAdmin')}
                               </>
                             )}
-                          </ToggleAdminButton>
+                          </SafeToggleAdminButton>
                         )}
                       </ActionButtons>
                     </TableCell>
