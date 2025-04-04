@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiCheckCircle, FiAlertCircle, FiX, FiLoader, FiSend, FiList, FiPlus } from 'react-icons/fi';
+import { FiCheckCircle, FiAlertCircle, FiX, FiLoader, FiSend, FiList, FiPlus, FiBookOpen } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import {
@@ -288,6 +288,51 @@ const DeleteButton = styled.button`
   }
 `;
 
+const QuotaBar = styled.div`
+  background-color: ${props => props.theme.colors.background};
+  height: 8px;
+  border-radius: ${props => props.theme.borderRadius.full};
+  overflow: hidden;
+  margin-top: ${props => props.theme.spacing.xs};
+`;
+
+const QuotaProgress = styled.div<{ percent: number }>`
+  height: 100%;
+  width: ${props => props.percent}%;
+  background-color: ${props => {
+    if (props.percent < 60) return props.theme.colors.success;
+    if (props.percent < 85) return props.theme.colors.warning;
+    return props.theme.colors.danger;
+  }};
+  transition: width 0.3s ease;
+`;
+
+const QuotaInfo = styled.div`
+  padding: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border-left: 4px solid ${props => props.theme.colors.primary};
+`;
+
+const QuotaLabel = styled.div`
+  display: flex;
+  align-items: center;
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  margin-bottom: ${props => props.theme.spacing.xs};
+  
+  svg {
+    margin-right: ${props => props.theme.spacing.xs};
+  }
+`;
+
+const QuotaValue = styled.div`
+  display: flex;
+  justify-content: space-between;
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  margin-bottom: ${props => props.theme.spacing.xs};
+`;
+
 // Interface for book request
 interface BookRequest {
   id: string;
@@ -313,18 +358,73 @@ interface FormData {
   priority: string;
 }
 
+// Custom hook to track monthly book request quota
+const useBookRequestQuota = () => {
+  const { user } = useAuth();
+  const [remainingRequests, setRemainingRequests] = useState<number | null>(null);
+  const [totalQuota, setTotalQuota] = useState<number | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const checkRemainingQuota = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // First get the user's monthly request limit
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('monthly_request_limit')
+        .eq('id', user.id)
+        .single();
+        
+      if (profileError) throw profileError;
+      
+      // Set the total quota
+      const quota = profileData?.monthly_request_limit || 5;
+      setTotalQuota(quota);
+      
+      // Use the database function to get remaining requests
+      const { data, error: countError } = await supabase
+        .rpc('get_remaining_book_requests', { user_uuid: user.id });
+        
+      if (countError) throw countError;
+      
+      setRemainingRequests(data);
+      setError(null);
+    } catch (error: any) {
+      console.error('Error checking remaining book requests:', error);
+      setError(error.message);
+      // Fallback to a reasonable value if there's an error
+      setRemainingRequests(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkRemainingQuota();
+  }, [user]);
+
+  return { remainingRequests, totalQuota, loading, error, checkRemainingQuota };
+};
+
 // Main component
 const BookRequestPage: React.FC = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const { user, isLoading: authLoading } = useAuth();
-  
-  const [activeTab, setActiveTab] = useState('requests'); // 'requests' or 'form'
+  const [activeTab, setActiveTab] = useState<'form' | 'list'>('form');
   const [requests, setRequests] = useState<BookRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
+  const { remainingRequests, totalQuota, loading: quotaLoading, checkRemainingQuota } = useBookRequestQuota();
   
   const [formData, setFormData] = useState<FormData>({
     title: '',
@@ -332,7 +432,7 @@ const BookRequestPage: React.FC = () => {
     language: 'German',
     format: 'Ebook',
     description: '',
-    priority: 'Medium'
+    priority: 'Medium',
   });
   
   useEffect(() => {
@@ -347,7 +447,7 @@ const BookRequestPage: React.FC = () => {
   const fetchBookRequests = async () => {
     try {
       setIsLoading(true);
-      setError(null);
+      setSubmitError(null);
       
       if (!user) return;
       
@@ -375,9 +475,9 @@ const BookRequestPage: React.FC = () => {
       setRequests(mappedRequests);
     } catch (error) {
       if (error instanceof Error) {
-        setError(error.message);
+        setSubmitError(error.message);
       } else {
-        setError(t('common.unknownError', 'An unknown error occurred'));
+        setSubmitError(t('common.unknownError', 'An unknown error occurred'));
       }
     } finally {
       setIsLoading(false);
@@ -410,15 +510,15 @@ const BookRequestPage: React.FC = () => {
       
       // Update the local state
       setRequests(prev => prev.filter(request => request.id !== id));
-      setSuccess(t('bookRequest.deleteSuccess', 'Request deleted successfully'));
+      setSubmitSuccess(t('bookRequest.deleteSuccess', 'Request deleted successfully'));
       
       // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000);
+      setTimeout(() => setSubmitSuccess(null), 3000);
     } catch (error) {
       if (error instanceof Error) {
-        setError(error.message);
+        setSubmitError(error.message);
       } else {
-        setError(t('common.unknownError', 'An unknown error occurred'));
+        setSubmitError(t('common.unknownError', 'An unknown error occurred'));
       }
     } finally {
       setIsLoading(false);
@@ -429,15 +529,9 @@ const BookRequestPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
-    if (!formData.title.trim()) {
-      setError(t('bookRequest.titleRequired', 'Book title is required'));
-      return;
-    }
-    
     try {
       setIsSubmitting(true);
-      setError(null);
+      setSubmitError(null);
       
       if (!user) {
         throw new Error(t('common.loginRequired', 'You must be logged in to submit a request'));
@@ -470,31 +564,24 @@ const BookRequestPage: React.FC = () => {
         language: 'German',
         format: 'Ebook',
         description: '',
-        priority: 'Medium'
+        priority: 'Medium',
       });
       
-      // Show success message
-      setSuccess(t('bookRequest.submitSuccess', 'Request submitted successfully'));
+      setSubmitSuccess(true);
       
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000);
+      // Update the quota count after successful submission
+      checkRemainingQuota();
       
-      // Add the new request to the list and switch to requests tab
-      if (data && data.length > 0) {
-        const newRequest = {
-          ...data[0],
-          status: 'Pending', // Formatted for display
-        };
-        
-        setRequests(prev => [newRequest, ...prev]);
-        setActiveTab('requests');
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError(t('common.unknownError', 'An unknown error occurred'));
-      }
+      // Switch to the list tab after 2 seconds
+      setTimeout(() => {
+        fetchBookRequests();
+        setActiveTab('list');
+        setSubmitSuccess(false);
+      }, 2000);
+      
+    } catch (error: any) {
+      setSubmitError(error.message);
+      console.error('Error submitting request:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -540,62 +627,92 @@ const BookRequestPage: React.FC = () => {
   return (
     <AdminContainer>
       <PageHeader>
-        <PageTitle>{t('bookRequest.title', 'Book Requests')}</PageTitle>
+        <PageTitle>{t('bookRequest.pageTitle', 'Book Request')}</PageTitle>
         <Subtitle>
-          {t('bookRequest.subtitle', 'Request books you would like to see in our collection')}
+          {t('bookRequest.pageSubtitle', 'Request books that you would like to see in our library')}
         </Subtitle>
       </PageHeader>
-      
-      {error && (
-        <div style={{ 
-          backgroundColor: 'rgba(166, 89, 83, 0.1)', 
-          color: '#A65953', 
-          padding: '1rem', 
-          borderRadius: '0.25rem',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem' 
-        }}>
-          <FiAlertCircle /> {error}
-        </div>
-      )}
-      
-      {success && (
-        <div style={{ 
-          backgroundColor: 'rgba(94, 139, 126, 0.1)', 
-          color: '#5E8B7E', 
-          padding: '1rem', 
-          borderRadius: '0.25rem',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem' 
-        }}>
-          <FiCheckCircle /> {success}
-        </div>
-      )}
       
       <Card>
         <Tabs>
           <Tab 
-            active={activeTab === 'requests'} 
-            onClick={() => setActiveTab('requests')}
-          >
-            <FiList style={{ marginRight: '0.5rem' }} />
-            {t('bookRequest.myRequests', 'My Requests')}
-          </Tab>
-          <Tab 
             active={activeTab === 'form'} 
             onClick={() => setActiveTab('form')}
           >
-            <FiPlus style={{ marginRight: '0.5rem' }} />
-            {t('bookRequest.newRequest', 'New Request')}
+            <FiSend style={{ marginRight: '8px' }} />
+            {t('bookRequest.tabs.newRequest', 'New Request')}
+          </Tab>
+          <Tab 
+            active={activeTab === 'list'} 
+            onClick={() => setActiveTab('list')}
+          >
+            <FiList style={{ marginRight: '8px' }} />
+            {t('bookRequest.tabs.myRequests', 'My Requests')}
           </Tab>
         </Tabs>
         
         {activeTab === 'form' ? (
           <FormContainer>
+            {!quotaLoading && remainingRequests !== null && totalQuota !== null && (
+              <QuotaInfo>
+                <QuotaLabel>
+                  <FiBookOpen />
+                  {t('bookRequest.monthlyQuota', 'Monthly Request Quota')}
+                </QuotaLabel>
+                <QuotaValue>
+                  <span>
+                    {t('bookRequest.remainingRequests', 'Remaining Requests')}: 
+                    <strong> {remainingRequests}</strong> / {totalQuota}
+                  </span>
+                </QuotaValue>
+                <QuotaBar>
+                  <QuotaProgress 
+                    percent={Math.min(100, 100 - (remainingRequests / Math.max(1, totalQuota) * 100))} 
+                  />
+                </QuotaBar>
+                {remainingRequests <= 0 && (
+                  <div style={{ 
+                    color: '#d32f2f', 
+                    fontSize: '0.875rem', 
+                    marginTop: '0.5rem',
+                    fontWeight: 500
+                  }}>
+                    {t('bookRequest.quotaExceeded', 'Monthly request quota exceeded. Try again next month.')}
+                  </div>
+                )}
+              </QuotaInfo>
+            )}
+            
+            {submitSuccess && (
+              <div style={{ 
+                backgroundColor: 'rgba(94, 139, 126, 0.1)', 
+                color: '#5E8B7E', 
+                padding: '1rem', 
+                borderRadius: '0.25rem',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem' 
+              }}>
+                <FiCheckCircle /> {t('bookRequest.submitSuccess', 'Your book request has been submitted successfully!')}
+              </div>
+            )}
+            
+            {submitError && (
+              <div style={{ 
+                backgroundColor: 'rgba(166, 89, 83, 0.1)', 
+                color: '#A65953', 
+                padding: '1rem', 
+                borderRadius: '0.25rem',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem' 
+              }}>
+                <FiAlertCircle /> {submitError}
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit}>
               <FormGroup>
                 <Label htmlFor="title">{t('bookRequest.bookTitle', 'Book Title')} *</Label>
