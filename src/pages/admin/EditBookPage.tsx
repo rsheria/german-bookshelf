@@ -6,25 +6,12 @@ import { FiArrowLeft, FiEdit } from 'react-icons/fi';
 import BookForm from '../../components/admin/BookForm';
 import { useAuth } from '../../context/AuthContext';
 import { useBook } from '../../hooks/useBooks';
-
-const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  color: #2c3e50;
-  margin: 0 0 1rem 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
+import {
+  AdminContainer,
+  AdminHeader,
+  AdminTitle,
+  LoadingState
+} from '../../styles/adminStyles';
 
 const BackButton = styled.button`
   display: flex;
@@ -32,30 +19,37 @@ const BackButton = styled.button`
   gap: 0.5rem;
   background: none;
   border: none;
-  color: #3498db;
-  font-size: 1rem;
-  font-weight: 500;
+  color: ${props => props.theme.colors.primary};
+  font-size: ${props => props.theme.typography.fontSize.base};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
   cursor: pointer;
   padding: 0.5rem 0;
   margin-bottom: 1rem;
-
+  transition: all 0.2s;
+  
   &:hover {
-    text-decoration: underline;
+    transform: translateX(-3px);
+    color: ${props => props.theme.colors.primaryDark};
   }
 `;
 
-const LoadingState = styled.div`
-  text-align: center;
-  padding: 3rem;
-  color: #666;
+const FormContainer = styled.div`
+  background-color: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  box-shadow: ${props => props.theme.shadows.sm};
+  padding: 2rem;
+  margin-top: 1rem;
 `;
 
 const ErrorState = styled.div`
-  text-align: center;
-  padding: 3rem;
-  color: #e74c3c;
-  background-color: #f8d7da;
-  border-radius: 8px;
+  padding: 1.5rem;
+  color: ${props => props.theme.colors.danger};
+  background-color: rgba(220, 53, 69, 0.1);
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin: 1.5rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const EditBookPage: React.FC = () => {
@@ -81,9 +75,9 @@ const EditBookPage: React.FC = () => {
 
   if (authLoading || bookLoading) {
     return (
-      <Container>
+      <AdminContainer>
         <LoadingState>{t('common.loading')}</LoadingState>
-      </Container>
+      </AdminContainer>
     );
   }
 
@@ -93,14 +87,14 @@ const EditBookPage: React.FC = () => {
 
   if (error) {
     return (
-      <Container>
+      <AdminContainer>
         <BackButton onClick={() => navigate('/admin/books')}>
           <FiArrowLeft /> {t('common.back')}
         </BackButton>
         <ErrorState>
           {t('common.error')}: {error.message}
         </ErrorState>
-      </Container>
+      </AdminContainer>
     );
   }
 
@@ -109,19 +103,21 @@ const EditBookPage: React.FC = () => {
   }
 
   return (
-    <Container>
+    <AdminContainer>
       <BackButton onClick={() => navigate('/admin/books')}>
         <FiArrowLeft /> {t('common.back')}
       </BackButton>
       
-      <Header>
-        <Title>
-          <FiEdit /> {t('admin.editBook')}
-        </Title>
-      </Header>
+      <AdminHeader>
+        <AdminTitle>
+          <FiEdit style={{ marginRight: '0.5rem' }} /> {t('admin.editBook')}: {book.title}
+        </AdminTitle>
+      </AdminHeader>
       
-      <BookForm book={book} isEdit={true} />
-    </Container>
+      <FormContainer>
+        <BookForm book={book} isEdit={true} />
+      </FormContainer>
+    </AdminContainer>
   );
 };
 

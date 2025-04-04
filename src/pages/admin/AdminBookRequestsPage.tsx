@@ -9,153 +9,181 @@ import {
   FiCheckCircle, 
   FiX,
   FiEdit,
-  FiTrash2
+  FiTrash2,
+  FiSearch,
+  FiRefreshCw,
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
+import {
+  AdminContainer,
+  AdminHeader,
+  AdminTitle,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeader,
+  TableCell,
+  LoadingState
+} from '../../styles/adminStyles';
 
-// Styled components
-const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  color: #2c3e50;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const Card = styled.div`
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  overflow: auto;
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-`;
-
-const Th = styled.th`
-  text-align: left;
-  padding: 1rem;
-  border-bottom: 2px solid #eee;
-  color: #2c3e50;
-  font-weight: 600;
-`;
-
-const Td = styled.td`
-  padding: 1rem;
-  border-bottom: 1px solid #eee;
-  color: #34495e;
-`;
-
-const Badge = styled.span<{ type: string }>`
+// Additional styled components specific to this page
+const StatusBadge = styled.span<{ $variant: 'Pending' | 'Approved' | 'Fulfilled' | 'Rejected' }>`
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.3rem 0.6rem;
-  border-radius: 50px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  background-color: ${({ type }) => {
-    switch (type) {
-      case 'Pending': return '#fff8e1';
-      case 'Approved': return '#e3f2fd';
-      case 'Fulfilled': return '#e8f5e9';
-      case 'Rejected': return '#ffebee';
-      case 'High': return '#ffebee';
-      case 'Medium': return '#fff8e1';
-      case 'Low': return '#e8f5e9';
-      default: return '#f5f5f5';
+  padding: 0.25rem 0.75rem;
+  border-radius: ${props => props.theme.borderRadius.full};
+  font-size: ${props => props.theme.typography.fontSize.xs};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  
+  ${props => {
+    switch(props.$variant) {
+      case 'Pending':
+        return `
+          background-color: rgba(247, 181, 0, 0.1);
+          color: #f7b500;
+        `;
+      case 'Approved':
+        return `
+          background-color: rgba(63, 118, 156, 0.1);
+          color: ${props.theme.colors.primary};
+        `;
+      case 'Fulfilled':
+        return `
+          background-color: rgba(40, 167, 69, 0.1);
+          color: ${props.theme.colors.success};
+        `;
+      case 'Rejected':
+        return `
+          background-color: rgba(220, 53, 69, 0.1);
+          color: ${props.theme.colors.danger};
+        `;
+      default:
+        return `
+          background-color: ${props.theme.colors.backgroundAlt};
+          color: ${props.theme.colors.text};
+        `;
     }
-  }};
-  color: ${({ type }) => {
-    switch (type) {
-      case 'Pending': return '#f57c00';
-      case 'Approved': return '#1976d2';
-      case 'Fulfilled': return '#388e3c';
-      case 'Rejected': return '#d32f2f';
-      case 'High': return '#d32f2f';
-      case 'Medium': return '#f57c00';
-      case 'Low': return '#388e3c';
-      default: return '#616161';
-    }
-  }};
+  }}
 `;
 
-const Filters = styled.div`
+const PriorityBadge = styled.span<{ $variant: 'High' | 'Medium' | 'Low' | null }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: ${props => props.theme.borderRadius.full};
+  font-size: ${props => props.theme.typography.fontSize.xs};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  
+  ${props => {
+    switch(props.$variant) {
+      case 'High':
+        return `
+          background-color: rgba(220, 53, 69, 0.1);
+          color: ${props.theme.colors.danger};
+        `;
+      case 'Medium':
+        return `
+          background-color: rgba(247, 181, 0, 0.1);
+          color: #f7b500;
+        `;
+      case 'Low':
+        return `
+          background-color: rgba(40, 167, 69, 0.1);
+          color: ${props.theme.colors.success};
+        `;
+      default:
+        return `
+          background-color: ${props.theme.colors.backgroundAlt};
+          color: ${props.theme.colors.text};
+        `;
+    }
+  }}
+`;
+
+const FiltersContainer = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  box-shadow: ${props => props.theme.shadows.sm};
 `;
 
 const FilterSelect = styled.select`
-  padding: 0.6rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  color: #2c3e50;
-  font-size: 0.9rem;
+  padding: 0.625rem 1rem;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  color: ${props => props.theme.colors.text};
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  transition: all 0.2s;
+  
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 2px rgba(63, 118, 156, 0.1);
+  }
+`;
+
+const SearchBar = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+  max-width: 400px;
 `;
 
 const SearchInput = styled.input`
-  padding: 0.6rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  flex-grow: 1;
-  min-width: 200px;
-  font-size: 0.9rem;
+  flex: 1;
+  padding: 0.625rem 1rem;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  color: ${props => props.theme.colors.text};
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  transition: all 0.2s;
   
   &:focus {
-    border-color: #3498db;
     outline: none;
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 2px rgba(63, 118, 156, 0.1);
   }
 `;
 
-const Button = styled.button<{ variant?: 'primary' | 'success' | 'danger' | 'default' }>`
-  background-color: ${({ variant }) => {
-    switch (variant) {
-      case 'primary': return '#3498db';
-      case 'success': return '#2ecc71';
-      case 'danger': return '#e74c3c';
-      default: return '#7f8c8d';
-    }
-  }};
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 0.5rem 1rem;
-  font-size: 0.9rem;
-  cursor: pointer;
+const IconButton = styled.button`
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  transition: opacity 0.2s;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: ${props => props.theme.borderRadius.full};
+  background-color: transparent;
+  border: 1px solid ${props => props.theme.colors.border};
+  color: ${props => props.theme.colors.textDim};
+  cursor: pointer;
+  transition: all 0.2s;
   
   &:hover {
-    opacity: 0.9;
+    background-color: ${props => props.theme.colors.backgroundAlt};
+    color: ${props => props.theme.colors.primary};
+    transform: translateY(-2px);
   }
   
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  &.edit:hover {
+    color: ${props => props.theme.colors.primary};
+    border-color: ${props => props.theme.colors.primary};
+    background-color: rgba(63, 118, 156, 0.05);
+  }
+  
+  &.delete:hover {
+    color: ${props => props.theme.colors.danger};
+    border-color: ${props => props.theme.colors.danger};
+    background-color: rgba(220, 53, 69, 0.05);
   }
 `;
 
@@ -164,6 +192,7 @@ const ActionButtons = styled.div`
   gap: 0.5rem;
 `;
 
+// Modal styled components
 const Modal = styled.div`
   position: fixed;
   top: 0;
@@ -178,9 +207,9 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  background-color: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  box-shadow: ${props => props.theme.shadows.lg};
   padding: 2rem;
   width: 90%;
   max-width: 600px;
@@ -193,30 +222,64 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  border-bottom: 1px solid ${props => props.theme.colors.border};
+  padding-bottom: 1rem;
 `;
 
 const ModalTitle = styled.h2`
   margin: 0;
-  font-size: 1.5rem;
-  color: #2c3e50;
+  font-size: ${props => props.theme.typography.fontSize.xl};
+  color: ${props => props.theme.colors.textDark};
+  font-weight: ${props => props.theme.typography.fontWeight.bold};
 `;
 
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: 1.5rem;
+  color: ${props => props.theme.colors.textDim};
   cursor: pointer;
-  color: #7f8c8d;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: ${props => props.theme.borderRadius.full};
+  transition: all 0.2s;
   
   &:hover {
-    background-color: #f1f1f1;
+    background-color: ${props => props.theme.colors.backgroundAlt};
+    color: ${props => props.theme.colors.danger};
   }
+`;
+
+const RequestDetails = styled.div`
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.theme.colors.border};
+`;
+
+const DetailItem = styled.div`
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const DetailLabel = styled.span`
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  color: ${props => props.theme.colors.textDark};
+  margin-right: 0.5rem;
+  min-width: 100px;
+`;
+
+const DetailValue = styled.span`
+  color: ${props => props.theme.colors.text};
+  flex: 1;
 `;
 
 const FormGroup = styled.div`
@@ -226,64 +289,122 @@ const FormGroup = styled.div`
 const Label = styled.label`
   display: block;
   margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #2c3e50;
-`;
-
-const Textarea = styled.textarea`
-  width: 100%;
-  padding: 0.75rem;
-  font-size: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  min-height: 100px;
-  resize: vertical;
-  transition: border-color 0.2s;
-  
-  &:focus {
-    border-color: #3498db;
-    outline: none;
-  }
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  color: ${props => props.theme.colors.textDark};
 `;
 
 const Select = styled.select`
   width: 100%;
   padding: 0.75rem;
-  font-size: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  transition: border-color 0.2s;
+  font-size: ${props => props.theme.typography.fontSize.base};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  color: ${props => props.theme.colors.text};
+  transition: all 0.2s;
   
   &:focus {
-    border-color: #3498db;
     outline: none;
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 2px rgba(63, 118, 156, 0.1);
   }
 `;
 
-const Alert = styled.div<{ type: 'error' | 'success' | 'info' }>`
+const Textarea = styled.textarea`
+  width: 100%;
+  padding: 0.75rem;
+  font-size: ${props => props.theme.typography.fontSize.base};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  color: ${props => props.theme.colors.text};
+  min-height: 120px;
+  resize: vertical;
+  transition: all 0.2s;
+  
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 2px rgba(63, 118, 156, 0.1);
+  }
+`;
+
+const Button = styled.button<{ $variant?: 'primary' | 'success' | 'danger' | 'default' }>`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: ${({ type }) => {
-    switch (type) {
-      case 'error': return '#f8d7da';
-      case 'success': return '#d4edda';
-      case 'info': return '#d1ecf1';
-      default: return '#f8d7da';
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: ${props => props.theme.typography.fontSize.base};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  background-color: ${({ $variant, theme }) => {
+    switch ($variant) {
+      case 'primary': return theme.colors.primary;
+      case 'success': return theme.colors.success;
+      case 'danger': return theme.colors.danger;
+      default: return theme.colors.backgroundAlt;
     }
   }};
-  color: ${({ type }) => {
-    switch (type) {
-      case 'error': return '#721c24';
-      case 'success': return '#155724';
-      case 'info': return '#0c5460';
-      default: return '#721c24';
+  
+  color: ${({ $variant, theme }) => {
+    switch ($variant) {
+      case 'primary':
+      case 'success':
+      case 'danger':
+        return 'white';
+      default:
+        return theme.colors.text;
     }
   }};
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: ${props => props.theme.shadows.sm};
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+const StatusAlert = styled.div<{ $variant: 'error' | 'success' | 'info' }>`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   padding: 1rem;
-  border-radius: 4px;
+  border-radius: ${props => props.theme.borderRadius.md};
   margin-bottom: 1.5rem;
+  
+  ${props => {
+    switch(props.$variant) {
+      case 'error':
+        return `
+          background-color: rgba(220, 53, 69, 0.1);
+          color: ${props.theme.colors.danger};
+        `;
+      case 'success':
+        return `
+          background-color: rgba(40, 167, 69, 0.1);
+          color: ${props.theme.colors.success};
+        `;
+      case 'info':
+        return `
+          background-color: rgba(63, 118, 156, 0.1);
+          color: ${props.theme.colors.primary};
+        `;
+      default:
+        return `
+          background-color: ${props.theme.colors.backgroundAlt};
+          color: ${props.theme.colors.text};
+        `;
+    }
+  }}
 `;
 
 const Pagination = styled.div`
@@ -293,16 +414,30 @@ const Pagination = styled.div`
   margin-top: 1.5rem;
 `;
 
-const PageButton = styled.button<{ active?: boolean }>`
-  padding: 0.5rem 0.75rem;
-  border: 1px solid ${({ active }) => active ? '#3498db' : '#ddd'};
-  background-color: ${({ active }) => active ? '#3498db' : 'white'};
-  color: ${({ active }) => active ? 'white' : '#2c3e50'};
-  border-radius: 4px;
+const PageButton = styled.button<{ $active?: boolean }>`
+  min-width: 36px;
+  height: 36px;
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.$active 
+    ? props.theme.colors.primary 
+    : props.theme.colors.border};
+  background-color: ${props => props.$active 
+    ? props.theme.colors.primary 
+    : props.theme.colors.backgroundAlt};
+  color: ${props => props.$active 
+    ? 'white' 
+    : props.theme.colors.text};
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  transition: all 0.2s;
   
-  &:hover {
-    background-color: ${({ active }) => active ? '#2980b9' : '#f1f1f1'};
+  &:hover:not([disabled]) {
+    background-color: ${props => props.$active 
+      ? props.theme.colors.primaryDark 
+      : props.theme.colors.background};
+    transform: translateY(-2px);
   }
   
   &:disabled {
@@ -311,38 +446,14 @@ const PageButton = styled.button<{ active?: boolean }>`
   }
 `;
 
-const NoDataMessage = styled.div`
+const EmptyState = styled.div`
   text-align: center;
   padding: 3rem;
-  color: #7f8c8d;
+  color: ${props => props.theme.colors.textDim};
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  margin: 1.5rem 0;
   font-style: italic;
-`;
-
-const RequestDetails = styled.div`
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-`;
-
-const DetailItem = styled.div`
-  margin-bottom: 0.5rem;
-`;
-
-const DetailLabel = styled.span`
-  font-weight: 500;
-  color: #2c3e50;
-  margin-right: 0.5rem;
-`;
-
-const DetailValue = styled.span`
-  color: #34495e;
-`;
-
-const LoadingState = styled.div`
-  text-align: center;
-  padding: 3rem;
-  color: #666;
 `;
 
 // Interface for book request
@@ -602,41 +713,41 @@ const AdminBookRequestsPage: React.FC = () => {
   
   if (authLoading || isLoading) {
     return (
-      <Container>
+      <AdminContainer>
         <LoadingState>{t('common.loading', 'Loading...')}</LoadingState>
-      </Container>
+      </AdminContainer>
     );
   }
   
   return (
-    <Container>
-      <Header>
-        <Title>
-          <FiBookOpen /> {t('admin.bookRequestsTitle', 'Manage Book Requests')}
-        </Title>
-      </Header>
+    <AdminContainer>
+      <AdminHeader>
+        <AdminTitle>
+          <FiBookOpen style={{ marginRight: '0.5rem' }} /> {t('admin.bookRequestsTitle', 'Manage Book Requests')}
+        </AdminTitle>
+      </AdminHeader>
       
       {error && (
-        <Alert type="error">
+        <StatusAlert $variant="error">
           <FiAlertCircle />
           {error}
-        </Alert>
+        </StatusAlert>
       )}
       
       {success && (
-        <Alert type="success">
+        <StatusAlert $variant="success">
           <FiCheckCircle />
           {success}
-        </Alert>
+        </StatusAlert>
       )}
       
-      <Card>
-        <Filters>
+      <TableContainer>
+        <FiltersContainer>
           <FilterSelect
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="all">{t('admin.allStatuses', 'All Statuses')}</option>
+            <option value="all">{t('admin.statusAll', 'All Statuses')}</option>
             <option value="Pending">{t('admin.statusPending', 'Pending')}</option>
             <option value="Approved">{t('admin.statusApproved', 'Approved')}</option>
             <option value="Fulfilled">{t('admin.statusFulfilled', 'Fulfilled')}</option>
@@ -647,7 +758,7 @@ const AdminBookRequestsPage: React.FC = () => {
             value={formatFilter}
             onChange={(e) => setFormatFilter(e.target.value)}
           >
-            <option value="all">{t('admin.allFormats', 'All Formats')}</option>
+            <option value="all">{t('admin.formatAll', 'All Formats')}</option>
             <option value="Book">{t('admin.formatBook', 'Book')}</option>
             <option value="Audiobook">{t('admin.formatAudiobook', 'Audiobook')}</option>
             <option value="Either">{t('admin.formatEither', 'Either')}</option>
@@ -657,86 +768,90 @@ const AdminBookRequestsPage: React.FC = () => {
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
           >
-            <option value="all">{t('admin.allPriorities', 'All Priorities')}</option>
+            <option value="all">{t('admin.priorityAll', 'All Priorities')}</option>
             <option value="Low">{t('admin.priorityLow', 'Low')}</option>
             <option value="Medium">{t('admin.priorityMedium', 'Medium')}</option>
             <option value="High">{t('admin.priorityHigh', 'High')}</option>
           </FilterSelect>
           
-          <SearchInput
-            type="text"
-            placeholder={t('admin.searchRequests', 'Search requests...')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          <SearchBar>
+            <SearchInput
+              type="text"
+              placeholder={t('admin.searchRequests', 'Search requests...')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <IconButton>
+              <FiSearch />
+            </IconButton>
+          </SearchBar>
           
-          <Button onClick={handleResetFilters}>
-            <FiX />
-            {t('admin.resetFilters', 'Reset')}
-          </Button>
-        </Filters>
+          <IconButton onClick={handleResetFilters} title={t('admin.resetFilters', 'Reset filters')}>
+            <FiRefreshCw />
+          </IconButton>
+        </FiltersContainer>
         
         {filteredRequests.length === 0 ? (
-          <NoDataMessage>
+          <EmptyState>
             {searchQuery || statusFilter !== 'all' || formatFilter !== 'all' || priorityFilter !== 'all'
               ? t('admin.noMatchingRequests', 'No matching requests found')
               : t('admin.noRequests', 'No book requests yet')}
-          </NoDataMessage>
+          </EmptyState>
         ) : (
           <>
             <Table>
-              <thead>
-                <tr>
-                  <Th>{t('admin.title', 'Title')}</Th>
-                  <Th>{t('admin.format', 'Format')}</Th>
-                  <Th>{t('admin.requester', 'Requester')}</Th>
-                  <Th>{t('admin.status', 'Status')}</Th>
-                  <Th>{t('admin.priority', 'Priority')}</Th>
-                  <Th>{t('admin.requested', 'Requested')}</Th>
-                  <Th>{t('admin.actions', 'Actions')}</Th>
-                </tr>
-              </thead>
+              <TableHead>
+                <TableRow>
+                  <TableHeader>{t('admin.title', 'Title')}</TableHeader>
+                  <TableHeader>{t('admin.format', 'Format')}</TableHeader>
+                  <TableHeader>{t('admin.requester', 'Requester')}</TableHeader>
+                  <TableHeader>{t('admin.status', 'Status')}</TableHeader>
+                  <TableHeader>{t('admin.priority', 'Priority')}</TableHeader>
+                  <TableHeader>{t('admin.requested', 'Requested')}</TableHeader>
+                  <TableHeader>{t('admin.actions', 'Actions')}</TableHeader>
+                </TableRow>
+              </TableHead>
               <tbody>
                 {currentRequests.map(request => (
-                  <tr key={request.id}>
-                    <Td>
+                  <TableRow key={request.id}>
+                    <TableCell>
                       <strong>{request.title}</strong>
                       {request.author && <div>{request.author}</div>}
-                    </Td>
-                    <Td>{request.format}</Td>
-                    <Td>
+                    </TableCell>
+                    <TableCell>{request.format}</TableCell>
+                    <TableCell>
                       {request.requester_username || 'Unknown'}
-                    </Td>
-                    <Td>
-                      <Badge type={request.status}>{request.status}</Badge>
-                    </Td>
-                    <Td>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge $variant={request.status}>{request.status}</StatusBadge>
+                    </TableCell>
+                    <TableCell>
                       {request.priority ? (
-                        <Badge type={request.priority}>{request.priority}</Badge>
+                        <PriorityBadge $variant={request.priority}>{request.priority}</PriorityBadge>
                       ) : (
                         '-'
                       )}
-                    </Td>
-                    <Td>{formatDate(request.created_at)}</Td>
-                    <Td>
+                    </TableCell>
+                    <TableCell>{formatDate(request.created_at)}</TableCell>
+                    <TableCell>
                       <ActionButtons>
-                        <Button 
-                          variant="primary" 
+                        <IconButton 
+                          className="edit" 
                           onClick={() => handleEditClick(request)}
                           title={t('admin.edit', 'Edit')}
                         >
                           <FiEdit />
-                        </Button>
-                        <Button 
-                          variant="danger" 
+                        </IconButton>
+                        <IconButton 
+                          className="delete" 
                           onClick={() => handleDeleteRequest(request.id)}
                           title={t('admin.delete', 'Delete')}
                         >
                           <FiTrash2 />
-                        </Button>
+                        </IconButton>
                       </ActionButtons>
-                    </Td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
               </tbody>
             </Table>
@@ -756,7 +871,7 @@ const AdminBookRequestsPage: React.FC = () => {
                   &lt;
                 </PageButton>
                 
-                <PageButton active>
+                <PageButton $active>
                   {currentPage} / {totalPages}
                 </PageButton>
                 
@@ -776,7 +891,7 @@ const AdminBookRequestsPage: React.FC = () => {
             )}
           </>
         )}
-      </Card>
+      </TableContainer>
       
       {/* Edit Modal */}
       {isEditModalOpen && selectedRequest && (
@@ -852,14 +967,14 @@ const AdminBookRequestsPage: React.FC = () => {
               />
             </FormGroup>
             
-            <Button variant="primary" onClick={handleUpdateRequest}>
+            <Button $variant="primary" onClick={handleUpdateRequest}>
               <FiCheck />
               {t('admin.updateRequest', 'Update Request')}
             </Button>
           </ModalContent>
         </Modal>
       )}
-    </Container>
+    </AdminContainer>
   );
 };
 

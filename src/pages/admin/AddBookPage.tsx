@@ -5,25 +5,12 @@ import styled from 'styled-components';
 import { FiArrowLeft, FiPlus } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import BookForm from '../../components/admin/BookForm';
-
-const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  color: #2c3e50;
-  margin: 0 0 1rem 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
+import {
+  AdminContainer,
+  AdminHeader,
+  AdminTitle,
+  LoadingState
+} from '../../styles/adminStyles';
 
 const BackButton = styled.button`
   display: flex;
@@ -31,22 +18,26 @@ const BackButton = styled.button`
   gap: 0.5rem;
   background: none;
   border: none;
-  color: #3498db;
-  font-size: 1rem;
-  font-weight: 500;
+  color: ${props => props.theme.colors.primary};
+  font-size: ${props => props.theme.typography.fontSize.base};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
   cursor: pointer;
   padding: 0.5rem 0;
   margin-bottom: 1rem;
-
+  transition: all 0.2s;
+  
   &:hover {
-    text-decoration: underline;
+    transform: translateX(-3px);
+    color: ${props => props.theme.colors.primaryDark};
   }
 `;
 
-const LoadingState = styled.div`
-  text-align: center;
-  padding: 3rem;
-  color: #666;
+const FormContainer = styled.div`
+  background-color: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  box-shadow: ${props => props.theme.shadows.sm};
+  padding: 2rem;
+  margin-top: 1rem;
 `;
 
 const AddBookPage: React.FC = () => {
@@ -63,9 +54,9 @@ const AddBookPage: React.FC = () => {
 
   if (authLoading) {
     return (
-      <Container>
+      <AdminContainer>
         <LoadingState>{t('common.loading')}</LoadingState>
-      </Container>
+      </AdminContainer>
     );
   }
 
@@ -74,19 +65,21 @@ const AddBookPage: React.FC = () => {
   }
 
   return (
-    <Container>
+    <AdminContainer>
       <BackButton onClick={() => navigate('/admin/books')}>
         <FiArrowLeft /> {t('common.back')}
       </BackButton>
       
-      <Header>
-        <Title>
-          <FiPlus /> {t('admin.addBook')}
-        </Title>
-      </Header>
+      <AdminHeader>
+        <AdminTitle>
+          <FiPlus style={{ marginRight: '0.5rem' }} /> {t('admin.addBook')}
+        </AdminTitle>
+      </AdminHeader>
       
-      <BookForm />
-    </Container>
+      <FormContainer>
+        <BookForm />
+      </FormContainer>
+    </AdminContainer>
   );
 };
 
