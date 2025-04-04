@@ -12,8 +12,6 @@ import {
   AdminSubtitle,
   StatsGrid,
   StatCard,
-  StatTitle,
-  StatValue,
   ButtonsContainer,
   ActionButton,
   SectionTitle,
@@ -37,6 +35,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import UserActivityPanel from '../../components/admin/UserActivityPanel';
 
 // Register ChartJS components
 ChartJS.register(
@@ -83,6 +82,39 @@ const ChartCard = styled.div`
     font-family: ${(props) => props.theme.typography.fontFamily.heading};
     font-weight: ${(props) => props.theme.typography.fontWeight.semibold};
   }
+`;
+
+const StatIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 1rem;
+  background-color: rgba(63, 118, 156, 0.1);
+  color: ${props => props.theme.colors.primary};
+  
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const StatContent = styled.div`
+  flex: 1;
+`;
+
+const StatLabel = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  color: ${props => props.theme.colors.textDim};
+  margin-top: 0.25rem;
+`;
+
+const StatValue = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.xl};
+  font-weight: ${props => props.theme.typography.fontWeight.semibold};
+  margin-bottom: 0.25rem;
 `;
 
 const TimeRangeSelector = styled.div`
@@ -389,45 +421,60 @@ const AdminDashboardPage: React.FC = () => {
   return (
     <AdminContainer>
       <AdminHeader>
-        <AdminTitle>{t('admin.dashboard')}</AdminTitle>
-        <AdminSubtitle>{t('admin.dashboardSubtitle')}</AdminSubtitle>
+        <AdminTitle>
+          <FiBarChart2 style={{ marginRight: '0.5rem' }} />
+          {t('admin.dashboardTitle', 'Admin Dashboard')}
+        </AdminTitle>
+        <AdminSubtitle>
+          {t('admin.dashboardSubtitle', 'Overview of your library and user activity')}
+        </AdminSubtitle>
       </AdminHeader>
       
       <StatsGrid>
         <StatCard>
-          <StatTitle><FiBook /> {t('admin.totalBooks')}</StatTitle>
-          <StatValue>{stats.totalBooks}</StatValue>
+          <StatIcon>
+            <FiBook />
+          </StatIcon>
+          <StatContent>
+            <StatValue>{stats.totalBooks}</StatValue>
+            <StatLabel>{t('admin.totalBooks', 'Total Books')}</StatLabel>
+          </StatContent>
         </StatCard>
         
         <StatCard>
-          <StatTitle><FiBook /> {t('books.audiobook')}</StatTitle>
-          <StatValue>{stats.totalAudiobooks}</StatValue>
+          <StatIcon>
+            <FiUsers />
+          </StatIcon>
+          <StatContent>
+            <StatValue>{stats.totalUsers}</StatValue>
+            <StatLabel>{t('admin.totalUsers', 'Total Users')}</StatLabel>
+          </StatContent>
         </StatCard>
         
         <StatCard>
-          <StatTitle><FiBook /> {t('books.ebook')}</StatTitle>
-          <StatValue>{stats.totalEbooks}</StatValue>
+          <StatIcon>
+            <FiDownload />
+          </StatIcon>
+          <StatContent>
+            <StatValue>{stats.totalDownloads}</StatValue>
+            <StatLabel>{t('admin.totalDownloads', 'Total Downloads')}</StatLabel>
+          </StatContent>
         </StatCard>
         
         <StatCard>
-          <StatTitle><FiUsers /> {t('admin.totalUsers')}</StatTitle>
-          <StatValue>{stats.totalUsers}</StatValue>
-        </StatCard>
-        
-        <StatCard>
-          <StatTitle><FiDownload /> {t('admin.totalDownloads')}</StatTitle>
-          <StatValue>{stats.totalDownloads}</StatValue>
-        </StatCard>
-        
-        <StatCard>
-          <StatTitle><FiMessageSquare /> {t('admin.bookRequests')}</StatTitle>
-          <StatValue>{stats.totalBookRequests}</StatValue>
+          <StatIcon>
+            <FiMessageSquare />
+          </StatIcon>
+          <StatContent>
+            <StatValue>{stats.totalBookRequests}</StatValue>
+            <StatLabel>{t('admin.totalBookRequests', 'Book Requests')}</StatLabel>
+          </StatContent>
         </StatCard>
       </StatsGrid>
       
       <ButtonsContainer>
         <ActionButton onClick={() => navigate('/admin/books')}>
-          <FiBook /> {t('admin.manageBooks')}
+          <FiBook /> {t('admin.manageBooks', 'Manage Books')}
         </ActionButton>
         
         <ActionButton onClick={() => navigate('/admin/users')}>
@@ -523,42 +570,53 @@ const AdminDashboardPage: React.FC = () => {
         </ChartCard>
       </AnalyticsGrid>
       
-      <SectionTitle>{t('admin.recentDownloads', 'Recent Downloads')}</SectionTitle>
-      
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableHeader>{t('books.title', 'Title')}</TableHeader>
-              <TableHeader>{t('books.type', 'Type')}</TableHeader>
-              <TableHeader>{t('auth.username', 'Username')}</TableHeader>
-              <TableHeader>{t('admin.downloadDate', 'Download Date')}</TableHeader>
-            </TableRow>
-          </TableHead>
-          <tbody>
-            {recentDownloads.map((download) => (
-              <TableRow key={download.id}>
-                <TableCell>{download.books?.title}</TableCell>
-                <TableCell>
-                  {download.books?.type === 'audiobook' 
-                    ? t('books.audiobook', 'Audiobook') 
-                    : t('books.ebook', 'E-book')}
-                </TableCell>
-                <TableCell>{download.profiles?.username}</TableCell>
-                <TableCell>{formatDate(download.downloaded_at)}</TableCell>
-              </TableRow>
-            ))}
-            
-            {recentDownloads.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={4} style={{ textAlign: 'center' }}>
-                  {t('admin.noRecentDownloads', 'No recent downloads')}
-                </TableCell>
-              </TableRow>
-            )}
-          </tbody>
-        </Table>
-      </TableContainer>
+      <AnalyticsGrid>
+        {/* User Activity Panel */}
+        <UserActivityPanel 
+          title={t('admin.recentUserActivity', 'Recent User Activity')}
+          limit={8}
+          autoRefresh={true}
+        />
+        
+        <ChartCard>
+          <SectionTitle>{t('admin.recentDownloads', 'Recent Downloads')}</SectionTitle>
+          
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeader>{t('books.title', 'Title')}</TableHeader>
+                  <TableHeader>{t('books.type', 'Type')}</TableHeader>
+                  <TableHeader>{t('auth.username', 'Username')}</TableHeader>
+                  <TableHeader>{t('admin.downloadDate', 'Download Date')}</TableHeader>
+                </TableRow>
+              </TableHead>
+              <tbody>
+                {recentDownloads.map((download) => (
+                  <TableRow key={download.id}>
+                    <TableCell>{download.books?.title}</TableCell>
+                    <TableCell>
+                      {download.books?.type === 'audiobook' 
+                        ? t('books.audiobook', 'Audiobook') 
+                        : t('books.ebook', 'E-book')}
+                    </TableCell>
+                    <TableCell>{download.profiles?.username}</TableCell>
+                    <TableCell>{formatDate(download.downloaded_at)}</TableCell>
+                  </TableRow>
+                ))}
+                
+                {recentDownloads.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} style={{ textAlign: 'center' }}>
+                      {t('admin.noRecentDownloads', 'No recent downloads')}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </tbody>
+            </Table>
+          </TableContainer>
+        </ChartCard>
+      </AnalyticsGrid>
     </AdminContainer>
   );
 };
