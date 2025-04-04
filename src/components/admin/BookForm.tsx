@@ -6,6 +6,7 @@ import { FiSave, FiX, FiUpload, FiAlertCircle, FiSearch, FiLoader } from 'react-
 import { supabase } from '../../services/supabase';
 import { Book } from '../../types/supabase';
 import { fetchBookDataFromAmazon, isValidAmazonUrl } from '../../services/amazonScraperService';
+import { fetchBookDataFromLehmanns, isValidLehmannsUrl } from '../../services/lehmannsScraperService';
 
 interface BookFormProps {
   book?: Book;
@@ -195,14 +196,44 @@ const AlertSuccess = styled(Alert)`
   color: #155724;
 `;
 
-const AmazonUrlContainer = styled.div`
+const BookLinkContainer = styled.div`
   display: flex;
+  flex-direction: column;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   border: 1px dashed #3498db;
   padding: 1rem;
   border-radius: 4px;
   background-color: #f8f9fa;
+`;
+
+const SourceTabs = styled.div`
+  display: flex;
+  margin-bottom: 1rem;
+`;
+
+const SourceTab = styled.button<{ active: boolean }>`
+  padding: 0.5rem 1rem;
+  background-color: ${props => props.active ? '#3498db' : '#f1f1f1'};
+  color: ${props => props.active ? 'white' : '#333'};
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.active ? '#2980b9' : '#e9e9e9'};
+  }
+  
+  &:first-child {
+    margin-right: 0.5rem;
+  }
+`;
+
+const InputRow = styled.div`
+  display: flex;
+  gap: 0.5rem;
 `;
 
 const FetchButton = styled(Button)`
@@ -245,21 +276,26 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
-  // New states for Amazon URL extraction
-  const [amazonUrl, setAmazonUrl] = useState('');
+  // New states for book data extraction
+  const [sourceType, setSourceType] = useState<'amazon' | 'lehmanns'>('amazon');
+  const [bookUrl, setBookUrl] = useState('');
   const [isExtractingData, setIsExtractingData] = useState(false);
   const [dataExtractionError, setDataExtractionError] = useState<string | null>(null);
   const [dataExtractionSuccess, setDataExtractionSuccess] = useState<string | null>(null);
 
-  // Function to extract data from Amazon URL
-  const extractDataFromAmazon = async () => {
-    if (!amazonUrl) {
-      setDataExtractionError(t('admin.amazonUrlEmpty', 'Please enter an Amazon URL'));
+  // Function to extract data from URL
+  const extractBookData = async () => {
+    if (!bookUrl) {
+      setDataExtractionError(t('admin.urlEmpty', 'Please enter a book URL'));
       return;
     }
 
-    if (!isValidAmazonUrl(amazonUrl)) {
-      setDataExtractionError(t('admin.invalidAmazonUrl', 'Invalid Amazon URL. Please use a valid Amazon book URL'));
+    // Validate URL based on source type
+    if (sourceType === 'amazon' && !isValidAmazonUrl(bookUrl)) {
+      setDataExtractionError(t('admin.invalidUrl', 'Invalid Amazon URL. Please use a valid Amazon book URL'));
+      return;
+    } else if (sourceType === 'lehmanns' && !isValidLehmannsUrl(bookUrl)) {
+      setDataExtractionError(t('admin.invalidUrl', 'Invalid Lehmanns URL. Please use a valid Lehmanns book URL'));
       return;
     }
 
@@ -268,36 +304,67 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
     setDataExtractionSuccess(null);
 
     try {
-      const amazonData = await fetchBookDataFromAmazon(amazonUrl);
-      
-      if (!amazonData) {
-        throw new Error(t('admin.failedToExtractData', 'Failed to extract data from the provided URL'));
+      if (sourceType === 'amazon') {
+        const amazonData = await fetchBookDataFromAmazon(bookUrl);
+        
+        if (!amazonData) {
+          throw new Error(t('admin.failedToExtractData', 'Failed to extract data from the provided URL'));
+        }
+
+        // Set the data from Amazon
+        setTitle(amazonData.title);
+        setAuthor(amazonData.author);
+        setGenre(amazonData.genre);
+        setLanguage(amazonData.language);
+        setDescription(amazonData.description);
+        setType(amazonData.type);
+        setCoverUrl(amazonData.coverUrl);
+        setIsbn(amazonData.isbn);
+        setExternalId(amazonData.asin);
+        
+        if (amazonData.pageCount) {
+          setPageCount(amazonData.pageCount.toString());
+        }
+        
+        if (amazonData.publishedDate) {
+          setPublishedDate(amazonData.publishedDate);
+        }
+        
+        if (amazonData.publisher) {
+          setPublisher(amazonData.publisher);
+        }
+      } else if (sourceType === 'lehmanns') {
+        const lehmannsData = await fetchBookDataFromLehmanns(bookUrl);
+        
+        if (!lehmannsData) {
+          throw new Error(t('admin.failedToExtractData', 'Failed to extract data from the provided URL'));
+        }
+
+        // Set the data from Lehmanns
+        setTitle(lehmannsData.title);
+        setAuthor(lehmannsData.author);
+        setGenre(lehmannsData.genre);
+        setLanguage(lehmannsData.language);
+        setDescription(lehmannsData.description);
+        setType(lehmannsData.type);
+        setCoverUrl(lehmannsData.coverUrl);
+        setIsbn(lehmannsData.isbn);
+        setExternalId(lehmannsData.external_id);
+        
+        if (lehmannsData.pageCount) {
+          setPageCount(lehmannsData.pageCount.toString());
+        }
+        
+        if (lehmannsData.publishedDate) {
+          setPublishedDate(lehmannsData.publishedDate);
+        }
+        
+        if (lehmannsData.publisher) {
+          setPublisher(lehmannsData.publisher);
+        }
       }
 
-      // Convert and set the data
-      setTitle(amazonData.title);
-      setAuthor(amazonData.author);
-      setGenre(amazonData.genre);
-      setLanguage(amazonData.language);
-      setDescription(amazonData.description);
-      setType(amazonData.type);
-      setCoverUrl(amazonData.coverUrl);
-      setIsbn(amazonData.isbn);
-      setExternalId(amazonData.asin);
-      
-      if (amazonData.pageCount) {
-        setPageCount(amazonData.pageCount.toString());
-      }
-      
-      if (amazonData.publishedDate) {
-        setPublishedDate(amazonData.publishedDate);
-      }
-      
-      if (amazonData.publisher) {
-        setPublisher(amazonData.publisher);
-      }
-
-      setDataExtractionSuccess(t('admin.dataExtracted', 'Book data successfully extracted from Amazon'));
+      setDataExtractionSuccess(t('admin.dataExtracted', 'Book data successfully extracted'));
     } catch (err) {
       console.error('Error extracting data:', err);
       setDataExtractionError(
@@ -455,31 +522,55 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
         </AlertSuccess>
       )}
 
-      {/* Amazon URL Input */}
-      <AmazonUrlContainer>
-        <FormGroup style={{ flex: 1 }}>
-          <Label htmlFor="amazonUrl">{t('admin.amazonUrlInput', 'Amazon Book URL')}</Label>
-          <Input
-            id="amazonUrl"
-            type="url"
-            value={amazonUrl}
-            onChange={(e) => setAmazonUrl(e.target.value)}
-            placeholder="https://www.amazon.de/dp/ASIN"
-          />
-          {dataExtractionError && <span style={{ color: '#721c24', fontSize: '0.85rem' }}>{dataExtractionError}</span>}
-          {dataExtractionSuccess && <span style={{ color: '#155724', fontSize: '0.85rem' }}>{dataExtractionSuccess}</span>}
-        </FormGroup>
-        <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '0.25rem' }}>
-          <FetchButton 
-            type="button" 
-            onClick={extractDataFromAmazon}
-            disabled={isExtractingData || !amazonUrl}
+      {/* Book URL input with source selection */}
+      <BookLinkContainer>
+        <SourceTabs>
+          <SourceTab 
+            active={sourceType === 'amazon'} 
+            onClick={() => setSourceType('amazon')}
           >
-            {isExtractingData ? <FiLoader style={{ animation: 'spin 1s linear infinite' }} /> : <FiSearch />} 
-            {t('admin.extractData', 'Extract Data')}
-          </FetchButton>
-        </div>
-      </AmazonUrlContainer>
+            Amazon
+          </SourceTab>
+          <SourceTab 
+            active={sourceType === 'lehmanns'} 
+            onClick={() => setSourceType('lehmanns')}
+          >
+            Lehmanns.de
+          </SourceTab>
+        </SourceTabs>
+        
+        <InputRow>
+          <FormGroup style={{ flex: 1 }}>
+            <Label htmlFor="bookUrl">
+              {sourceType === 'amazon' 
+                ? t('admin.amazonUrlInput', 'Amazon Book URL') 
+                : t('admin.lehmannsUrlInput', 'Lehmanns Book URL')}
+            </Label>
+            <Input
+              id="bookUrl"
+              type="url"
+              value={bookUrl}
+              onChange={(e) => setBookUrl(e.target.value)}
+              placeholder={sourceType === 'amazon' 
+                ? "https://www.amazon.de/dp/ASIN" 
+                : "https://www.lehmanns.de/buch/ISBN"
+              }
+            />
+            {dataExtractionError && <span style={{ color: '#721c24', fontSize: '0.85rem' }}>{dataExtractionError}</span>}
+            {dataExtractionSuccess && <span style={{ color: '#155724', fontSize: '0.85rem' }}>{dataExtractionSuccess}</span>}
+          </FormGroup>
+          <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '0.25rem' }}>
+            <FetchButton 
+              type="button" 
+              onClick={extractBookData}
+              disabled={isExtractingData || !bookUrl}
+            >
+              {isExtractingData ? <FiLoader style={{ animation: 'spin 1s linear infinite' }} /> : <FiSearch />} 
+              {t('admin.extractData', 'Extract Data')}
+            </FetchButton>
+          </div>
+        </InputRow>
+      </BookLinkContainer>
       
       <Form onSubmit={handleSubmit}>
         <FormRow>
