@@ -5,44 +5,39 @@ import styled from 'styled-components';
 import { FiArrowLeft } from 'react-icons/fi';
 import BookDetails from '../components/BookDetails';
 import { useBook } from '../hooks/useBooks';
-
-const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem;
-`;
+import { AdminContainer, LoadingState } from '../styles/adminStyles';
 
 const BackButton = styled.button`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: ${props => props.theme.spacing.sm};
   background: none;
   border: none;
-  color: #3498db;
-  font-size: 1rem;
-  font-weight: 500;
+  color: ${props => props.theme.colors.primary};
+  font-size: ${props => props.theme.typography.fontSize.base};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
   cursor: pointer;
-  padding: 0.5rem 0;
-  margin-bottom: 1rem;
+  padding: ${props => props.theme.spacing.sm} 0;
+  margin-bottom: ${props => props.theme.spacing.md};
+  transition: all 0.2s ease;
 
   &:hover {
-    text-decoration: underline;
+    transform: translateX(-3px);
+    color: ${props => props.theme.colors.primaryDark};
   }
 `;
 
-const LoadingState = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 5rem 0;
-  font-size: 1.2rem;
-  color: #666;
-`;
-
 const ErrorState = styled.div`
+  padding: ${props => props.theme.spacing.xl};
+  color: ${props => props.theme.colors.error};
+  background-color: rgba(166, 89, 83, 0.1);
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin: ${props => props.theme.spacing.xl} 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 3rem;
-  color: #e74c3c;
 `;
 
 const BookDetailsPage: React.FC = () => {
@@ -64,7 +59,7 @@ const BookDetailsPage: React.FC = () => {
   }, [book, isLoading, error, navigate]);
   
   return (
-    <Container>
+    <AdminContainer>
       <BackButton onClick={handleBack}>
         <FiArrowLeft /> {t('common.back')}
       </BackButton>
@@ -78,7 +73,7 @@ const BookDetailsPage: React.FC = () => {
       ) : book ? (
         <BookDetails book={book} />
       ) : null}
-    </Container>
+    </AdminContainer>
   );
 };
 

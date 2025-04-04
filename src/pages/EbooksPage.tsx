@@ -6,80 +6,40 @@ import BookGrid from '../components/BookGrid';
 import { useBooks } from '../hooks/useBooks';
 import { useSessionCheck } from '../hooks/useSessionCheck';
 import theme from '../styles/theme';
+import { AdminContainer, LoadingState } from '../styles/adminStyles';
 
-const PageWrapper = styled.div`
-  width: 100%;
-  min-height: 100%;
-  background-color: ${props => props.theme.colors.background};
-  padding: ${theme.spacing.xl} 0;
-  
-  body[data-theme='dark'] & {
-    background-color: ${({ theme }) => theme.colors.background};
-  }
-`;
-
-const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 ${theme.spacing.xl};
-  
-  @media (max-width: 768px) {
-    padding: 0 ${theme.spacing.lg};
-  }
-  
-  @media (max-width: 480px) {
-    padding: 0 ${theme.spacing.md};
-  }
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: ${theme.spacing.xl};
-  flex-wrap: wrap;
-  gap: ${theme.spacing.md};
-  
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-`;
-
-const Title = styled.h1`
-  font-size: ${theme.typography.fontSize['3xl']};
-  color: ${props => props.theme.colors.primary};
-  display: flex;
-  align-items: center;
-  gap: ${theme.spacing.sm};
-  margin: 0;
-  font-weight: ${theme.typography.fontWeight.bold};
+const PageHeader = styled.div`
+  margin-bottom: ${props => props.theme.spacing.xl};
   position: relative;
   
   &::after {
     content: '';
     position: absolute;
-    bottom: -8px;
+    bottom: -${props => props.theme.spacing.sm};
     left: 0;
-    width: 60px;
+    width: 80px;
     height: 3px;
     background-color: ${props => props.theme.colors.secondary};
-    border-radius: ${theme.borderRadius.full};
+    border-radius: ${props => props.theme.borderRadius.full};
   }
-  
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.primary};
-    
-    &::after {
-      background-color: ${({ theme }) => theme.colors.secondary};
-    }
-  }
+`;
+
+const PageTitle = styled.h1`
+  font-size: ${theme.typography.fontSize['3xl']};
+  color: ${props => props.theme.colors.primary};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  margin: 0 0 ${props => props.theme.spacing.sm} 0;
+  font-family: ${props => props.theme.typography.fontFamily.heading};
+  font-weight: ${theme.typography.fontWeight.bold};
 `;
 
 const Controls = styled.div`
   display: flex;
   gap: ${theme.spacing.md};
   flex-wrap: wrap;
+  margin-bottom: ${theme.spacing.xl};
   
   @media (max-width: 768px) {
     width: 100%;
@@ -95,7 +55,7 @@ const Controls = styled.div`
 const SearchBar = styled.div`
   display: flex;
   align-items: center;
-  background-color: ${props => props.theme.colors.backgroundAlt};
+  background-color: ${props => props.theme.colors.card};
   border-radius: ${theme.borderRadius.md};
   padding: 0 ${theme.spacing.md};
   width: 280px;
@@ -104,17 +64,7 @@ const SearchBar = styled.div`
   
   &:focus-within {
     border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 2px ${props => props.theme.colors.primaryLight}20;
-  }
-  
-  body[data-theme='dark'] & {
-    background-color: ${({ theme }) => theme.colors.backgroundAlt};
-    border-color: ${({ theme }) => theme.colors.border};
-    
-    &:focus-within {
-      border-color: ${({ theme }) => theme.colors.primary};
-      box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primaryLight}30;
-    }
+    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary}20;
   }
   
   @media (max-width: 480px) {
@@ -134,21 +84,13 @@ const SearchInput = styled.input`
   &::placeholder {
     color: ${props => props.theme.colors.textLight};
   }
-  
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.text};
-    
-    &::placeholder {
-      color: ${({ theme }) => theme.colors.textLight};
-    }
-  }
 `;
 
 const FilterDropdown = styled.select`
   padding: ${theme.spacing.sm} ${theme.spacing.md};
   border: 1px solid ${props => props.theme.colors.border};
   border-radius: ${theme.borderRadius.md};
-  background-color: ${props => props.theme.colors.backgroundAlt};
+  background-color: ${props => props.theme.colors.card};
   font-size: ${theme.typography.fontSize.md};
   outline: none;
   cursor: pointer;
@@ -158,18 +100,11 @@ const FilterDropdown = styled.select`
   
   &:focus {
     border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 2px ${props => props.theme.colors.primaryLight}20;
+    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary}20;
   }
   
-  body[data-theme='dark'] & {
-    background-color: ${({ theme }) => theme.colors.backgroundAlt};
-    border-color: ${({ theme }) => theme.colors.border};
-    color: ${({ theme }) => theme.colors.text};
-    
-    &:focus {
-      border-color: ${({ theme }) => theme.colors.primary};
-      box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primaryLight}30;
-    }
+  &:hover {
+    border-color: ${props => props.theme.colors.primary}80;
   }
   
   @media (max-width: 480px) {
@@ -182,6 +117,7 @@ const Pagination = styled.div`
   justify-content: center;
   gap: ${theme.spacing.sm};
   margin-top: ${theme.spacing.xl};
+  margin-bottom: ${theme.spacing.xl};
   flex-wrap: wrap;
 `;
 
@@ -189,7 +125,7 @@ const PageButton = styled.button<{ active?: boolean }>`
   padding: ${theme.spacing.sm} ${theme.spacing.md};
   border: 1px solid ${props => props.active ? props.theme.colors.primary : props.theme.colors.border};
   border-radius: ${theme.borderRadius.md};
-  background-color: ${props => props.active ? props.theme.colors.primary : props.theme.colors.backgroundAlt};
+  background-color: ${props => props.active ? props.theme.colors.primary : props.theme.colors.card};
   color: ${props => props.active ? 'white' : props.theme.colors.text};
   cursor: pointer;
   transition: all 0.3s ease;
@@ -198,15 +134,12 @@ const PageButton = styled.button<{ active?: boolean }>`
   justify-content: center;
   min-width: 40px;
   font-weight: ${props => props.active ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal};
+  box-shadow: ${props => props.theme.shadows.sm};
   
   &:hover {
-    background-color: ${props => props.active ? props.theme.colors.primaryDark : props.theme.colors.backgroundAlt};
+    background-color: ${props => props.active ? props.theme.colors.primary : props.theme.colors.backgroundAlt};
     transform: translateY(-2px);
-    box-shadow: ${theme.shadows.sm};
-  }
-  
-  &:active {
-    transform: translateY(0);
+    box-shadow: ${props => props.theme.shadows.md};
   }
   
   &:disabled {
@@ -217,45 +150,25 @@ const PageButton = styled.button<{ active?: boolean }>`
     transform: none;
     box-shadow: none;
   }
-  
-  body[data-theme='dark'] & {
-    background-color: ${props => props.active ? props.theme.colors.primary : props.theme.colors.backgroundAlt};
-    border-color: ${props => props.active ? props.theme.colors.primary : props.theme.colors.border};
-    color: ${props => props.active ? 'white' : props.theme.colors.text};
-    
-    &:hover:not(:disabled) {
-      background-color: ${props => props.active ? props.theme.colors.primaryDark : props.theme.colors.backgroundAlt};
-    }
-    
-    &:disabled {
-      background-color: ${props => props.theme.colors.backgroundAlt};
-      color: ${props => props.theme.colors.textLight};
-      border-color: ${props => props.theme.colors.border};
-    }
-  }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: ${theme.spacing.xl};
   color: ${props => props.theme.colors.textLight};
+  background-color: ${props => props.theme.colors.backgroundAlt}30;
+  border-radius: ${theme.borderRadius.md};
+  margin: ${theme.spacing.xl} 0;
   
   h3 {
     margin-bottom: ${theme.spacing.md};
     color: ${props => props.theme.colors.text};
+    font-family: ${props => props.theme.typography.fontFamily.heading};
   }
   
   p {
     max-width: 500px;
     margin: 0 auto;
-  }
-  
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.textLight};
-    
-    h3 {
-      color: ${({ theme }) => theme.colors.text};
-    }
   }
 `;
 
@@ -340,66 +253,77 @@ const EbooksPage: React.FC = () => {
   };
   
   return (
-    <PageWrapper>
-      <Container>
-        <Header>
-          <Title>
-            <FiBook /> {t('nav.ebooks')}
-          </Title>
-          
-          <Controls>
-            <SearchBar>
-              <FiSearch style={{ color: 'currentColor', marginRight: theme.spacing.sm, opacity: 0.7 }} />
-              <SearchInput
-                type="text"
-                placeholder={t('nav.search')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </SearchBar>
-            
-            <FilterDropdown
-              value={genre}
-              onChange={(e) => {
-                setGenre(e.target.value);
-                setPage(0); // Reset to first page on filter change
-              }}
-            >
-              <option value="">{t('books.allGenres')}</option>
-              <option value="Fiction">Fiction</option>
-              <option value="Non-Fiction">Non-Fiction</option>
-              <option value="Science Fiction">Science Fiction</option>
-              <option value="Fantasy">Fantasy</option>
-              <option value="Mystery">Mystery</option>
-              <option value="Thriller">Thriller</option>
-              <option value="Romance">Romance</option>
-              <option value="Biography">Biography</option>
-              <option value="History">History</option>
-              <option value="Self-Help">Self-Help</option>
-            </FilterDropdown>
-          </Controls>
-        </Header>
-        
-        {books && books.length > 0 ? (
-          <BookGrid 
-            books={books} 
-            isLoading={isLoading} 
-            error={error} 
+    <AdminContainer>
+      <PageHeader>
+        <PageTitle>
+          <FiBook /> {t('nav.ebooks')}
+        </PageTitle>
+      </PageHeader>
+      
+      <Controls>
+        <SearchBar>
+          <FiSearch style={{ color: theme.colors.textLight, marginRight: theme.spacing.sm }} />
+          <SearchInput
+            type="text"
+            placeholder={t('nav.search')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
-        ) : !isLoading && !error && (
-          <EmptyState>
-            <h3>{t('books.noResults')}</h3>
-            <p>{t('books.tryDifferentSearch')}</p>
-          </EmptyState>
-        )}
+        </SearchBar>
         
-        {totalPages > 1 && !isLoading && books && books.length > 0 && (
-          <Pagination>
-            {renderPagination()}
-          </Pagination>
-        )}
-      </Container>
-    </PageWrapper>
+        <FilterDropdown
+          value={genre}
+          onChange={(e) => {
+            setGenre(e.target.value);
+            setPage(0); // Reset to first page on filter change
+          }}
+        >
+          <option value="">{t('books.allGenres')}</option>
+          <option value="Fiction">Fiction</option>
+          <option value="Non-Fiction">Non-Fiction</option>
+          <option value="Science Fiction">Science Fiction</option>
+          <option value="Fantasy">Fantasy</option>
+          <option value="Mystery">Mystery</option>
+          <option value="Thriller">Thriller</option>
+          <option value="Romance">Romance</option>
+          <option value="Biography">Biography</option>
+          <option value="History">History</option>
+          <option value="Self-Help">Self-Help</option>
+        </FilterDropdown>
+      </Controls>
+      
+      {isLoading ? (
+        <LoadingState>{t('common.loading')}</LoadingState>
+      ) : error ? (
+        <div style={{ 
+          padding: theme.spacing.xl, 
+          textAlign: 'center', 
+          color: theme.colors.error,
+          backgroundColor: `${theme.colors.error}10`,
+          borderRadius: theme.borderRadius.md,
+          margin: `${theme.spacing.xl} 0`
+        }}>
+          {error.message}
+        </div>
+      ) : books && books.length > 0 ? (
+        <BookGrid 
+          books={books} 
+          isLoading={false} 
+          error={null} 
+        />
+      ) : (
+        <EmptyState>
+          <h3>{t('books.noResults')}</h3>
+          <p>{t('books.tryDifferentSearch')}</p>
+        </EmptyState>
+      )}
+      
+      {totalPages > 1 && !isLoading && books && books.length > 0 && (
+        <Pagination>
+          {renderPagination()}
+        </Pagination>
+      )}
+    </AdminContainer>
   );
 };
 

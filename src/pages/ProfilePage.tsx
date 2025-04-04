@@ -6,77 +6,33 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import { useDownloads } from '../hooks/useDownloads';
 import theme from '../styles/theme';
+import { AdminContainer, LoadingState } from '../styles/adminStyles';
 
-const PageWrapper = styled.div`
-  width: 100%;
-  min-height: 100%;
-  background-color: ${props => props.theme.colors.background};
-  padding: ${theme.spacing.xl} 0;
-  
-  body[data-theme='dark'] & {
-    background-color: ${({ theme }) => theme.colors.background};
-  }
-`;
-
-const Container = styled.div`
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 0 ${theme.spacing.xl};
-  
-  @media (max-width: 768px) {
-    padding: 0 ${theme.spacing.lg};
-  }
-  
-  @media (max-width: 480px) {
-    padding: 0 ${theme.spacing.md};
-  }
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.xl};
-  
-  @media (max-width: 480px) {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-`;
-
-const Title = styled.h1`
-  font-size: ${theme.typography.fontSize['3xl']};
-  color: ${props => props.theme.colors.primary};
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: ${theme.spacing.sm};
-  font-weight: ${theme.typography.fontWeight.bold};
+const PageHeader = styled.div`
+  margin-bottom: ${props => props.theme.spacing.xl};
   position: relative;
   
   &::after {
     content: '';
     position: absolute;
-    bottom: -8px;
+    bottom: -${props => props.theme.spacing.sm};
     left: 0;
-    width: 60px;
+    width: 80px;
     height: 3px;
     background-color: ${props => props.theme.colors.secondary};
-    border-radius: ${theme.borderRadius.full};
+    border-radius: ${props => props.theme.borderRadius.full};
   }
-  
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.primary};
-    
-    &::after {
-      background-color: ${({ theme }) => theme.colors.secondary};
-    }
-  }
-  
-  @media (max-width: 480px) {
-    margin-bottom: ${theme.spacing.md};
-  }
+`;
+
+const PageTitle = styled.h1`
+  font-size: ${theme.typography.fontSize['3xl']};
+  color: ${props => props.theme.colors.primary};
+  margin: 0 0 ${props => props.theme.spacing.sm} 0;
+  font-family: ${props => props.theme.typography.fontFamily.heading};
+  font-weight: ${props => props.theme.typography.fontWeight.bold};
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
 `;
 
 const Card = styled.div`
@@ -85,12 +41,8 @@ const Card = styled.div`
   box-shadow: ${props => props.theme.shadows.md};
   padding: ${theme.spacing.xl};
   margin-bottom: ${theme.spacing.xl};
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
-  
-  body[data-theme='dark'] & {
-    background-color: ${({ theme }) => theme.colors.card};
-    box-shadow: ${({ theme }) => theme.shadows.md};
-  }
+  border: 1px solid ${props => props.theme.colors.border};
+  transition: all 0.3s ease;
   
   @media (max-width: 480px) {
     padding: ${theme.spacing.lg};
@@ -106,11 +58,7 @@ const CardTitle = styled.h2`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.primary};
-    border-bottom-color: ${({ theme }) => theme.colors.border};
-  }
+  font-family: ${props => props.theme.typography.fontFamily.heading};
 `;
 
 const ProfileInfo = styled.div`
@@ -128,20 +76,12 @@ const InfoItem = styled.div`
 const InfoLabel = styled.span`
   font-size: ${theme.typography.fontSize.sm};
   color: ${props => props.theme.colors.textLight};
-  
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.textLight};
-  }
 `;
 
 const InfoValue = styled.span`
   font-size: ${theme.typography.fontSize.lg};
-  font-weight: ${theme.typography.fontWeight.medium};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
   color: ${props => props.theme.colors.text};
-  
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.text};
-  }
 `;
 
 const QuotaBar = styled.div`
@@ -150,20 +90,16 @@ const QuotaBar = styled.div`
   border-radius: ${theme.borderRadius.full};
   margin-top: ${theme.spacing.sm};
   overflow: hidden;
-  
-  body[data-theme='dark'] & {
-    background-color: ${({ theme }) => theme.colors.backgroundAlt};
-  }
 `;
 
-const QuotaProgress = styled.div<{ percent: number }>`
+const QuotaProgress = styled.div<{percent: number}>`
+  width: ${({percent}) => `${percent}%`};
   height: 100%;
-  width: ${({ percent }) => `${percent}%`};
-  background-color: ${({ percent, theme }) => 
-    percent < 50 ? theme.colors.success : 
-    percent < 80 ? theme.colors.warning : 
-    theme.colors.error};
-  border-radius: ${theme.borderRadius.full};
+  background-color: ${({percent}) => 
+    percent < 50 ? props => props.theme.colors.success :
+    percent < 85 ? props => props.theme.colors.warning :
+    props => props.theme.colors.error
+  };
   transition: width 0.3s ease;
 `;
 
@@ -175,20 +111,15 @@ const DownloadList = styled.div`
 
 const DownloadItem = styled.div`
   display: flex;
-  align-items: center;
   gap: ${theme.spacing.md};
   padding: ${theme.spacing.md};
-  background-color: ${props => props.theme.colors.backgroundAlt};
   border-radius: ${theme.borderRadius.md};
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background-color: ${props => props.theme.colors.backgroundAlt}10;
+  transition: all 0.3s ease;
   
   &:hover {
     transform: translateY(-2px);
     box-shadow: ${props => props.theme.shadows.sm};
-  }
-  
-  body[data-theme='dark'] & {
-    background-color: ${({ theme }) => theme.colors.backgroundAlt};
   }
 `;
 
@@ -205,45 +136,29 @@ const DownloadInfo = styled.div`
 `;
 
 const BookTitle = styled.div`
-  font-weight: ${theme.typography.fontWeight.medium};
+  font-weight: ${theme.typography.fontWeight.semibold};
+  color: ${props => props.theme.colors.primary};
   margin-bottom: ${theme.spacing.xs};
-  color: ${props => props.theme.colors.text};
-  
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.text};
-  }
 `;
 
 const BookAuthor = styled.div`
   font-size: ${theme.typography.fontSize.sm};
   color: ${props => props.theme.colors.textLight};
   margin-bottom: ${theme.spacing.xs};
-  
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.textLight};
-  }
 `;
 
 const DownloadDate = styled.div`
   font-size: ${theme.typography.fontSize.sm};
   color: ${props => props.theme.colors.textLight};
-  
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.textLight};
-  }
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.xs};
 `;
 
 const EmptyState = styled.div`
-  text-align: center;
   padding: ${theme.spacing.xl};
+  text-align: center;
   color: ${props => props.theme.colors.textLight};
-  background-color: ${props => props.theme.colors.backgroundAlt};
-  border-radius: ${theme.borderRadius.md};
-  
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.textLight};
-    background-color: ${({ theme }) => theme.colors.backgroundAlt};
-  }
 `;
 
 const Alert = styled.div`
@@ -254,52 +169,31 @@ const Alert = styled.div`
   color: ${props => props.theme.colors.error};
   padding: ${theme.spacing.md};
   border-radius: ${theme.borderRadius.md};
-  margin-bottom: ${theme.spacing.lg};
-  
-  body[data-theme='dark'] & {
-    background-color: ${({ theme }) => theme.colors.error}30;
-    color: ${({ theme }) => theme.colors.error};
-  }
-`;
-
-const LoadingState = styled.div`
-  text-align: center;
-  padding: ${theme.spacing.xl};
-  color: ${props => props.theme.colors.textLight};
-  
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.textLight};
-  }
+  margin-bottom: ${theme.spacing.md};
+  border-left: 3px solid ${props => props.theme.colors.error};
 `;
 
 const RefreshButton = styled.button`
-  background: none;
-  border: none;
-  color: ${props => props.theme.colors.primary};
-  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: ${theme.spacing.xs};
-  font-size: ${theme.typography.fontSize.md};
+  gap: ${theme.spacing.sm};
+  background: none;
+  border: 1px solid ${props => props.theme.colors.border};
+  color: ${props => props.theme.colors.primary};
   padding: ${theme.spacing.sm} ${theme.spacing.md};
   border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.typography.fontSize.md};
+  cursor: pointer;
   transition: all 0.3s ease;
   
   &:hover {
-    background-color: ${props => props.theme.colors.primaryLight}15;
+    background-color: ${props => props.theme.colors.primary}10;
+    transform: translateY(-2px);
   }
   
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-  }
-  
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.primary};
-    
-    &:hover {
-      background-color: ${({ theme }) => theme.colors.primaryLight}20;
-    }
   }
 `;
 
@@ -336,176 +230,128 @@ interface DownloadHistoryItem {
 
 const ProfilePage: React.FC = () => {
   const { t } = useTranslation();
-  const { user, profile, isLoading: authLoading } = useAuth();
+  const { user } = useAuth();
   const { remainingQuota, checkRemainingQuota } = useDownloads();
   const [downloadHistory, setDownloadHistory] = useState<DownloadHistoryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
-  
-  // Cache history to avoid flickering during reloads
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [historyLoaded, setHistoryLoaded] = useState<boolean>(false);
   const cachedHistoryRef = useRef<DownloadHistoryItem[]>([]);
   const cachedHistory = cachedHistoryRef.current;
-
+  
   // Handler to manually refresh data
   const handleRefresh = () => {
     setIsLoading(true);
     setError(null);
-    setRetryCount(prev => prev + 1);
+    setHistoryLoaded(false);
+    fetchDownloadHistory();
     checkRemainingQuota();
   };
-
-  // Effect to fetch download history
-  useEffect(() => {
-    // Skip if no user or already loading
-    if (!user || authLoading) return;
-    
-    fetchDownloadHistory();
-    
-    async function fetchDownloadHistory() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        // Ensure user is not null before proceeding
-        if (!user) {
-          throw new Error('User not authenticated');
-        }
-        
-        // Fetch user download history
-        // The user ID from auth is directly used as the profile ID
-        const userId = user.id;
-        
-        // Verify the profile exists (optional check)
-        const { data: profileCheck, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', userId)
-          .single();
-          
-        if (profileError) {
-          throw new Error(`Error fetching profile: ${profileError.message}`);
-        }
-        
-        if (!profileCheck) {
-          throw new Error('Profile not found');
-        }
-        
-        // Then get the download history
-        const { data, error: historyError } = await supabase
-          .from('download_logs')
-          .select(`
-            id,
-            downloaded_at,
-            book:books (
-              id,
-              title,
-              author,
-              cover_url
-            )
-          `)
-          .eq('user_id', userId)
-          .order('downloaded_at', { ascending: false })
-          .limit(20);
-        
-        if (historyError) {
-          throw new Error(`Error fetching download history: ${historyError.message}`);
-        }
-        
-        // Validate and transform the data
-        const validHistory = data
-          .filter(item => item.book !== null && item.book !== undefined)
-          .map(item => {
-            // Type guard for book property
-            const bookData = item.book;
-            
-            // Handle both array and single object cases with proper null checks
-            const bookInfo = Array.isArray(bookData) ? bookData[0] : bookData;
-            
-            // Ensure we have valid book data before accessing properties
-            if (!bookInfo) {
-              return {
-                id: item.id,
-                downloaded_at: item.downloaded_at,
-                book: {
-                  id: 'unknown',
-                  title: 'Unknown Book',
-                  author: 'Unknown Author',
-                  cover_url: 'https://via.placeholder.com/50x75?text=No+Cover'
-                }
-              };
-            }
-            
-            return {
-              id: item.id,
-              downloaded_at: item.downloaded_at,
-              book: {
-                id: bookInfo.id || 'unknown',
-                title: bookInfo.title || 'Unknown Book',
-                author: bookInfo.author || 'Unknown Author',
-                cover_url: bookInfo.cover_url || 'https://via.placeholder.com/50x75?text=No+Cover'
-              }
-            };
-          });
-
-        // Update the state and cache
-        setDownloadHistory(validHistory);
-        cachedHistoryRef.current = validHistory;
-        setHistoryLoaded(true);
-      } catch (err) {
-        console.error('Error in download history:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load download history');
-        // Keep the cached history if we have an error
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  }, [user, authLoading, retryCount]);
   
-  // Check quota on load
+  // On mount, fetch data
   useEffect(() => {
-    if (user && !authLoading) {
-      // Only check quota if we don't already have it or on refresh
-      if (remainingQuota === undefined || retryCount > 0) {
-        checkRemainingQuota();
-      }
+    if (user) {
+      fetchDownloadHistory();
+      checkRemainingQuota();
     }
-  }, [user, checkRemainingQuota, retryCount, cachedHistory]);
-
+  }, [user]);
+  
+  const fetchDownloadHistory = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // First, get download IDs from the user's download history
+      const { data: downloadData, error: downloadError } = await supabase
+        .from('downloads')
+        .select('id, book_id, downloaded_at')
+        .order('downloaded_at', { ascending: false })
+        .limit(20);
+        
+      if (downloadError) {
+        console.error('Error fetching download history:', downloadError);
+        throw new Error(t('profile.errorFetchingHistory', 'Could not load download history'));
+      }
+      
+      if (!downloadData || downloadData.length === 0) {
+        setDownloadHistory([]);
+        setHistoryLoaded(true);
+        return;
+      }
+      
+      // Create a map of book IDs to fetch books in a single query
+      const bookIds = downloadData.map(d => d.book_id);
+      
+      // Fetch books by IDs
+      const { data: bookData, error: bookError } = await supabase
+        .from('books')
+        .select('id, title, author, cover_url')
+        .in('id', bookIds);
+        
+      if (bookError) {
+        console.error('Error fetching books for download history:', bookError);
+        throw new Error(t('profile.errorFetchingBooks', 'Could not load book details'));
+      }
+      
+      // Create a map for fast book lookups
+      const bookMap = (bookData || []).reduce((map, book) => {
+        map[book.id] = book;
+        return map;
+      }, {} as Record<string, SimpleBook>);
+      
+      // Map the downloads with book details
+      const historyWithDetails = downloadData.map(download => {
+        const book = bookMap[download.book_id];
+        return {
+          id: download.id,
+          book: book || {
+            id: download.book_id,
+            title: t('profile.unknownBook', 'Unknown Book'),
+            author: t('profile.unknownAuthor', 'Unknown Author'),
+            cover_url: 'https://via.placeholder.com/50x75?text=No+Cover'
+          },
+          downloaded_at: download.downloaded_at
+        };
+      });
+      
+      setDownloadHistory(historyWithDetails);
+      cachedHistoryRef.current = historyWithDetails;
+      setHistoryLoaded(true);
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError(t('common.unknownError', 'An unknown error occurred'));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Display profile and user info (with fallbacks to prevent UI errors)
+  const displayUser = user || FALLBACK_USER;
+  const displayProfile = user?.user_metadata || FALLBACK_PROFILE;
+  
   // Format date for display
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return new Intl.DateTimeFormat(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
+      return new Intl.DateTimeFormat(undefined, { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric', 
+        hour: '2-digit', 
         minute: '2-digit'
       }).format(date);
     } catch (e) {
-      console.error('Error formatting date:', e);
-      return 'Unknown date';
+      // If date parsing fails, just return the raw string
+      return dateString;
     }
   };
-
-  if (authLoading) {
-    return (
-      <PageWrapper>
-        <Container>
-          <LoadingState>{t('common.loading', 'Loading...')}</LoadingState>
-        </Container>
-      </PageWrapper>
-    );
-  }
-
-  // Display the profile even while downloads are loading
-  const displayUser = user || FALLBACK_USER;
-  const displayProfile = profile || FALLBACK_PROFILE;
-
-  // Safely calculate quota
-  const safeRemainingQuota = remainingQuota !== undefined && remainingQuota !== null 
+  
+  // Calculate quota metrics
+  const safeRemainingQuota = typeof remainingQuota === 'number' 
     ? remainingQuota 
     : displayProfile.daily_quota;
   const quotaUsed = Math.max(0, displayProfile.daily_quota - safeRemainingQuota);
@@ -517,97 +363,97 @@ const ProfilePage: React.FC = () => {
     : [];
 
   return (
-    <PageWrapper>
-      <Container>
-        <Header>
-          <Title>
-            <FiUser /> {t('profile.title', 'Profile')}
-          </Title>
-          <RefreshButton onClick={handleRefresh} disabled={isLoading}>
-            <LoadingIcon $isLoading={isLoading} /> 
-            {isLoading ? t('common.loading', 'Loading...') : t('common.refresh', 'Refresh')}
-          </RefreshButton>
-        </Header>
-        
-        {error && (
-          <Alert>
-            <FiAlertCircle />
-            {error}
-          </Alert>
-        )}
-        
-        <Card>
-          <CardTitle>{t('profile.userInfo', 'User Information')}</CardTitle>
-          <ProfileInfo>
-            <InfoItem>
-              <InfoLabel>{t('auth.username', 'Username')}</InfoLabel>
-              <InfoValue>{displayProfile.username}</InfoValue>
-            </InfoItem>
-            
-            <InfoItem>
-              <InfoLabel>{t('auth.email', 'Email')}</InfoLabel>
-              <InfoValue>{displayUser.email}</InfoValue>
-            </InfoItem>
-            
-            <InfoItem>
-              <InfoLabel>{t('profile.quota', 'Daily Quota')}</InfoLabel>
-              <InfoValue>
-                {quotaUsed} / {displayProfile.daily_quota} {t('profile.downloads', 'Downloads').toLowerCase()}
-              </InfoValue>
-              <QuotaBar>
-                <QuotaProgress percent={quotaPercentUsed} />
-              </QuotaBar>
-            </InfoItem>
-          </ProfileInfo>
-        </Card>
-        
-        <Card>
-          <CardTitle>
-            <span>
-              <FiDownload /> {t('profile.downloadHistory', 'Download History')}
-            </span>
-            {isLoading && <LoadingIcon $isLoading={true} />}
-          </CardTitle>
+    <AdminContainer>
+      <PageHeader>
+        <PageTitle>
+          <FiUser /> {t('profile.title', 'Profile')}
+        </PageTitle>
+      </PageHeader>
+      
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: theme.spacing.lg }}>
+        <RefreshButton onClick={handleRefresh} disabled={isLoading}>
+          <LoadingIcon $isLoading={isLoading} /> 
+          {isLoading ? t('common.loading', 'Loading...') : t('common.refresh', 'Refresh')}
+        </RefreshButton>
+      </div>
+      
+      {error && (
+        <Alert>
+          <FiAlertCircle />
+          {error}
+        </Alert>
+      )}
+      
+      <Card>
+        <CardTitle>{t('profile.userInfo', 'User Information')}</CardTitle>
+        <ProfileInfo>
+          <InfoItem>
+            <InfoLabel>{t('auth.username', 'Username')}</InfoLabel>
+            <InfoValue>{displayProfile.username}</InfoValue>
+          </InfoItem>
           
-          {isLoading && displayHistory.length === 0 ? (
-            <LoadingState>{t('common.loading', 'Loading...')}</LoadingState>
-          ) : displayHistory.length > 0 ? (
-            <DownloadList>
-              {displayHistory.map((item) => (
-                <DownloadItem key={item.id}>
-                  <BookCover 
-                    src={Array.isArray(item.book) 
-                      ? (item.book[0]?.cover_url || 'https://via.placeholder.com/50x75?text=No+Cover')
-                      : (item.book?.cover_url || 'https://via.placeholder.com/50x75?text=No+Cover')
-                    } 
-                    alt={Array.isArray(item.book) ? item.book[0]?.title : item.book?.title}
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = 'https://via.placeholder.com/50x75?text=No+Cover';
-                    }}
-                  />
-                  <DownloadInfo>
-                    <BookTitle>
-                      {Array.isArray(item.book) ? item.book[0]?.title : item.book?.title}
-                    </BookTitle>
-                    {Array.isArray(item.book) 
-                      ? (item.book[0]?.author && <BookAuthor>{item.book[0].author}</BookAuthor>)
-                      : (item.book?.author && <BookAuthor>{item.book.author}</BookAuthor>)
-                    }
-                    <DownloadDate>
-                      <FiBook style={{ marginRight: theme.spacing.xs, verticalAlign: 'middle' }} /> 
-                      {formatDate(item.downloaded_at)}
-                    </DownloadDate>
-                  </DownloadInfo>
-                </DownloadItem>
-              ))}
-            </DownloadList>
-          ) : (
-            <EmptyState>{t('profile.noDownloads', 'No download history found')}</EmptyState>
-          )}
-        </Card>
-      </Container>
-    </PageWrapper>
+          <InfoItem>
+            <InfoLabel>{t('auth.email', 'Email')}</InfoLabel>
+            <InfoValue>{displayUser.email}</InfoValue>
+          </InfoItem>
+          
+          <InfoItem>
+            <InfoLabel>{t('profile.quota', 'Daily Quota')}</InfoLabel>
+            <InfoValue>
+              {quotaUsed} / {displayProfile.daily_quota} {t('profile.downloads', 'Downloads').toLowerCase()}
+            </InfoValue>
+            <QuotaBar>
+              <QuotaProgress percent={quotaPercentUsed} />
+            </QuotaBar>
+          </InfoItem>
+        </ProfileInfo>
+      </Card>
+      
+      <Card>
+        <CardTitle>
+          <span>
+            <FiDownload style={{ marginRight: theme.spacing.sm }} /> {t('profile.downloadHistory', 'Download History')}
+          </span>
+          {isLoading && <LoadingIcon $isLoading={true} />}
+        </CardTitle>
+        
+        {isLoading && displayHistory.length === 0 ? (
+          <LoadingState>{t('common.loading', 'Loading...')}</LoadingState>
+        ) : displayHistory.length > 0 ? (
+          <DownloadList>
+            {displayHistory.map((item) => (
+              <DownloadItem key={item.id}>
+                <BookCover 
+                  src={Array.isArray(item.book) 
+                    ? (item.book[0]?.cover_url || 'https://via.placeholder.com/50x75?text=No+Cover')
+                    : (item.book?.cover_url || 'https://via.placeholder.com/50x75?text=No+Cover')
+                  } 
+                  alt={Array.isArray(item.book) ? item.book[0]?.title : item.book?.title}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = 'https://via.placeholder.com/50x75?text=No+Cover';
+                  }}
+                />
+                <DownloadInfo>
+                  <BookTitle>
+                    {Array.isArray(item.book) ? item.book[0]?.title : item.book?.title}
+                  </BookTitle>
+                  {Array.isArray(item.book) 
+                    ? (item.book[0]?.author && <BookAuthor>{item.book[0].author}</BookAuthor>)
+                    : (item.book?.author && <BookAuthor>{item.book.author}</BookAuthor>)
+                  }
+                  <DownloadDate>
+                    <FiBook /> {formatDate(item.downloaded_at)}
+                  </DownloadDate>
+                </DownloadInfo>
+              </DownloadItem>
+            ))}
+          </DownloadList>
+        ) : (
+          <EmptyState>{t('profile.noDownloads', 'No download history found')}</EmptyState>
+        )}
+      </Card>
+    </AdminContainer>
   );
 };
 

@@ -2,92 +2,140 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiSearch } from 'react-icons/fi';
+import { FiSearch, FiFilter } from 'react-icons/fi';
 import BookGrid from '../components/BookGrid';
 import { useBooks } from '../hooks/useBooks';
+import { AdminContainer, LoadingState } from '../styles/adminStyles';
+import theme from '../styles/theme';
 
-const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem;
+const PageHeader = styled.div`
+  margin-bottom: ${props => props.theme.spacing.xl};
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -${props => props.theme.spacing.sm};
+    left: 0;
+    width: 80px;
+    height: 3px;
+    background-color: ${props => props.theme.colors.secondary};
+    border-radius: ${props => props.theme.borderRadius.full};
+  }
 `;
 
-const Header = styled.div`
+const PageTitle = styled.h1`
+  font-size: ${theme.typography.fontSize['3xl']};
+  color: ${props => props.theme.colors.primary};
+  margin: 0 0 ${props => props.theme.spacing.sm} 0;
+  font-family: ${props => props.theme.typography.fontFamily.heading};
+  font-weight: ${props => props.theme.typography.fontWeight.bold};
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  color: #2c3e50;
-  margin: 0;
+  gap: ${theme.spacing.sm};
 `;
 
 const Controls = styled.div`
   display: flex;
-  gap: 1rem;
+  gap: ${props => props.theme.spacing.md};
   flex-wrap: wrap;
-  margin-bottom: 1.5rem;
+  margin-bottom: ${props => props.theme.spacing.xl};
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `;
 
 const SearchBar = styled.div`
   display: flex;
   align-items: center;
-  background-color: #f5f5f5;
-  border-radius: 4px;
-  padding: 0 1rem;
+  background-color: ${props => props.theme.colors.card};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: 0 ${props => props.theme.spacing.md};
   flex-grow: 1;
   max-width: 400px;
+  box-shadow: ${props => props.theme.shadows.sm};
+  transition: all 0.3s ease;
+  
+  &:focus-within {
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary}20;
+  }
 `;
 
 const SearchInput = styled.input`
   border: none;
   background: transparent;
-  padding: 0.75rem 0;
+  padding: ${props => props.theme.spacing.md} 0;
   outline: none;
-  font-size: 1rem;
+  font-size: ${props => props.theme.typography.fontSize.md};
   width: 100%;
+  color: ${props => props.theme.colors.text};
+  
+  &::placeholder {
+    color: ${props => props.theme.colors.textLight};
+  }
 `;
 
 const FilterDropdown = styled.select`
-  padding: 0.75rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  font-size: 1rem;
+  padding: ${props => props.theme.spacing.md};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background-color: ${props => props.theme.colors.card};
+  font-size: ${props => props.theme.typography.fontSize.md};
+  color: ${props => props.theme.colors.text};
   outline: none;
   cursor: pointer;
+  box-shadow: ${props => props.theme.shadows.sm};
+  transition: all 0.3s ease;
+  
+  &:focus {
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary}20;
+  }
+  
+  &:hover {
+    border-color: ${props => props.theme.colors.primary}80;
+  }
 `;
 
 const Pagination = styled.div`
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
-  margin-top: 2rem;
+  gap: ${props => props.theme.spacing.sm};
+  margin-top: ${props => props.theme.spacing.xl};
+  margin-bottom: ${props => props.theme.spacing.xl};
 `;
 
 const PageButton = styled.button<{ active?: boolean }>`
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: ${({ active }) => (active ? '#3498db' : 'white')};
-  color: ${({ active }) => (active ? 'white' : '#333')};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border: 1px solid ${({ active, theme }) => active ? theme.colors.primary : theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background-color: ${({ active, theme }) => active ? theme.colors.primary : theme.colors.card};
+  color: ${({ active, theme }) => active ? 'white' : theme.colors.text};
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  font-size: ${props => props.theme.typography.fontSize.md};
+  box-shadow: ${props => props.theme.shadows.sm};
 
   &:hover {
-    background-color: ${({ active }) => (active ? '#2980b9' : '#f5f5f5')};
+    background-color: ${({ active, theme }) => active ? theme.colors.primaryDark : theme.colors.backgroundAlt};
+    transform: translateY(-2px);
   }
 
   &:disabled {
-    background-color: #f5f5f5;
-    color: #999;
+    background-color: ${props => props.theme.colors.backgroundAlt};
+    color: ${props => props.theme.colors.textLight};
     cursor: not-allowed;
+    transform: none;
   }
+`;
+
+const ResultsInfo = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.md};
+  color: ${props => props.theme.colors.textLight};
+  margin-bottom: ${props => props.theme.spacing.md};
 `;
 
 const SearchPage: React.FC = () => {
@@ -175,17 +223,23 @@ const SearchPage: React.FC = () => {
   };
   
   return (
-    <Container>
-      <Header>
-        <Title>
-          {t('books.searchResults')}: {searchTerm}
-        </Title>
-      </Header>
+    <AdminContainer>
+      <PageHeader>
+        <PageTitle>
+          <FiSearch /> {t('books.searchResults')}
+        </PageTitle>
+        {searchTerm && (
+          <ResultsInfo>
+            {t('books.showingResultsFor')}: "{searchTerm}"
+            {totalCount !== undefined && ` (${totalCount} ${t('books.results')})`}
+          </ResultsInfo>
+        )}
+      </PageHeader>
       
       <Controls>
-        <form onSubmit={handleSearch} style={{ flexGrow: 1, maxWidth: '400px' }}>
+        <form onSubmit={handleSearch} style={{ flexGrow: 1, maxWidth: '500px' }}>
           <SearchBar>
-            <FiSearch style={{ color: '#666', marginRight: '0.5rem' }} />
+            <FiSearch style={{ color: theme.colors.textLight, marginRight: theme.spacing.sm }} />
             <SearchInput
               type="text"
               placeholder={t('common.search')}
@@ -195,51 +249,73 @@ const SearchPage: React.FC = () => {
           </SearchBar>
         </form>
         
-        <FilterDropdown
-          value={bookType}
-          onChange={(e) => {
-            setBookType(e.target.value);
-            setPage(0); // Reset to first page on filter change
-          }}
-        >
-          <option value="">{t('books.allTypes')}</option>
-          <option value="audiobook">{t('books.audiobook')}</option>
-          <option value="ebook">{t('books.ebook')}</option>
-        </FilterDropdown>
-        
-        <FilterDropdown
-          value={genre}
-          onChange={(e) => {
-            setGenre(e.target.value);
-            setPage(0); // Reset to first page on filter change
-          }}
-        >
-          <option value="">{t('books.allGenres')}</option>
-          <option value="Fiction">Fiction</option>
-          <option value="Non-Fiction">Non-Fiction</option>
-          <option value="Science Fiction">Science Fiction</option>
-          <option value="Fantasy">Fantasy</option>
-          <option value="Mystery">Mystery</option>
-          <option value="Thriller">Thriller</option>
-          <option value="Romance">Romance</option>
-          <option value="Biography">Biography</option>
-          <option value="History">History</option>
-          <option value="Self-Help">Self-Help</option>
-        </FilterDropdown>
+        <div style={{ display: 'flex', gap: theme.spacing.md, alignItems: 'center' }}>
+          <FiFilter style={{ color: theme.colors.textLight }} />
+          
+          <FilterDropdown
+            value={bookType}
+            onChange={(e) => {
+              setBookType(e.target.value);
+              setPage(0); // Reset to first page on filter change
+            }}
+          >
+            <option value="">{t('books.allTypes')}</option>
+            <option value="audiobook">{t('books.audiobook')}</option>
+            <option value="ebook">{t('books.ebook')}</option>
+          </FilterDropdown>
+          
+          <FilterDropdown
+            value={genre}
+            onChange={(e) => {
+              setGenre(e.target.value);
+              setPage(0); // Reset to first page on filter change
+            }}
+          >
+            <option value="">{t('books.allGenres')}</option>
+            <option value="Fiction">Fiction</option>
+            <option value="Non-Fiction">Non-Fiction</option>
+            <option value="Science Fiction">Science Fiction</option>
+            <option value="Fantasy">Fantasy</option>
+            <option value="Mystery">Mystery</option>
+            <option value="Thriller">Thriller</option>
+            <option value="Romance">Romance</option>
+            <option value="Biography">Biography</option>
+            <option value="History">History</option>
+            <option value="Self-Help">Self-Help</option>
+          </FilterDropdown>
+        </div>
       </Controls>
       
-      <BookGrid 
-        books={books} 
-        isLoading={isLoading} 
-        error={error} 
-      />
+      {isLoading ? (
+        <LoadingState>{t('common.loading')}</LoadingState>
+      ) : error ? (
+        <div style={{ 
+          padding: theme.spacing.xl, 
+          textAlign: 'center', 
+          color: theme.colors.error 
+        }}>
+          {error.message}
+        </div>
+      ) : books.length === 0 ? (
+        <div style={{ 
+          padding: theme.spacing.xl, 
+          textAlign: 'center', 
+          color: theme.colors.textLight,
+          backgroundColor: theme.colors.backgroundAlt,
+          borderRadius: theme.borderRadius.md
+        }}>
+          {t('books.noResults')}
+        </div>
+      ) : (
+        <BookGrid books={books} isLoading={false} error={null} />
+      )}
       
       {totalPages > 1 && !isLoading && (
         <Pagination>
           {renderPagination()}
         </Pagination>
       )}
-    </Container>
+    </AdminContainer>
   );
 };
 
