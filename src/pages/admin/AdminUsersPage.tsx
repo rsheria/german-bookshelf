@@ -19,7 +19,15 @@ import {
   TableRow,
   TableHeader,
   TableCell,
-  LoadingState
+  LoadingState,
+  EmptyState,
+  ActionButtons,
+  IconButton,
+  PageButton,
+  SearchBar,
+  SearchInput,
+  SectionTitle,
+  Pagination
 } from '../../styles/adminStyles';
 
 // Register ChartJS components
@@ -142,6 +150,205 @@ const Tab = styled.button<{ active?: boolean }>`
   }
 `;
 
+const SectionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+`;
+
+const SectionToggle = styled.button`
+  padding: 0.25rem 0.5rem;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border: none;
+  border-radius: ${props => props.theme.borderRadius.md};
+  cursor: pointer;
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.theme.colors.backgroundAltHover};
+    transform: translateY(-2px);
+  }
+`;
+
+const FilterContainer = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+`;
+
+const FilterButton = styled.button<{ active?: boolean }>`
+  padding: 0.5rem 1rem;
+  background-color: ${props => props.active 
+    ? props.theme.colors.primary 
+    : props.theme.colors.backgroundAlt};
+  color: ${props => props.active 
+    ? 'white' 
+    : props.theme.colors.text};
+  border: none;
+  border-radius: ${props => props.theme.borderRadius.md};
+  cursor: pointer;
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.active 
+      ? props.theme.colors.primary 
+      : props.theme.colors.backgroundAltHover};
+    transform: translateY(-2px);
+  }
+`;
+
+const DateFilterContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+`;
+
+const DateInput = styled.input`
+  padding: 0.5rem 1rem;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border: none;
+  border-radius: ${props => props.theme.borderRadius.md};
+  cursor: pointer;
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.theme.colors.backgroundAltHover};
+    transform: translateY(-2px);
+  }
+`;
+
+const ExportButton = styled.button`
+  padding: 0.5rem 1rem;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border: none;
+  border-radius: ${props => props.theme.borderRadius.md};
+  cursor: pointer;
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.theme.colors.backgroundAltHover};
+    transform: translateY(-2px);
+  }
+`;
+
+const QuotaInput = styled.input`
+  padding: 0.5rem 1rem;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border: none;
+  border-radius: ${props => props.theme.borderRadius.md};
+  cursor: pointer;
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.theme.colors.backgroundAltHover};
+    transform: translateY(-2px);
+  }
+`;
+
+const Badge = styled.span<{ variant: 'admin' | 'user' }>`
+  padding: 0.25rem 0.5rem;
+  background-color: ${props => props.variant === 'admin' 
+    ? props.theme.colors.primary 
+    : props.theme.colors.backgroundAlt};
+  color: ${props => props.variant === 'admin' 
+    ? 'white' 
+    : props.theme.colors.text};
+  border: none;
+  border-radius: ${props => props.theme.borderRadius.md};
+  cursor: pointer;
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.variant === 'admin' 
+      ? props.theme.colors.primary 
+      : props.theme.colors.backgroundAltHover};
+    transform: translateY(-2px);
+  }
+`;
+
+const SafeToggleAdminButton = styled.button<{ $isAdmin: boolean }>`
+  padding: 0.5rem 1rem;
+  background-color: ${props => props.$isAdmin 
+    ? props.theme.colors.backgroundAlt 
+    : props.theme.colors.primary};
+  color: ${props => props.$isAdmin 
+    ? props.theme.colors.text 
+    : 'white'};
+  border: none;
+  border-radius: ${props => props.theme.borderRadius.md};
+  cursor: pointer;
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.$isAdmin 
+      ? props.theme.colors.backgroundAltHover 
+      : props.theme.colors.primary};
+    transform: translateY(-2px);
+  }
+`;
+
+const StatContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+`;
+
+const StatusMessage = styled.div`
+  padding: 1rem;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-bottom: 1rem;
+`;
+
+const SuccessMessage = styled.div`
+  padding: 1rem;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-bottom: 1rem;
+`;
+
+const PageInfo = styled.div`
+  padding: 0.5rem 1rem;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-bottom: 1rem;
+`;
+
+const PageButtons = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+`;
+
 interface UserWithEmail extends Profile {
   email?: string;
   last_sign_in?: string;
@@ -164,8 +371,6 @@ interface UserStats {
 }
 
 type UserRole = 'all' | 'admin' | 'user';
-type ActivityFilter = 'all' | 'active' | 'inactive';
-type QuotaFilter = 'all' | 'high' | 'low';
 type StatsTab = 'overview' | 'recentActivity' | 'userGrowth';
 
 const AdminUsersPage: React.FC = () => {
@@ -183,8 +388,6 @@ const AdminUsersPage: React.FC = () => {
   
   // New filters
   const [roleFilter, setRoleFilter] = useState<UserRole>('all');
-  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
-  const [quotaFilter, setQuotaFilter] = useState<QuotaFilter>('all');
   const [dateRange, setDateRange] = useState<{from: string; to: string}>({
     from: '',
     to: ''
@@ -235,7 +438,7 @@ const AdminUsersPage: React.FC = () => {
       fetchUserStats();
       fetchUserGrowthData();
     }
-  }, [user, isAdmin, searchTerm, page, roleFilter, activityFilter, quotaFilter, dateRange]);
+  }, [user, isAdmin, searchTerm, page, roleFilter, dateRange]);
 
   const fetchUsers = async () => {
     if (!user || !isAdmin) return;
@@ -262,24 +465,6 @@ const AdminUsersPage: React.FC = () => {
         query = query.eq('is_admin', true);
       } else if (roleFilter === 'user') {
         query = query.eq('is_admin', false);
-      }
-      
-      // Activity filter
-      if (activityFilter === 'active') {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        query = query.gte('last_sign_in', thirtyDaysAgo.toISOString());
-      } else if (activityFilter === 'inactive') {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        query = query.or(`last_sign_in.lt.${thirtyDaysAgo.toISOString()},last_sign_in.is.null`);
-      }
-      
-      // Quota filter
-      if (quotaFilter === 'high') {
-        query = query.gte('daily_quota', 5);
-      } else if (quotaFilter === 'low') {
-        query = query.lt('daily_quota', 5);
       }
       
       // Date range filter
@@ -392,10 +577,6 @@ const AdminUsersPage: React.FC = () => {
     } catch (error) {
       console.error('Error fetching user stats:', error);
     }
-  };
-  
-  const fetchUserActivity = async () => {
-    // Our AdminUserActivity component will handle activity fetching
   };
   
   const fetchUserGrowthData = async () => {
@@ -869,28 +1050,6 @@ const AdminUsersPage: React.FC = () => {
         >
           <FiUsers /> {t('regularUsers')}
         </FilterButton>
-        
-        <DropdownFilter 
-          value={activityFilter} 
-          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => 
-            setActivityFilter(e.target.value as ActivityFilter)
-          }
-        >
-          <option value="all">{t('activityAll')}</option>
-          <option value="active">{t('activityActive')}</option>
-          <option value="inactive">{t('activityInactive')}</option>
-        </DropdownFilter>
-        
-        <DropdownFilter 
-          value={quotaFilter} 
-          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => 
-            setQuotaFilter(e.target.value as QuotaFilter)
-          }
-        >
-          <option value="all">{t('quotaAll')}</option>
-          <option value="high">{t('quotaHigh')}</option>
-          <option value="low">{t('quotaLow')}</option>
-        </DropdownFilter>
         
         <DateFilterContainer>
           <FiCalendar />
