@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiSave, FiX, FiUpload, FiAlertCircle } from 'react-icons/fi';
+import { FiSave, FiX, FiUpload, FiAlertCircle, FiSearch, FiLoader } from 'react-icons/fi';
 import { supabase } from '../../services/supabase';
 import { Book } from '../../types/supabase';
+import { fetchBookDataFromAmazon, isValidAmazonUrl } from '../../services/amazonScraperService';
 
 interface BookFormProps {
   book?: Book;
@@ -18,11 +19,6 @@ const FormContainer = styled.div`
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-`;
-
-const FormTitle = styled.h2`
-  margin: 0 0 1.5rem 0;
-  color: #2c3e50;
 `;
 
 const Form = styled.form`
@@ -194,6 +190,37 @@ const Alert = styled.div`
   margin-bottom: 1.5rem;
 `;
 
+const AlertSuccess = styled(Alert)`
+  background-color: #d4edda;
+  color: #155724;
+`;
+
+const AmazonUrlContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px dashed #3498db;
+  padding: 1rem;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+`;
+
+const FetchButton = styled(Button)`
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+
+  &:hover {
+    background-color: #2980b9;
+  }
+
+  &:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+  }
+`;
+
 const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -205,11 +232,84 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const [description, setDescription] = useState(book?.description || '');
   const [type, setType] = useState(book?.type || 'audiobook');
   const [downloadUrl, setDownloadUrl] = useState(book?.download_url || '');
+  const [isbn, setIsbn] = useState(book?.isbn || '');
+  const [externalId, setExternalId] = useState(book?.external_id || '');
+  const [publishedDate, setPublishedDate] = useState(book?.published_date || '');
+  const [publisher, setPublisher] = useState(book?.publisher || '');
+  const [pageCount, setPageCount] = useState(book?.page_count?.toString() || '');
+  
   const [coverUrl, setCoverUrl] = useState(book?.cover_url || '');
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   
+  // New states for Amazon URL extraction
+  const [amazonUrl, setAmazonUrl] = useState('');
+  const [isExtractingData, setIsExtractingData] = useState(false);
+  const [dataExtractionError, setDataExtractionError] = useState<string | null>(null);
+  const [dataExtractionSuccess, setDataExtractionSuccess] = useState<string | null>(null);
+
+  // Function to extract data from Amazon URL
+  const extractDataFromAmazon = async () => {
+    if (!amazonUrl) {
+      setDataExtractionError(t('admin.amazonUrlEmpty', 'Please enter an Amazon URL'));
+      return;
+    }
+
+    if (!isValidAmazonUrl(amazonUrl)) {
+      setDataExtractionError(t('admin.invalidAmazonUrl', 'Invalid Amazon URL. Please use a valid Amazon book URL'));
+      return;
+    }
+
+    setIsExtractingData(true);
+    setDataExtractionError(null);
+    setDataExtractionSuccess(null);
+
+    try {
+      const amazonData = await fetchBookDataFromAmazon(amazonUrl);
+      
+      if (!amazonData) {
+        throw new Error(t('admin.failedToExtractData', 'Failed to extract data from the provided URL'));
+      }
+
+      // Convert and set the data
+      setTitle(amazonData.title);
+      setAuthor(amazonData.author);
+      setGenre(amazonData.genre);
+      setLanguage(amazonData.language);
+      setDescription(amazonData.description);
+      setType(amazonData.type);
+      setCoverUrl(amazonData.coverUrl);
+      setIsbn(amazonData.isbn);
+      setExternalId(amazonData.asin);
+      
+      if (amazonData.pageCount) {
+        setPageCount(amazonData.pageCount.toString());
+      }
+      
+      if (amazonData.publishedDate) {
+        setPublishedDate(amazonData.publishedDate);
+      }
+      
+      if (amazonData.publisher) {
+        setPublisher(amazonData.publisher);
+      }
+
+      setDataExtractionSuccess(t('admin.dataExtracted', 'Book data successfully extracted from Amazon'));
+    } catch (err) {
+      console.error('Error extracting data:', err);
+      setDataExtractionError(
+        err instanceof Error 
+          ? err.message 
+          : t('admin.unknownError', 'An unknown error occurred')
+      );
+    } finally {
+      setIsExtractingData(false);
+    }
+  };
+
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -259,6 +359,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setSuccess(null);
     
     try {
       // Validate form
@@ -288,7 +389,12 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
             description,
             type,
             download_url: downloadUrl,
-            cover_url: finalCoverUrl
+            cover_url: finalCoverUrl,
+            isbn,
+            external_id: externalId,
+            published_date: publishedDate,
+            publisher,
+            page_count: pageCount ? parseInt(pageCount) : null
           })
           .eq('id', book.id);
         
@@ -313,7 +419,12 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
             description,
             type,
             download_url: downloadUrl,
-            cover_url: finalCoverUrl
+            cover_url: finalCoverUrl,
+            isbn,
+            external_id: externalId,
+            published_date: publishedDate,
+            publisher,
+            page_count: pageCount ? parseInt(pageCount) : null
           });
         
         if (insertError) {
@@ -332,16 +443,43 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   
   return (
     <FormContainer>
-      <FormTitle>
-        {isEdit ? t('admin.editBook') : t('admin.addBook')}
-      </FormTitle>
-      
       {error && (
         <Alert>
-          <FiAlertCircle />
-          {error}
+          <FiAlertCircle /> {error}
         </Alert>
       )}
+      
+      {success && (
+        <AlertSuccess>
+          <FiAlertCircle /> {success}
+        </AlertSuccess>
+      )}
+
+      {/* Amazon URL Input */}
+      <AmazonUrlContainer>
+        <FormGroup style={{ flex: 1 }}>
+          <Label htmlFor="amazonUrl">{t('admin.amazonUrlInput', 'Amazon Book URL')}</Label>
+          <Input
+            id="amazonUrl"
+            type="url"
+            value={amazonUrl}
+            onChange={(e) => setAmazonUrl(e.target.value)}
+            placeholder="https://www.amazon.de/dp/ASIN"
+          />
+          {dataExtractionError && <span style={{ color: '#721c24', fontSize: '0.85rem' }}>{dataExtractionError}</span>}
+          {dataExtractionSuccess && <span style={{ color: '#155724', fontSize: '0.85rem' }}>{dataExtractionSuccess}</span>}
+        </FormGroup>
+        <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '0.25rem' }}>
+          <FetchButton 
+            type="button" 
+            onClick={extractDataFromAmazon}
+            disabled={isExtractingData || !amazonUrl}
+          >
+            {isExtractingData ? <FiLoader style={{ animation: 'spin 1s linear infinite' }} /> : <FiSearch />} 
+            {t('admin.extractData', 'Extract Data')}
+          </FetchButton>
+        </div>
+      </AmazonUrlContainer>
       
       <Form onSubmit={handleSubmit}>
         <FormRow>
@@ -401,6 +539,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
             >
               <option value="German">German</option>
               <option value="German-English">German-English</option>
+              <option value="English">English</option>
             </Select>
           </FormGroup>
         </FormRow>
@@ -428,6 +567,55 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               onChange={(e) => setDownloadUrl(e.target.value)}
               placeholder="https://example.com/download/book.pdf"
               required
+            />
+          </FormGroup>
+        </FormRow>
+
+        {/* Additional book metadata row */}
+        <FormRow>
+          <FormGroup>
+            <Label htmlFor="isbn">{t('books.isbn', 'ISBN')}</Label>
+            <Input
+              id="isbn"
+              type="text"
+              value={isbn}
+              onChange={(e) => setIsbn(e.target.value)}
+              placeholder="9783123456789"
+            />
+          </FormGroup>
+          
+          <FormGroup>
+            <Label htmlFor="externalId">{t('books.externalId', 'ASIN/External ID')}</Label>
+            <Input
+              id="externalId"
+              type="text"
+              value={externalId}
+              onChange={(e) => setExternalId(e.target.value)}
+              placeholder="B07ABC123D"
+            />
+          </FormGroup>
+        </FormRow>
+
+        <FormRow>
+          <FormGroup>
+            <Label htmlFor="publisher">{t('books.publisher', 'Publisher')}</Label>
+            <Input
+              id="publisher"
+              type="text"
+              value={publisher}
+              onChange={(e) => setPublisher(e.target.value)}
+              placeholder="Verlag XYZ"
+            />
+          </FormGroup>
+          
+          <FormGroup>
+            <Label htmlFor="publishedDate">{t('books.publishedDate', 'Published Date')}</Label>
+            <Input
+              id="publishedDate"
+              type="text"
+              value={publishedDate}
+              onChange={(e) => setPublishedDate(e.target.value)}
+              placeholder="1. Januar 2023"
             />
           </FormGroup>
         </FormRow>

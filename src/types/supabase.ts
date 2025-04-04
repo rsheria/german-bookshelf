@@ -14,6 +14,13 @@ export interface Book {
   created_at: string;
   updated_at?: string;
   rating?: number; // Rating score for the book (1-10 scale)
+  
+  // New fields for Amazon integration
+  isbn?: string; // ISBN identifier
+  external_id?: string; // ASIN or other external identifier
+  published_date?: string; // Publication date
+  publisher?: string; // Publisher name
+  page_count?: number; // Number of pages (for ebooks)
 }
 
 export interface Profile {
