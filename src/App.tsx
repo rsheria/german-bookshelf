@@ -294,12 +294,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     
     // Fast bypass: if we've been loading for over 2.5 seconds, just show content
     if (isLoading && !showLoading) {
-      // Check localStorage for admin status to help with bypass
-      const adminStatus = localStorage.getItem('user_is_admin');
-      if (adminStatus === 'true') {
-        return <>{children}</>;
-      }
-      return <>{children}</>;
+      return null;
     }
     
     // Normal loading state - only show if we've been loading for a while

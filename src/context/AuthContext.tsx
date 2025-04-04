@@ -212,22 +212,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Sign out function with enhanced reliability
   const signOut = async () => {
     try {
-      // First remove from localStorage to ensure it's gone even if Supabase fails
+      // First set state to null to immediately remove UI access
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setIsAdmin(false);
+      setAuthStatusChecked(true);
+      
+      // Remove all admin and auth data from localStorage 
       localStorage.removeItem('supabase.auth.token');
       localStorage.removeItem('sb-session');
       localStorage.removeItem('sb-access-token');
       localStorage.removeItem('sb-refresh-token');
       localStorage.removeItem('user_is_admin');
       
+      // Remove any other Supabase-related keys
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      // Clear session storage too
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+      
       // Then sign out from Supabase
       await supabase.auth.signOut();
       
-      // Reset auth state
-      setUser(null);
-      setSession(null);
-      setProfile(null);
-      setIsAdmin(false);
-      setAuthStatusChecked(true);
+      // Force reload the page to clear any in-memory state
+      window.location.href = '/';
     } catch (logoutError) {
       console.error('Error signing out:', logoutError);
       setError(logoutError instanceof Error ? logoutError : new Error(String(logoutError)));
