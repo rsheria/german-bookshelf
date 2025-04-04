@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiUsers, FiEdit, FiCheck, FiX, FiSearch, FiDownload, FiCalendar } from 'react-icons/fi';
+import { FiUsers, FiEdit, FiCheck, FiX, FiSearch, FiDownload, FiCalendar, FiBarChart2, FiPieChart, FiActivity } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import { Profile } from '../../types/supabase';
+import AdminUserActivity from './AdminUserActivity';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
 import {
   AdminContainer,
   AdminHeader,
@@ -19,326 +22,16 @@ import {
   LoadingState
 } from '../../styles/adminStyles';
 
-// Additional styled components specific to this page
-const SearchBar = styled.div`
-  display: flex;
-  gap: 0.5rem;
-  flex: 1;
-  max-width: 500px;
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
-  input {
-    flex: 1;
-    padding: 0.625rem 1rem;
-    border: 1px solid ${props => props.theme.colors.border};
-    border-radius: ${props => props.theme.borderRadius.md};
-    font-size: ${props => props.theme.typography.fontSize.base};
-    color: ${props => props.theme.colors.text};
-    background-color: ${props => props.theme.colors.card};
-    transition: all 0.2s;
-    
-    &:focus {
-      outline: none;
-      border-color: ${props => props.theme.colors.primary};
-      box-shadow: 0 0 0 2px rgba(63, 118, 156, 0.1);
-    }
-  }
-`;
-
-const Badge = styled.span<{ variant?: 'admin' | 'user' }>`
-  padding: 0.25rem 0.75rem;
-  border-radius: ${props => props.theme.borderRadius.full};
-  font-size: ${props => props.theme.typography.fontSize.xs};
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
-  display: inline-flex;
-  align-items: center;
-  
-  ${props => {
-    switch(props.variant) {
-      case 'admin':
-        return `
-          background-color: rgba(63, 118, 156, 0.1);
-          color: ${props.theme.colors.primary};
-        `;
-      case 'user':
-        return `
-          background-color: rgba(149, 165, 166, 0.1);
-          color: #7f8c8d;
-        `;
-      default:
-        return `
-          background-color: ${props.theme.colors.backgroundAlt};
-          color: ${props.theme.colors.text};
-        `;
-    }
-  }}
-`;
-
-const ActionButtons = styled.div`
-  display: flex;
-  gap: 0.5rem;
-`;
-
-const IconButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: ${props => props.theme.borderRadius.full};
-  background-color: transparent;
-  border: 1px solid ${props => props.theme.colors.border};
-  color: ${props => props.theme.colors.textDim};
-  cursor: pointer;
-  transition: all 0.2s;
-  
-  &:hover {
-    background-color: ${props => props.theme.colors.backgroundAlt};
-    color: ${props => props.theme.colors.primary};
-    transform: translateY(-2px);
-  }
-  
-  &.edit:hover {
-    color: ${props => props.theme.colors.primary};
-    border-color: ${props => props.theme.colors.primary};
-    background-color: rgba(63, 118, 156, 0.05);
-  }
-  
-  &.save:hover {
-    color: ${props => props.theme.colors.success};
-    border-color: ${props => props.theme.colors.success};
-    background-color: rgba(40, 167, 69, 0.05);
-  }
-  
-  &.cancel:hover {
-    color: ${props => props.theme.colors.danger};
-    border-color: ${props => props.theme.colors.danger};
-    background-color: rgba(220, 53, 69, 0.05);
-  }
-`;
-
-const SafeToggleAdminButton = styled.button<{ $isAdmin: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: ${props => props.theme.borderRadius.md};
-  border: none;
-  background-color: ${props => props.$isAdmin 
-    ? props.theme.colors.danger 
-    : props.theme.colors.success};
-  color: white;
-  font-size: ${props => props.theme.typography.fontSize.sm};
-  cursor: pointer;
-  transition: all 0.2s;
-  
-  &:hover {
-    transform: translateY(-2px);
-    opacity: 0.9;
-  }
-`;
-
-const QuotaInput = styled.input`
-  width: 70px;
-  padding: 0.5rem;
-  border: 1px solid ${props => props.theme.colors.border};
-  border-radius: ${props => props.theme.borderRadius.md};
-  background-color: ${props => props.theme.colors.card};
-  color: ${props => props.theme.colors.text};
-  text-align: center;
-  
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 2px rgba(63, 118, 156, 0.1);
-  }
-`;
-
-const Pagination = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1.5rem;
-`;
-
-const PageInfo = styled.div`
-  color: ${props => props.theme.colors.textDim};
-  font-size: ${props => props.theme.typography.fontSize.sm};
-`;
-
-const PageButtons = styled.div`
-  display: flex;
-  gap: 0.5rem;
-`;
-
-const PageButton = styled.button<{ active?: boolean }>`
-  min-width: 36px;
-  height: 36px;
-  border-radius: ${props => props.theme.borderRadius.md};
-  border: 1px solid ${props => props.active 
-    ? props.theme.colors.primary 
-    : props.theme.colors.border};
-  background-color: ${props => props.active 
-    ? props.theme.colors.primary 
-    : 'transparent'};
-  color: ${props => props.active 
-    ? 'white' 
-    : props.theme.colors.text};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  
-  &:hover:not([disabled]) {
-    background-color: ${props => props.active 
-      ? props.theme.colors.primaryDark 
-      : props.theme.colors.backgroundAlt};
-    transform: translateY(-2px);
-  }
-  
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
-
-const StatusMessage = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: rgba(220, 53, 69, 0.1);
-  color: ${props => props.theme.colors.danger};
-  padding: 1rem;
-  border-radius: ${props => props.theme.borderRadius.md};
-  margin-bottom: 1.5rem;
-`;
-
-const SuccessMessage = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: rgba(40, 167, 69, 0.1);
-  color: ${props => props.theme.colors.success};
-  padding: 1rem;
-  border-radius: ${props => props.theme.borderRadius.md};
-  margin-bottom: 1.5rem;
-`;
-
-const EmptyState = styled.div`
-  text-align: center;
-  padding: 3rem;
-  color: ${props => props.theme.colors.textDim};
-  background-color: ${props => props.theme.colors.backgroundAlt};
-  border-radius: ${props => props.theme.borderRadius.lg};
-  margin-top: 1.5rem;
-`;
-
-const SearchInput = styled.input`
-  flex: 1;
-  padding: 0.625rem 1rem;
-  border: 1px solid ${props => props.theme.colors.border};
-  border-radius: ${props => props.theme.borderRadius.md};
-  font-size: ${props => props.theme.typography.fontSize.base};
-  color: ${props => props.theme.colors.text};
-  background-color: ${props => props.theme.colors.card};
-  transition: all 0.2s;
-  
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 2px rgba(63, 118, 156, 0.1);
-  }
-`;
-
-const FilterContainer = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-`;
-
-const FilterButton = styled.button<{ active?: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background-color: ${props => props.active 
-    ? props.theme.colors.primary 
-    : props.theme.colors.backgroundAlt};
-  color: ${props => props.active 
-    ? 'white' 
-    : props.theme.colors.text};
-  border: 1px solid ${props => props.active 
-    ? props.theme.colors.primary 
-    : props.theme.colors.border};
-  border-radius: ${props => props.theme.borderRadius.md};
-  font-size: ${props => props.theme.typography.fontSize.sm};
-  cursor: pointer;
-  transition: all 0.2s;
-  
-  &:hover {
-    background-color: ${props => props.active 
-      ? props.theme.colors.primaryDark 
-      : props.theme.colors.background};
-    transform: translateY(-2px);
-  }
-`;
-
-const DropdownFilter = styled.select`
-  padding: 0.5rem 1rem;
-  border: 1px solid ${props => props.theme.colors.border};
-  border-radius: ${props => props.theme.borderRadius.md};
-  background-color: ${props => props.theme.colors.backgroundAlt};
-  color: ${props => props.theme.colors.text};
-  font-size: ${props => props.theme.typography.fontSize.sm};
-  cursor: pointer;
-  transition: all 0.2s;
-  
-  &:hover {
-    border-color: ${props => props.theme.colors.primary};
-  }
-  
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 2px rgba(63, 118, 156, 0.1);
-  }
-`;
-
-const DateFilterContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const DateInput = styled.input`
-  padding: 0.5rem;
-  border: 1px solid ${props => props.theme.colors.border};
-  border-radius: ${props => props.theme.borderRadius.md};
-  background-color: ${props => props.theme.colors.backgroundAlt};
-  color: ${props => props.theme.colors.text};
-  font-size: ${props => props.theme.typography.fontSize.sm};
-  
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 2px rgba(63, 118, 156, 0.1);
-  }
-`;
-
-const ExportButton = styled(FilterButton)`
-  margin-left: auto;
-  background-color: ${props => props.theme.colors.success};
-  color: white;
-  border-color: ${props => props.theme.colors.success};
-  
-  &:hover {
-    background-color: ${props => props.theme.colors.successDark || '#218838'};
-    border-color: ${props => props.theme.colors.successDark || '#218838'};
-  }
-`;
-
-// Stats visualization components
 const StatsSection = styled.div`
   margin-bottom: 2rem;
 `;
@@ -355,7 +48,8 @@ const StatCard = styled.div`
   border-radius: ${props => props.theme.borderRadius.md};
   padding: 1.5rem;
   box-shadow: ${props => props.theme.shadows.sm};
-  border: 1px solid ${props => props.theme.colors.border};
+  display: flex;
+  align-items: center;
   transition: all 0.3s ease;
   
   &:hover {
@@ -364,32 +58,57 @@ const StatCard = styled.div`
   }
 `;
 
-const StatValue = styled.div`
-  font-size: 2rem;
-  font-weight: ${props => props.theme.typography.fontWeight.bold};
+const StatIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 1rem;
+  background-color: rgba(63, 118, 156, 0.1);
   color: ${props => props.theme.colors.primary};
-  margin-bottom: 0.5rem;
+  
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const StatValue = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.xl};
+  font-weight: ${props => props.theme.typography.fontWeight.semibold};
+  margin-bottom: 0.25rem;
 `;
 
 const StatLabel = styled.div`
-  color: ${props => props.theme.colors.textDim};
   font-size: ${props => props.theme.typography.fontSize.sm};
+  color: ${props => props.theme.colors.textDim};
 `;
 
 const ChartContainer = styled.div`
+  height: 400px;
+  margin-top: 1rem;
+  padding: 1rem;
   background-color: ${props => props.theme.colors.card};
   border-radius: ${props => props.theme.borderRadius.md};
-  padding: 1.5rem;
   box-shadow: ${props => props.theme.shadows.sm};
-  border: 1px solid ${props => props.theme.colors.border};
-  margin-bottom: 1.5rem;
-  height: 300px;
 `;
 
-const ChartTitle = styled.h3`
-  font-size: ${props => props.theme.typography.fontSize.lg};
-  margin-bottom: 1rem;
-  color: ${props => props.theme.colors.textDark};
+const UserStatsOverview = styled.div`
+  padding: 1.5rem;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-top: 1rem;
+  
+  p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
 `;
 
 const TabContainer = styled.div`
@@ -406,77 +125,20 @@ const Tab = styled.button<{ active?: boolean }>`
   color: ${props => props.active 
     ? 'white' 
     : props.theme.colors.text};
-  border: 1px solid ${props => props.active 
-    ? props.theme.colors.primary 
-    : props.theme.colors.border};
+  border: none;
   border-radius: ${props => props.theme.borderRadius.md};
   cursor: pointer;
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   transition: all 0.2s;
   
   &:hover {
     background-color: ${props => props.active 
-      ? props.theme.colors.primaryDark 
-      : props.theme.colors.background};
-  }
-`;
-
-const UserActivityList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-height: 400px;
-  overflow-y: auto;
-`;
-
-const ActivityItem = styled.div`
-  padding: 1rem;
-  border-radius: ${props => props.theme.borderRadius.md};
-  background-color: ${props => props.theme.colors.backgroundAlt};
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  
-  &:hover {
-    background-color: ${props => props.theme.colors.background};
-  }
-`;
-
-const ActivityUser = styled.div`
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
-`;
-
-const ActivityTime = styled.div`
-  color: ${props => props.theme.colors.textDim};
-  font-size: ${props => props.theme.typography.fontSize.sm};
-`;
-
-const SectionHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-`;
-
-const SectionTitle = styled.h2`
-  font-size: ${props => props.theme.typography.fontSize.xl};
-  color: ${props => props.theme.colors.textDark};
-  margin: 0;
-`;
-
-const SectionToggle = styled.button`
-  background: none;
-  border: none;
-  color: ${props => props.theme.colors.primary};
-  cursor: pointer;
-  font-size: ${props => props.theme.typography.fontSize.sm};
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: ${props => props.theme.borderRadius.sm};
-  
-  &:hover {
-    background-color: rgba(63, 118, 156, 0.05);
+      ? props.theme.colors.primary 
+      : props.theme.colors.backgroundAltHover};
+    transform: translateY(-2px);
   }
 `;
 
@@ -501,17 +163,10 @@ interface UserStats {
   averageDailyQuota: number;
 }
 
-interface UserActivity {
-  id: string;
-  username: string;
-  action: string;
-  timestamp: string;
-}
-
 type UserRole = 'all' | 'admin' | 'user';
 type ActivityFilter = 'all' | 'active' | 'inactive';
 type QuotaFilter = 'all' | 'high' | 'low';
-type StatsTab = 'overview' | 'activity' | 'growth';
+type StatsTab = 'overview' | 'recentActivity' | 'userGrowth';
 
 const AdminUsersPage: React.FC = () => {
   const { t } = useTranslation();
@@ -547,7 +202,6 @@ const AdminUsersPage: React.FC = () => {
     newUsersThisMonth: 0,
     averageDailyQuota: 0
   });
-  const [userActivity, setUserActivity] = useState<UserActivity[]>([]);
   const [userGrowthData, setUserGrowthData] = useState<{
     labels: string[];
     datasets: {
@@ -559,7 +213,7 @@ const AdminUsersPage: React.FC = () => {
   }>({
     labels: [],
     datasets: [{
-      label: t('newUsers'),
+      label: t('newUsers', 'New Users'),
       data: [],
       backgroundColor: 'rgba(63, 118, 156, 0.2)',
       borderColor: 'rgba(63, 118, 156, 1)'
@@ -579,7 +233,6 @@ const AdminUsersPage: React.FC = () => {
     if (user && isAdmin) {
       fetchUsers();
       fetchUserStats();
-      fetchUserActivity();
       fetchUserGrowthData();
     }
   }, [user, isAdmin, searchTerm, page, roleFilter, activityFilter, quotaFilter, dateRange]);
@@ -742,73 +395,54 @@ const AdminUsersPage: React.FC = () => {
   };
   
   const fetchUserActivity = async () => {
-    // In a real application, this would fetch from a user_activity or audit_log table
-    // For this example, let's create some mock data
-    const mockActivity: UserActivity[] = [
-      { 
-        id: '1', 
-        username: 'admin', 
-        action: t('activityLogin'), 
-        timestamp: new Date().toISOString() 
-      },
-      { 
-        id: '2', 
-        username: 'johndoe', 
-        action: t('activityDownload'), 
-        timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() // 5 minutes ago
-      },
-      { 
-        id: '3', 
-        username: 'alice', 
-        action: t('activityPasswordChange'), 
-        timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString() // 15 minutes ago
-      },
-      { 
-        id: '4', 
-        username: 'robert', 
-        action: t('activityProfileUpdate'), 
-        timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() // 30 minutes ago
-      },
-      { 
-        id: '5', 
-        username: 'emma', 
-        action: t('activityLogin'), 
-        timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString() // 45 minutes ago
-      }
-    ];
-    
-    setUserActivity(mockActivity);
+    // Our AdminUserActivity component will handle activity fetching
   };
   
   const fetchUserGrowthData = async () => {
-    // In a real application, this would run a SQL query to aggregate user registrations
-    // For this example, we'll create mock data
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    
-    const currentMonth = new Date().getMonth();
-    const labels = [];
-    const data = [];
-    
-    // Generate labels for the last 6 months
-    for (let i = 5; i >= 0; i--) {
-      const monthIndex = (currentMonth - i + 12) % 12;
-      labels.push(months[monthIndex]);
-      // Generate random data between 5 and 30 for demo purposes
-      data.push(Math.floor(Math.random() * 25) + 5);
+    // For user growth data, we'll query the profiles table by month
+    try {
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      
+      const currentMonth = new Date().getMonth();
+      const labels = [];
+      const data = [];
+      
+      // Get data for the last 6 months
+      for (let i = 5; i >= 0; i--) {
+        const monthIndex = (currentMonth - i + 12) % 12;
+        labels.push(months[monthIndex]);
+        
+        // Calculate start and end of that month
+        const year = new Date().getFullYear() - (monthIndex > currentMonth ? 1 : 0);
+        const month = monthIndex;
+        
+        const startDate = new Date(year, month, 1);
+        const endDate = new Date(year, month + 1, 0); // Last day of month
+        
+        const { count } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', endDate.toISOString());
+        
+        data.push(count || 0);
+      }
+      
+      setUserGrowthData({
+        labels,
+        datasets: [{
+          label: t('newUsers', 'New Users'),
+          data,
+          backgroundColor: 'rgba(63, 118, 156, 0.2)',
+          borderColor: 'rgba(63, 118, 156, 1)'
+        }]
+      });
+    } catch (error) {
+      console.error('Error fetching user growth data:', error);
     }
-    
-    setUserGrowthData({
-      labels,
-      datasets: [{
-        label: t('newUsers'),
-        data,
-        backgroundColor: 'rgba(63, 118, 156, 0.2)',
-        borderColor: 'rgba(63, 118, 156, 1)'
-      }]
-    });
   };
   
   const handleToggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
@@ -978,113 +612,161 @@ const AdminUsersPage: React.FC = () => {
     }
   };
   
-  const renderUserStats = () => {
+  const renderStatsSection = () => {
+    if (!showStats) return null;
+    
     return (
       <StatsSection>
         <SectionHeader>
           <SectionTitle>{t('userStatistics', 'User Statistics')}</SectionTitle>
-          <SectionToggle onClick={() => setShowStats(!showStats)}>
-            {showStats ? t('hide') : t('show')}
+          <SectionToggle onClick={() => setShowStats(false)}>
+            {t('hide', 'Hide')}
           </SectionToggle>
         </SectionHeader>
         
-        {showStats && (
-          <>
-            <TabContainer>
-              <Tab 
-                active={statsTab === 'overview'} 
-                onClick={() => setStatsTab('overview')}
-              >
-                {t('overview')}
-              </Tab>
-              <Tab 
-                active={statsTab === 'activity'} 
-                onClick={() => setStatsTab('activity')}
-              >
-                {t('recentActivity')}
-              </Tab>
-              <Tab 
-                active={statsTab === 'growth'} 
-                onClick={() => setStatsTab('growth')}
-              >
-                {t('userGrowth')}
-              </Tab>
-            </TabContainer>
-            
-            {statsTab === 'overview' && (
-              <StatsGrid>
-                <StatCard>
-                  <StatValue>{userStats.totalUsers}</StatValue>
-                  <StatLabel>{t('totalUsers')}</StatLabel>
-                </StatCard>
-                <StatCard>
-                  <StatValue>{userStats.adminUsers}</StatValue>
-                  <StatLabel>{t('adminUsers')}</StatLabel>
-                </StatCard>
-                <StatCard>
-                  <StatValue>{userStats.activeUsers}</StatValue>
-                  <StatLabel>{t('activeUsers')}</StatLabel>
-                </StatCard>
-                <StatCard>
-                  <StatValue>{userStats.newUsersToday}</StatValue>
-                  <StatLabel>{t('newUsersToday')}</StatLabel>
-                </StatCard>
-                <StatCard>
-                  <StatValue>{userStats.newUsersThisWeek}</StatValue>
-                  <StatLabel>{t('newUsersThisWeek')}</StatLabel>
-                </StatCard>
-                <StatCard>
-                  <StatValue>{userStats.newUsersThisMonth}</StatValue>
-                  <StatLabel>{t('newUsersThisMonth')}</StatLabel>
-                </StatCard>
-                <StatCard>
-                  <StatValue>{userStats.averageDailyQuota}</StatValue>
-                  <StatLabel>{t('averageQuota')}</StatLabel>
-                </StatCard>
-              </StatsGrid>
-            )}
-            
-            {statsTab === 'activity' && (
-              <UserActivityList>
-                {userActivity.map(activity => (
-                  <ActivityItem key={activity.id}>
-                    <ActivityUser>
-                      {activity.username} - {activity.action}
-                    </ActivityUser>
-                    <ActivityTime>
-                      {new Date(activity.timestamp).toLocaleString()}
-                    </ActivityTime>
-                  </ActivityItem>
-                ))}
-              </UserActivityList>
-            )}
-            
-            {statsTab === 'growth' && (
-              <ChartContainer>
-                <ChartTitle>{t('userGrowthOverTime')}</ChartTitle>
-                {/* 
-                  Note: In a real implementation, you would render a Chart.js component here
-                  For example: 
-                  <Bar data={userGrowthData} options={{ maintainAspectRatio: false }} />
-                */}
-                <div style={{ textAlign: 'center', paddingTop: '80px', color: '#666' }}>
-                  {t('chartPlaceholder')} 
-                  <div>
-                    {t('dataPoints')}: {userGrowthData.labels.join(', ')}
-                  </div>
-                  <div>
-                    {t('values')}: {userGrowthData.datasets[0].data.join(', ')}
-                  </div>
-                </div>
-              </ChartContainer>
-            )}
-          </>
+        <StatsGrid>
+          <StatCard>
+            <StatIcon>
+              <FiUsers />
+            </StatIcon>
+            <StatContent>
+              <StatValue>{userStats.totalUsers}</StatValue>
+              <StatLabel>{t('totalUsers', 'Total Users')}</StatLabel>
+            </StatContent>
+          </StatCard>
+          
+          <StatCard>
+            <StatIcon style={{ color: '#3498db' }}>
+              <FiActivity />
+            </StatIcon>
+            <StatContent>
+              <StatValue>{userStats.activeUsers}</StatValue>
+              <StatLabel>{t('activeUsers', 'Active Users')}</StatLabel>
+            </StatContent>
+          </StatCard>
+          
+          <StatCard>
+            <StatIcon style={{ color: '#2ecc71' }}>
+              <FiUsers />
+            </StatIcon>
+            <StatContent>
+              <StatValue>{userStats.newUsersToday}</StatValue>
+              <StatLabel>{t('newUsersToday', 'New Today')}</StatLabel>
+            </StatContent>
+          </StatCard>
+          
+          <StatCard>
+            <StatIcon style={{ color: '#f39c12' }}>
+              <FiUsers />
+            </StatIcon>
+            <StatContent>
+              <StatValue>{userStats.newUsersThisWeek}</StatValue>
+              <StatLabel>{t('newUsersWeek', 'New This Week')}</StatLabel>
+            </StatContent>
+          </StatCard>
+          
+          <StatCard>
+            <StatIcon style={{ color: '#e74c3c' }}>
+              <FiUsers />
+            </StatIcon>
+            <StatContent>
+              <StatValue>{userStats.newUsersThisMonth}</StatValue>
+              <StatLabel>{t('newUsersMonth', 'New This Month')}</StatLabel>
+            </StatContent>
+          </StatCard>
+          
+          <StatCard>
+            <StatIcon style={{ color: '#9b59b6' }}>
+              <FiDownload />
+            </StatIcon>
+            <StatContent>
+              <StatValue>{userStats.averageDailyQuota}</StatValue>
+              <StatLabel>{t('averageQuota', 'Avg. Daily Quota')}</StatLabel>
+            </StatContent>
+          </StatCard>
+        </StatsGrid>
+        
+        <TabContainer>
+          <Tab 
+            active={statsTab === 'overview'} 
+            onClick={() => setStatsTab('overview')}
+          >
+            <FiBarChart2 /> {t('overview', 'Overview')}
+          </Tab>
+          <Tab 
+            active={statsTab === 'recentActivity'} 
+            onClick={() => setStatsTab('recentActivity')}
+          >
+            <FiActivity /> {t('recentActivity', 'Recent Activity')}
+          </Tab>
+          <Tab 
+            active={statsTab === 'userGrowth'} 
+            onClick={() => setStatsTab('userGrowth')}
+          >
+            <FiPieChart /> {t('userGrowth', 'User Growth')}
+          </Tab>
+        </TabContainer>
+        
+        {statsTab === 'overview' && (
+          <UserStatsOverview>
+            <p>{t('userStatsOverview', 'Your platform has {{totalUsers}} total users, with {{activeUsers}} active users in the last 30 days. {{adminCount}} users have admin privileges.', {
+              totalUsers: userStats.totalUsers,
+              activeUsers: userStats.activeUsers,
+              adminCount: userStats.adminUsers
+            })}</p>
+            <p>{t('growthStats', 'You have {{newToday}} new users today, {{newWeek}} this week, and {{newMonth}} this month.', {
+              newToday: userStats.newUsersToday,
+              newWeek: userStats.newUsersThisWeek,
+              newMonth: userStats.newUsersThisMonth
+            })}</p>
+          </UserStatsOverview>
+        )}
+        
+        {statsTab === 'recentActivity' && (
+          <AdminUserActivity 
+            title={t('userActivity', 'User Activity')}
+            limit={8}
+            autoRefresh={true}
+          />
+        )}
+        
+        {statsTab === 'userGrowth' && (
+          <ChartContainer>
+            <Bar 
+              data={userGrowthData}
+              options={{
+                responsive: true,
+                plugins: {
+                  legend: {
+                    position: 'top' as const,
+                  },
+                  title: {
+                    display: true,
+                    text: t('newUsersByMonth', 'New Users by Month')
+                  },
+                },
+              }}
+            />
+          </ChartContainer>
         )}
       </StatsSection>
     );
   };
-  
-  // Generate pagination buttons
+
+  if (authLoading || isLoading) {
+    return (
+      <AdminContainer>
+        <LoadingState>{t('loading')}</LoadingState>
+      </AdminContainer>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return null; // Will redirect to home
+  }
+
+  const totalPages = Math.ceil(totalCount / limit);
+
   const renderPagination = () => {
     const buttons = [];
     
@@ -1100,7 +782,6 @@ const AdminUsersPage: React.FC = () => {
     );
     
     // Page numbers
-    const totalPages = Math.ceil(totalCount / limit);
     const startPage = Math.max(0, page - 2);
     const endPage = Math.min(totalPages - 1, page + 2);
     
@@ -1129,20 +810,6 @@ const AdminUsersPage: React.FC = () => {
     
     return buttons;
   };
-
-  if (authLoading || isLoading) {
-    return (
-      <AdminContainer>
-        <LoadingState>{t('loading')}</LoadingState>
-      </AdminContainer>
-    );
-  }
-
-  if (!user || !isAdmin) {
-    return null; // Will redirect to home
-  }
-
-  const totalPages = Math.ceil(totalCount / limit);
 
   return (
     <AdminContainer>
@@ -1180,7 +847,7 @@ const AdminUsersPage: React.FC = () => {
       )}
       
       {/* User Statistics Section */}
-      {renderUserStats()}
+      {renderStatsSection()}
       
       {/* Filters */}
       <FilterContainer>
