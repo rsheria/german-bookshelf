@@ -2,126 +2,49 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiBook, FiEdit, FiTrash2, FiPlus, FiSearch, FiAlertCircle } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiPlus, FiSearch, FiDownload, FiActivity, FiEye, FiArchive, FiBook } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
-import { Book } from '../../types/supabase';
+import {
+  AdminContainer,
+  AdminHeader,
+  AdminTitle,
+  AdminSubtitle,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeader,
+  TableCell,
+  LoadingState,
+  ActionButton,
+  ControlsContainer,
+  FilterDropdown
+} from '../../styles/adminStyles';
 
-const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  color: #2c3e50;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const AddButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: #2ecc71;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: #27ae60;
-  }
-`;
-
-const Controls = styled.div`
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-`;
-
+// Additional styled components specific to this page
 const SearchBar = styled.div`
   display: flex;
-  align-items: center;
-  background-color: #f5f5f5;
-  border-radius: 4px;
-  padding: 0 1rem;
-  flex-grow: 1;
-  max-width: 400px;
-`;
+  gap: 0.5rem;
+  flex: 1;
+  max-width: 500px;
 
-const SearchInput = styled.input`
-  border: none;
-  background: transparent;
-  padding: 0.75rem 0;
-  outline: none;
-  font-size: 1rem;
-  width: 100%;
-`;
-
-const FilterDropdown = styled.select`
-  padding: 0.75rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  font-size: 1rem;
-  outline: none;
-  cursor: pointer;
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-`;
-
-const TableHead = styled.thead`
-  background-color: #f8f9fa;
-`;
-
-const TableRow = styled.tr`
-  &:not(:last-child) {
-    border-bottom: 1px solid #eee;
+  input {
+    flex: 1;
+    padding: 0.625rem 1rem;
+    border: 1px solid ${props => props.theme.colors.border};
+    border-radius: ${props => props.theme.borderRadius.md};
+    font-size: ${props => props.theme.typography.fontSize.base};
+    color: ${props => props.theme.colors.text};
+    background-color: ${props => props.theme.colors.card};
+    transition: all 0.2s;
+    
+    &:focus {
+      outline: none;
+      border-color: ${props => props.theme.colors.primary};
+      box-shadow: 0 0 0 2px rgba(63, 118, 156, 0.1);
+    }
   }
-`;
-
-const TableHeader = styled.th`
-  text-align: left;
-  padding: 1rem;
-  font-weight: 600;
-  color: #2c3e50;
-`;
-
-const TableCell = styled.td`
-  padding: 1rem;
-  color: #333;
-`;
-
-const BookCover = styled.img`
-  width: 40px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: 4px;
 `;
 
 const ActionButtons = styled.div`
@@ -129,123 +52,168 @@ const ActionButtons = styled.div`
   gap: 0.5rem;
 `;
 
-const EditButton = styled.button`
+const IconButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 4px;
   width: 36px;
   height: 36px;
+  border-radius: ${props => props.theme.borderRadius.full};
+  background-color: transparent;
+  border: 1px solid ${props => props.theme.colors.border};
+  color: ${props => props.theme.colors.textDim};
   cursor: pointer;
-  transition: background-color 0.2s;
-
+  transition: all 0.2s;
+  
   &:hover {
-    background-color: #2980b9;
+    background-color: ${props => props.theme.colors.backgroundAlt};
+    color: ${props => props.theme.colors.primary};
+    transform: translateY(-2px);
   }
-`;
-
-const DeleteButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #e74c3c;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  width: 36px;
-  height: 36px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: #c0392b;
+  
+  &.edit:hover {
+    color: ${props => props.theme.colors.primary};
+    border-color: ${props => props.theme.colors.primary};
+    background-color: rgba(63, 118, 156, 0.05);
+  }
+  
+  &.delete:hover {
+    color: ${props => props.theme.colors.danger};
+    border-color: ${props => props.theme.colors.danger};
+    background-color: rgba(220, 53, 69, 0.05);
+  }
+  
+  &.view:hover {
+    color: ${props => props.theme.colors.success};
+    border-color: ${props => props.theme.colors.success};
+    background-color: rgba(40, 167, 69, 0.05);
   }
 `;
 
 const Pagination = styled.div`
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+`;
+
+const PageInfo = styled.div`
+  color: ${props => props.theme.colors.textDim};
+  font-size: ${props => props.theme.typography.fontSize.sm};
+`;
+
+const PageButtons = styled.div`
+  display: flex;
   gap: 0.5rem;
-  margin-top: 2rem;
 `;
 
 const PageButton = styled.button<{ active?: boolean }>`
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: ${({ active }) => (active ? '#3498db' : 'white')};
-  color: ${({ active }) => (active ? 'white' : '#333')};
+  min-width: 36px;
+  height: 36px;
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.active 
+    ? props.theme.colors.primary 
+    : props.theme.colors.border};
+  background-color: ${props => props.active 
+    ? props.theme.colors.primary 
+    : 'transparent'};
+  color: ${props => props.active 
+    ? 'white' 
+    : props.theme.colors.text};
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-
-  &:hover {
-    background-color: ${({ active }) => (active ? '#2980b9' : '#f5f5f5')};
+  
+  &:hover:not([disabled]) {
+    background-color: ${props => props.active 
+      ? props.theme.colors.primaryDark 
+      : props.theme.colors.backgroundAlt};
+    transform: translateY(-2px);
   }
-
+  
   &:disabled {
-    background-color: #f5f5f5;
-    color: #999;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 `;
 
-const LoadingState = styled.div`
-  text-align: center;
-  padding: 3rem;
-  color: #666;
-`;
-
-const EmptyState = styled.div`
-  text-align: center;
-  padding: 3rem;
-  color: #666;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-`;
-
-const Alert = styled.div`
-  display: flex;
+const Chip = styled.span<{ variant?: 'audiobook' | 'ebook' | 'advanced' | 'intermediate' | 'beginner' }>`
+  padding: 0.25rem 0.75rem;
+  border-radius: ${props => props.theme.borderRadius.full};
+  font-size: ${props => props.theme.typography.fontSize.xs};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  background-color: #f8d7da;
-  color: #721c24;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
+  
+  ${props => {
+    switch(props.variant) {
+      case 'audiobook':
+        return `
+          background-color: rgba(63, 118, 156, 0.1);
+          color: ${props.theme.colors.primary};
+        `;
+      case 'ebook':
+        return `
+          background-color: rgba(216, 181, 137, 0.1);
+          color: #BF9B6F;
+        `;
+      case 'advanced':
+        return `
+          background-color: rgba(220, 53, 69, 0.1);
+          color: ${props.theme.colors.danger};
+        `;
+      case 'intermediate':
+        return `
+          background-color: rgba(255, 193, 7, 0.1);
+          color: #de9e1f;
+        `;
+      case 'beginner':
+        return `
+          background-color: rgba(40, 167, 69, 0.1);
+          color: ${props.theme.colors.success};
+        `;
+      default:
+        return `
+          background-color: ${props.theme.colors.backgroundAlt};
+          color: ${props.theme.colors.text};
+        `;
+    }
+  }}
 `;
 
-const Modal = styled.div`
+const ConfirmationModal = styled.div`
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   z-index: 1000;
 `;
 
 const ModalContent = styled.div`
-  background-color: white;
-  border-radius: 8px;
+  background-color: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  box-shadow: ${props => props.theme.shadows.lg};
   padding: 2rem;
+  width: 100%;
   max-width: 500px;
-  width: 90%;
-`;
-
-const ModalTitle = styled.h2`
-  margin-top: 0;
-  color: #2c3e50;
-`;
-
-const ModalText = styled.p`
-  margin-bottom: 2rem;
-  color: #333;
+  
+  h3 {
+    margin-top: 0;
+    color: ${props => props.theme.colors.textDark};
+    font-family: ${props => props.theme.typography.fontFamily.heading};
+  }
+  
+  p {
+    margin-bottom: 2rem;
+    color: ${props => props.theme.colors.text};
+  }
 `;
 
 const ModalButtons = styled.div`
@@ -255,32 +223,88 @@ const ModalButtons = styled.div`
 `;
 
 const CancelButton = styled.button`
-  padding: 0.75rem 1.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  color: #333;
+  padding: 0.625rem 1.25rem;
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.theme.colors.border};
+  background-color: transparent;
+  color: ${props => props.theme.colors.text};
   cursor: pointer;
-  transition: background-color 0.2s;
-
+  transition: all 0.2s;
+  
   &:hover {
-    background-color: #f5f5f5;
+    background-color: ${props => props.theme.colors.backgroundAlt};
   }
 `;
 
-const ConfirmButton = styled.button`
-  padding: 0.75rem 1.5rem;
+const DeleteButton = styled.button`
+  padding: 0.625rem 1.25rem;
+  border-radius: ${props => props.theme.borderRadius.md};
   border: none;
-  border-radius: 4px;
-  background-color: #e74c3c;
+  background-color: ${props => props.theme.colors.danger};
   color: white;
   cursor: pointer;
-  transition: background-color 0.2s;
-
+  transition: all 0.2s;
+  
   &:hover {
-    background-color: #c0392b;
+    background-color: #c82333;
   }
 `;
+
+const StatsRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+`;
+
+const StatsCard = styled.div`
+  background-color: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  box-shadow: ${props => props.theme.shadows.sm};
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border: 1px solid ${props => props.theme.colors.border};
+  
+  .icon {
+    width: 40px;
+    height: 40px;
+    border-radius: ${props => props.theme.borderRadius.md};
+    background-color: ${props => props.theme.colors.backgroundAlt};
+    color: ${props => props.theme.colors.primary};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .content {
+    .value {
+      font-size: 1.5rem;
+      font-weight: ${props => props.theme.typography.fontWeight.bold};
+      color: ${props => props.theme.colors.textDark};
+      line-height: 1.2;
+    }
+    
+    .label {
+      font-size: ${props => props.theme.typography.fontSize.sm};
+      color: ${props => props.theme.colors.textDim};
+    }
+  }
+`;
+
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  description: string;
+  cover_url: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  type: 'ebook' | 'audiobook';
+  published_at: string;
+  language: string;
+  download_count: number;
+}
 
 const AdminBooksPage: React.FC = () => {
   const { t } = useTranslation();
@@ -288,15 +312,21 @@ const AdminBooksPage: React.FC = () => {
   const { user, isAdmin, isLoading: authLoading } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [bookType, setBookType] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'ebook' | 'audiobook'>('all');
+  const [levelFilter, setLevelFilter] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');
   const [page, setPage] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
+  const [totalBooks, setTotalBooks] = useState(0);
+  const [bookStats, setBookStats] = useState({
+    total: 0,
+    ebooks: 0,
+    audiobooks: 0,
+    totalDownloads: 0
+  });
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
   
-  const limit = 10;
+  const pageSize = 10;
 
   useEffect(() => {
     // Redirect if not admin
@@ -305,142 +335,151 @@ const AdminBooksPage: React.FC = () => {
     }
   }, [user, isAdmin, authLoading, navigate]);
 
+  useEffect(() => {
+    if (!user || !isAdmin) return;
+    
+    fetchBooks();
+    fetchBookStats();
+  }, [user, isAdmin, page, searchTerm, typeFilter, levelFilter]);
+
   const fetchBooks = async () => {
     if (!user || !isAdmin) return;
     
     setIsLoading(true);
-    setError(null);
     
     try {
-      if (!supabase) {
-        throw new Error('Supabase client is not initialized');
-      }
-      
       let query = supabase
         .from('books')
         .select('*', { count: 'exact' });
       
-      // Apply filters
-      if (bookType) {
-        query = query.eq('type', bookType);
-      }
-      
+      // Apply search filter
       if (searchTerm) {
         query = query.or(`title.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%`);
       }
       
-      // Apply pagination
-      const from = page * limit;
-      const to = from + limit - 1;
-      
-      const { data, error: fetchError, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
-      
-      if (fetchError) {
-        throw fetchError;
+      // Apply type filter
+      if (typeFilter !== 'all') {
+        query = query.eq('type', typeFilter);
       }
       
-      setBooks(data || []);
-      setTotalCount(count || 0);
-    } catch (err) {
-      console.error('Error fetching books:', err);
-      setError((err as Error).message);
+      // Apply level filter
+      if (levelFilter !== 'all') {
+        query = query.eq('level', levelFilter);
+      }
+      
+      // Get total count for pagination
+      const { count } = await query;
+      setTotalBooks(count || 0);
+      
+      // Fetch books with pagination
+      const { data: booksData, error } = await query
+        .range(page * pageSize, (page + 1) * pageSize - 1)
+        .order('title');
+      
+      if (error) {
+        throw error;
+      }
+      
+      setBooks(booksData as Book[]);
+    } catch (error) {
+      console.error('Error fetching books:', error);
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchBooks();
-  }, [user, isAdmin, searchTerm, bookType, page]);
-
+  
+  const fetchBookStats = async () => {
+    try {
+      // Fetch total books
+      const { count: total } = await supabase
+        .from('books')
+        .select('*', { count: 'exact', head: true });
+      
+      // Fetch ebooks count
+      const { count: ebooks } = await supabase
+        .from('books')
+        .select('*', { count: 'exact', head: true })
+        .eq('type', 'ebook');
+      
+      // Fetch audiobooks count
+      const { count: audiobooks } = await supabase
+        .from('books')
+        .select('*', { count: 'exact', head: true })
+        .eq('type', 'audiobook');
+        
+      // Fetch total downloads
+      const { count: totalDownloads } = await supabase
+        .from('downloads')
+        .select('*', { count: 'exact', head: true });
+        
+      setBookStats({
+        total: total || 0,
+        ebooks: ebooks || 0,
+        audiobooks: audiobooks || 0,
+        totalDownloads: totalDownloads || 0
+      });
+    } catch (error) {
+      console.error('Error fetching book stats:', error);
+    }
+  };
+  
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setPage(0); // Reset to first page when search changes
+  };
+  
+  const handleTypeFilterChange = (type: 'all' | 'ebook' | 'audiobook') => {
+    setTypeFilter(type);
+    setPage(0); // Reset to first page when filter changes
+  };
+  
+  const handleLevelFilterChange = (level: 'all' | 'beginner' | 'intermediate' | 'advanced') => {
+    setLevelFilter(level);
+    setPage(0); // Reset to first page when filter changes
+  };
+  
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
+  
   const handleDeleteClick = (book: Book) => {
     setBookToDelete(book);
     setDeleteModalOpen(true);
   };
-
+  
   const handleDeleteConfirm = async () => {
     if (!bookToDelete) return;
     
     try {
-      if (!supabase) {
-        throw new Error('Supabase client is not initialized');
-      }
-      
-      const { error: deleteError } = await supabase
+      const { error } = await supabase
         .from('books')
         .delete()
         .eq('id', bookToDelete.id);
       
-      if (deleteError) {
-        throw deleteError;
+      if (error) {
+        throw error;
       }
       
-      // Refresh book list
+      // Refetch books after deletion
       fetchBooks();
-      
-      // Close modal
+      fetchBookStats();
       setDeleteModalOpen(false);
       setBookToDelete(null);
-    } catch (err) {
-      console.error('Error deleting book:', err);
-      setError((err as Error).message);
+    } catch (error) {
+      console.error('Error deleting book:', error);
     }
   };
-
-  const totalPages = Math.ceil(totalCount / limit);
   
-  // Generate pagination buttons
-  const renderPagination = () => {
-    const buttons = [];
-    
-    // Previous button
-    buttons.push(
-      <PageButton 
-        key="prev" 
-        onClick={() => setPage(prev => Math.max(0, prev - 1))}
-        disabled={page === 0}
-      >
-        {t('common.previous')}
-      </PageButton>
-    );
-    
-    // Page numbers
-    const startPage = Math.max(0, page - 2);
-    const endPage = Math.min(totalPages - 1, page + 2);
-    
-    for (let i = startPage; i <= endPage; i++) {
-      buttons.push(
-        <PageButton 
-          key={i} 
-          active={i === page}
-          onClick={() => setPage(i)}
-        >
-          {i + 1}
-        </PageButton>
-      );
-    }
-    
-    // Next button
-    buttons.push(
-      <PageButton 
-        key="next" 
-        onClick={() => setPage(prev => Math.min(totalPages - 1, prev + 1))}
-        disabled={page >= totalPages - 1}
-      >
-        {t('common.next')}
-      </PageButton>
-    );
-    
-    return buttons;
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   if (authLoading || isLoading) {
     return (
-      <Container>
+      <AdminContainer>
         <LoadingState>{t('common.loading')}</LoadingState>
-      </Container>
+      </AdminContainer>
     );
   }
 
@@ -448,140 +487,242 @@ const AdminBooksPage: React.FC = () => {
     return null; // Will redirect to home
   }
 
+  const totalPages = Math.ceil(totalBooks / pageSize);
+
   return (
-    <Container>
-      <Header>
-        <Title>
-          <FiBook /> {t('admin.manageBooks')}
-        </Title>
+    <AdminContainer>
+      <AdminHeader>
+        <AdminTitle>{t('admin.manageBooks')}</AdminTitle>
+        <AdminSubtitle>{t('admin.manageBooksSubtitle')}</AdminSubtitle>
+      </AdminHeader>
+      
+      <StatsRow>
+        <StatsCard>
+          <div className="icon">
+            <FiBook size={20} />
+          </div>
+          <div className="content">
+            <div className="value">{bookStats.total}</div>
+            <div className="label">{t('admin.totalBooks')}</div>
+          </div>
+        </StatsCard>
         
-        <AddButton onClick={() => navigate('/admin/books/add')}>
-          <FiPlus /> {t('admin.addBook')}
-        </AddButton>
-      </Header>
+        <StatsCard>
+          <div className="icon">
+            <FiArchive size={20} />
+          </div>
+          <div className="content">
+            <div className="value">{bookStats.ebooks}</div>
+            <div className="label">{t('books.ebook', 'E-Books')}</div>
+          </div>
+        </StatsCard>
+        
+        <StatsCard>
+          <div className="icon">
+            <FiActivity size={20} />
+          </div>
+          <div className="content">
+            <div className="value">{bookStats.audiobooks}</div>
+            <div className="label">{t('books.audiobook', 'Audiobooks')}</div>
+          </div>
+        </StatsCard>
+        
+        <StatsCard>
+          <div className="icon">
+            <FiDownload size={20} />
+          </div>
+          <div className="content">
+            <div className="value">{bookStats.totalDownloads}</div>
+            <div className="label">{t('admin.totalDownloads')}</div>
+          </div>
+        </StatsCard>
+      </StatsRow>
       
-      {error && (
-        <Alert>
-          <FiAlertCircle />
-          {error}
-        </Alert>
-      )}
-      
-      <Controls>
+      <ControlsContainer>
         <SearchBar>
-          <FiSearch style={{ color: '#666', marginRight: '0.5rem' }} />
-          <SearchInput
+          <input
             type="text"
             placeholder={t('common.search')}
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setPage(0); // Reset to first page on search
-            }}
+            onChange={handleSearch}
           />
+          <IconButton aria-label={t('common.search')}>
+            <FiSearch />
+          </IconButton>
         </SearchBar>
         
         <FilterDropdown
-          value={bookType}
-          onChange={(e) => {
-            setBookType(e.target.value);
-            setPage(0); // Reset to first page on filter change
-          }}
+          value={typeFilter}
+          onChange={(e) => handleTypeFilterChange(e.target.value as 'all' | 'ebook' | 'audiobook')}
         >
-          <option value="">{t('books.allTypes')}</option>
-          <option value="audiobook">{t('books.audiobook')}</option>
+          <option value="all">{t('admin.allTypes')}</option>
           <option value="ebook">{t('books.ebook')}</option>
+          <option value="audiobook">{t('books.audiobook')}</option>
         </FilterDropdown>
-      </Controls>
+        
+        <FilterDropdown
+          value={levelFilter}
+          onChange={(e) => handleLevelFilterChange(e.target.value as 'all' | 'beginner' | 'intermediate' | 'advanced')}
+        >
+          <option value="all">{t('admin.allLevels')}</option>
+          <option value="beginner">{t('levels.beginner')}</option>
+          <option value="intermediate">{t('levels.intermediate')}</option>
+          <option value="advanced">{t('levels.advanced')}</option>
+        </FilterDropdown>
+        
+        <ActionButton onClick={() => navigate('/admin/books/add')}>
+          <FiPlus /> {t('admin.addBook')}
+        </ActionButton>
+      </ControlsContainer>
       
-      {books.length > 0 ? (
-        <>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHeader style={{ width: '60px' }}></TableHeader>
-                <TableHeader>{t('books.title')}</TableHeader>
-                <TableHeader>{t('books.author')}</TableHeader>
-                <TableHeader>{t('books.genre')}</TableHeader>
-                <TableHeader>{t('books.type')}</TableHeader>
-                <TableHeader style={{ width: '120px' }}>{t('common.actions')}</TableHeader>
-              </TableRow>
-            </TableHead>
-            <tbody>
-              {books.map((book) => (
-                <TableRow key={book.id}>
-                  <TableCell>
-                    <BookCover 
-                      src={book.cover_url || 'https://via.placeholder.com/40x60?text=No+Cover'} 
-                      alt={book.title}
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = 'https://via.placeholder.com/40x60?text=No+Cover';
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>{book.title}</TableCell>
-                  <TableCell>{book.author}</TableCell>
-                  <TableCell>{book.genre}</TableCell>
-                  <TableCell>
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableHeader>{t('books.title')}</TableHeader>
+              <TableHeader>{t('books.author')}</TableHeader>
+              <TableHeader>{t('books.type')}</TableHeader>
+              <TableHeader>{t('books.level')}</TableHeader>
+              <TableHeader>{t('books.publishedAt')}</TableHeader>
+              <TableHeader>{t('books.downloadCount')}</TableHeader>
+              <TableHeader>{t('common.actions')}</TableHeader>
+            </TableRow>
+          </TableHead>
+          <tbody>
+            {books.map((book) => (
+              <TableRow key={book.id}>
+                <TableCell>{book.title}</TableCell>
+                <TableCell>{book.author}</TableCell>
+                <TableCell>
+                  <Chip variant={book.type}>
                     {book.type === 'audiobook' 
                       ? t('books.audiobook') 
                       : t('books.ebook')}
-                  </TableCell>
-                  <TableCell>
-                    <ActionButtons>
-                      <EditButton 
-                        title={t('common.edit')}
-                        onClick={() => navigate(`/admin/books/edit/${book.id}`)}
-                      >
-                        <FiEdit />
-                      </EditButton>
-                      <DeleteButton 
-                        title={t('common.delete')}
-                        onClick={() => handleDeleteClick(book)}
-                      >
-                        <FiTrash2 />
-                      </DeleteButton>
-                    </ActionButtons>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </tbody>
-          </Table>
+                  </Chip>
+                </TableCell>
+                <TableCell>
+                  <Chip variant={book.level}>
+                    {t(`levels.${book.level}`)}
+                  </Chip>
+                </TableCell>
+                <TableCell>{formatDate(book.published_at)}</TableCell>
+                <TableCell>{book.download_count || 0}</TableCell>
+                <TableCell>
+                  <ActionButtons>
+                    <IconButton 
+                      className="view"
+                      onClick={() => navigate(`/books/${book.id}`)} 
+                      aria-label={t('common.view')}
+                    >
+                      <FiEye size={16} />
+                    </IconButton>
+                    <IconButton 
+                      className="edit"
+                      onClick={() => navigate(`/admin/books/edit/${book.id}`)} 
+                      aria-label={t('common.edit')}
+                    >
+                      <FiEdit size={16} />
+                    </IconButton>
+                    <IconButton 
+                      className="delete"
+                      onClick={() => handleDeleteClick(book)} 
+                      aria-label={t('common.delete')}
+                    >
+                      <FiTrash2 size={16} />
+                    </IconButton>
+                  </ActionButtons>
+                </TableCell>
+              </TableRow>
+            ))}
+            
+            {books.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} style={{ textAlign: 'center' }}>
+                  {searchTerm || typeFilter !== 'all' || levelFilter !== 'all'
+                    ? t('admin.noSearchResults')
+                    : t('admin.noBooks')}
+                </TableCell>
+              </TableRow>
+            )}
+          </tbody>
+        </Table>
+      </TableContainer>
+      
+      {totalPages > 1 && (
+        <Pagination>
+          <PageInfo>
+            {t('admin.showingResults', {
+              from: page * pageSize + 1,
+              to: Math.min((page + 1) * pageSize, totalBooks),
+              total: totalBooks
+            })}
+          </PageInfo>
           
-          {totalPages > 1 && (
-            <Pagination>
-              {renderPagination()}
-            </Pagination>
-          )}
-        </>
-      ) : (
-        <EmptyState>
-          {searchTerm || bookType 
-            ? t('admin.noMatchingBooks') 
-            : t('admin.noBooks')}
-        </EmptyState>
+          <PageButtons>
+            <PageButton 
+              onClick={() => handlePageChange(page - 1)} 
+              disabled={page === 0}
+              aria-label={t('pagination.previous')}
+            >
+              &laquo;
+            </PageButton>
+            
+            {[...Array(Math.min(5, totalPages))].map((_, i) => {
+              // Show 5 pages around current page
+              let pageNum = 0;
+              if (totalPages <= 5) {
+                pageNum = i;
+              } else if (page < 3) {
+                pageNum = i;
+              } else if (page > totalPages - 4) {
+                pageNum = totalPages - 5 + i;
+              } else {
+                pageNum = page - 2 + i;
+              }
+              
+              return (
+                <PageButton 
+                  key={pageNum}
+                  active={pageNum === page}
+                  onClick={() => handlePageChange(pageNum)}
+                >
+                  {pageNum + 1}
+                </PageButton>
+              );
+            })}
+            
+            <PageButton 
+              onClick={() => handlePageChange(page + 1)} 
+              disabled={page === totalPages - 1}
+              aria-label={t('pagination.next')}
+            >
+              &raquo;
+            </PageButton>
+          </PageButtons>
+        </Pagination>
       )}
       
       {deleteModalOpen && bookToDelete && (
-        <Modal>
+        <ConfirmationModal>
           <ModalContent>
-            <ModalTitle>{t('admin.confirmDelete')}</ModalTitle>
-            <ModalText>
-              {t('admin.deleteBookConfirmation', { title: bookToDelete.title })}
-            </ModalText>
+            <h3>{t('admin.deleteBookConfirmTitle')}</h3>
+            <p>
+              {t('admin.deleteBookConfirmMessage', {
+                title: bookToDelete.title
+              })}
+            </p>
             <ModalButtons>
               <CancelButton onClick={() => setDeleteModalOpen(false)}>
                 {t('common.cancel')}
               </CancelButton>
-              <ConfirmButton onClick={handleDeleteConfirm}>
+              <DeleteButton onClick={handleDeleteConfirm}>
                 {t('common.delete')}
-              </ConfirmButton>
+              </DeleteButton>
             </ModalButtons>
           </ModalContent>
-        </Modal>
+        </ConfirmationModal>
       )}
-    </Container>
+    </AdminContainer>
   );
 };
 

@@ -6,88 +6,71 @@ import { FiUsers, FiEdit, FiCheck, FiX, FiSearch } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import { Profile } from '../../types/supabase';
+import {
+  AdminContainer,
+  AdminHeader,
+  AdminTitle,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeader,
+  TableCell,
+  LoadingState
+} from '../../styles/adminStyles';
 
-const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  color: #2c3e50;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
+// Additional styled components specific to this page
 const SearchBar = styled.div`
   display: flex;
-  align-items: center;
-  background-color: #f5f5f5;
-  border-radius: 4px;
-  padding: 0 1rem;
-  width: 300px;
-`;
+  gap: 0.5rem;
+  flex: 1;
+  max-width: 500px;
 
-const SearchInput = styled.input`
-  border: none;
-  background: transparent;
-  padding: 0.75rem 0;
-  outline: none;
-  font-size: 1rem;
-  width: 100%;
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-`;
-
-const TableHead = styled.thead`
-  background-color: #f8f9fa;
-`;
-
-const TableRow = styled.tr`
-  &:not(:last-child) {
-    border-bottom: 1px solid #eee;
+  input {
+    flex: 1;
+    padding: 0.625rem 1rem;
+    border: 1px solid ${props => props.theme.colors.border};
+    border-radius: ${props => props.theme.borderRadius.md};
+    font-size: ${props => props.theme.typography.fontSize.base};
+    color: ${props => props.theme.colors.text};
+    background-color: ${props => props.theme.colors.card};
+    transition: all 0.2s;
+    
+    &:focus {
+      outline: none;
+      border-color: ${props => props.theme.colors.primary};
+      box-shadow: 0 0 0 2px rgba(63, 118, 156, 0.1);
+    }
   }
 `;
 
-const TableHeader = styled.th`
-  text-align: left;
-  padding: 1rem;
-  font-weight: 600;
-  color: #2c3e50;
-`;
-
-const TableCell = styled.td`
-  padding: 1rem;
-  color: #333;
-`;
-
-const Badge = styled.span<{ type: 'admin' | 'user' }>`
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  background-color: ${({ type }) => (type === 'admin' ? '#3498db' : '#95a5a6')};
-  color: white;
+const Badge = styled.span<{ variant?: 'admin' | 'user' }>`
+  padding: 0.25rem 0.75rem;
+  border-radius: ${props => props.theme.borderRadius.full};
+  font-size: ${props => props.theme.typography.fontSize.xs};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  display: inline-flex;
+  align-items: center;
+  
+  ${props => {
+    switch(props.variant) {
+      case 'admin':
+        return `
+          background-color: rgba(63, 118, 156, 0.1);
+          color: ${props.theme.colors.primary};
+        `;
+      case 'user':
+        return `
+          background-color: rgba(149, 165, 166, 0.1);
+          color: #7f8c8d;
+        `;
+      default:
+        return `
+          background-color: ${props.theme.colors.backgroundAlt};
+          color: ${props.theme.colors.text};
+        `;
+    }
+  }}
 `;
 
 const ActionButtons = styled.div`
@@ -95,140 +78,180 @@ const ActionButtons = styled.div`
   gap: 0.5rem;
 `;
 
-const Button = styled.button`
+const IconButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-`;
-
-const EditButton = styled(Button)`
-  background-color: #3498db;
-  color: white;
-  border: none;
   width: 36px;
   height: 36px;
-
+  border-radius: ${props => props.theme.borderRadius.full};
+  background-color: transparent;
+  border: 1px solid ${props => props.theme.colors.border};
+  color: ${props => props.theme.colors.textDim};
+  cursor: pointer;
+  transition: all 0.2s;
+  
   &:hover {
-    background-color: #2980b9;
+    background-color: ${props => props.theme.colors.backgroundAlt};
+    color: ${props => props.theme.colors.primary};
+    transform: translateY(-2px);
+  }
+  
+  &.edit:hover {
+    color: ${props => props.theme.colors.primary};
+    border-color: ${props => props.theme.colors.primary};
+    background-color: rgba(63, 118, 156, 0.05);
+  }
+  
+  &.save:hover {
+    color: ${props => props.theme.colors.success};
+    border-color: ${props => props.theme.colors.success};
+    background-color: rgba(40, 167, 69, 0.05);
+  }
+  
+  &.cancel:hover {
+    color: ${props => props.theme.colors.danger};
+    border-color: ${props => props.theme.colors.danger};
+    background-color: rgba(220, 53, 69, 0.05);
   }
 `;
 
-const ToggleAdminButton = styled(Button)<{ isAdmin: boolean }>`
-  background-color: ${({ isAdmin }) => (isAdmin ? '#e74c3c' : '#2ecc71')};
-  color: white;
-  border: none;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.8rem;
+const ToggleAdminButton = styled.button<{ isAdmin: boolean }>`
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: none;
+  background-color: ${props => props.isAdmin 
+    ? props.theme.colors.danger 
+    : props.theme.colors.success};
+  color: white;
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  cursor: pointer;
+  transition: all 0.2s;
+  
   &:hover {
-    background-color: ${({ isAdmin }) => (isAdmin ? '#c0392b' : '#27ae60')};
+    transform: translateY(-2px);
+    opacity: 0.9;
   }
 `;
 
 const QuotaInput = styled.input`
-  width: 60px;
+  width: 70px;
   padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background-color: ${props => props.theme.colors.card};
+  color: ${props => props.theme.colors.text};
   text-align: center;
-`;
-
-const SaveButton = styled(Button)`
-  background-color: #2ecc71;
-  color: white;
-  border: none;
-  width: 36px;
-  height: 36px;
-
-  &:hover {
-    background-color: #27ae60;
-  }
-`;
-
-const CancelButton = styled(Button)`
-  background-color: #e74c3c;
-  color: white;
-  border: none;
-  width: 36px;
-  height: 36px;
-
-  &:hover {
-    background-color: #c0392b;
+  
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 2px rgba(63, 118, 156, 0.1);
   }
 `;
 
 const Pagination = styled.div`
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+`;
+
+const PageInfo = styled.div`
+  color: ${props => props.theme.colors.textDim};
+  font-size: ${props => props.theme.typography.fontSize.sm};
+`;
+
+const PageButtons = styled.div`
+  display: flex;
   gap: 0.5rem;
-  margin-top: 2rem;
 `;
 
 const PageButton = styled.button<{ active?: boolean }>`
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: ${({ active }) => (active ? '#3498db' : 'white')};
-  color: ${({ active }) => (active ? 'white' : '#333')};
+  min-width: 36px;
+  height: 36px;
+  border-radius: ${props => props.theme.borderRadius.md};
+  border: 1px solid ${props => props.active 
+    ? props.theme.colors.primary 
+    : props.theme.colors.border};
+  background-color: ${props => props.active 
+    ? props.theme.colors.primary 
+    : 'transparent'};
+  color: ${props => props.active 
+    ? 'white' 
+    : props.theme.colors.text};
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-
-  &:hover {
-    background-color: ${({ active }) => (active ? '#2980b9' : '#f5f5f5')};
+  
+  &:hover:not([disabled]) {
+    background-color: ${props => props.active 
+      ? props.theme.colors.primaryDark 
+      : props.theme.colors.backgroundAlt};
+    transform: translateY(-2px);
   }
-
+  
   &:disabled {
-    background-color: #f5f5f5;
-    color: #999;
+    opacity: 0.5;
     cursor: not-allowed;
   }
-`;
-
-const LoadingState = styled.div`
-  text-align: center;
-  padding: 3rem;
-  color: #666;
-`;
-
-const EmptyState = styled.div`
-  text-align: center;
-  padding: 3rem;
-  color: #666;
-  background-color: #f8f9fa;
-  border-radius: 8px;
 `;
 
 const StatusMessage = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: #f8d7da;
-  color: #721c24;
+  background-color: rgba(220, 53, 69, 0.1);
+  color: ${props => props.theme.colors.danger};
   padding: 1rem;
-  border-radius: 4px;
+  border-radius: ${props => props.theme.borderRadius.md};
   margin-bottom: 1.5rem;
 `;
 
-const Success = styled.div`
+const SuccessMessage = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: #d4edda;
-  color: #155724;
+  background-color: rgba(40, 167, 69, 0.1);
+  color: ${props => props.theme.colors.success};
   padding: 1rem;
-  border-radius: 4px;
+  border-radius: ${props => props.theme.borderRadius.md};
   margin-bottom: 1.5rem;
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 3rem;
+  color: ${props => props.theme.colors.textDim};
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  margin-top: 1.5rem;
+`;
+
+const SearchInput = styled.input`
+  flex: 1;
+  padding: 0.625rem 1rem;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: ${props => props.theme.typography.fontSize.base};
+  color: ${props => props.theme.colors.text};
+  background-color: ${props => props.theme.colors.card};
+  transition: all 0.2s;
+  
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 2px rgba(63, 118, 156, 0.1);
+  }
 `;
 
 interface UserWithEmail extends Profile {
   email?: string;
-  monthly_request_quota: number;
 }
 
 interface EditingUser {
@@ -259,6 +282,12 @@ const AdminUsersPage: React.FC = () => {
     }
   }, [user, isAdmin, authLoading, navigate]);
 
+  useEffect(() => {
+    if (user && isAdmin) {
+      fetchUsers();
+    }
+  }, [user, isAdmin, searchTerm, page]);
+
   const fetchUsers = async () => {
     if (!user || !isAdmin) return;
     
@@ -274,16 +303,16 @@ const AdminUsersPage: React.FC = () => {
         .from('profiles')
         .select('*', { count: 'exact' });
       
-      // Apply search filter
+      // Apply filters
       if (searchTerm) {
-        query = query.ilike('username', `%${searchTerm}%`);
+        query = query.or(`username.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
       }
       
       // Apply pagination
       const from = page * limit;
       const to = from + limit - 1;
       
-      const { data: profilesData, error: fetchError, count } = await query
+      const { data, error: fetchError, count } = await query
         .order('created_at', { ascending: false })
         .range(from, to);
       
@@ -291,32 +320,7 @@ const AdminUsersPage: React.FC = () => {
         throw fetchError;
       }
       
-      // Get emails for each user
-      const usersWithEmail: UserWithEmail[] = [];
-      
-      if (profilesData) {
-        for (const profile of profilesData) {
-          // Get user email from auth.users
-          if (!supabase) {
-            throw new Error('Supabase client is not initialized');
-          }
-          
-          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
-            profile.id
-          );
-          
-          if (!userError && userData) {
-            usersWithEmail.push({
-              ...profile,
-              email: userData.user.email
-            });
-          } else {
-            usersWithEmail.push(profile);
-          }
-        }
-      }
-      
-      setUsers(usersWithEmail);
+      setUsers(data || []);
       setTotalCount(count || 0);
     } catch (err) {
       console.error('Error fetching users:', err);
@@ -325,13 +329,12 @@ const AdminUsersPage: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchUsers();
-  }, [user, isAdmin, searchTerm, page]);
-
+  
   const handleToggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
     try {
+      setError(null);
+      setSuccess(null);
+      
       if (!supabase) {
         throw new Error('Supabase client is not initialized');
       }
@@ -345,73 +348,55 @@ const AdminUsersPage: React.FC = () => {
         throw updateError;
       }
       
-      // Update local state
-      setUsers(prev => 
-        prev.map(u => 
-          u.id === userId ? { ...u, is_admin: !currentIsAdmin } : u
-        )
-      );
+      setSuccess(currentIsAdmin 
+        ? t('admin.adminRightsRemoved') 
+        : t('admin.adminRightsGranted'));
       
-      setSuccess(
-        currentIsAdmin 
-          ? t('admin.adminRightsRemoved') 
-          : t('admin.adminRightsGranted')
-      );
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000);
+      // Refresh user list
+      fetchUsers();
     } catch (err) {
-      console.error('Error toggling admin status:', err);
+      console.error('Error updating admin status:', err);
       setError((err as Error).message);
     }
   };
-
+  
   const handleEditQuota = (userId: string, currentQuota: number, monthlyRequestQuota: number) => {
-    setEditingUser({
-      id: userId,
-      daily_quota: currentQuota,
-      monthly_request_quota: monthlyRequestQuota
-    });
+    setEditingUser({ id: userId, daily_quota: currentQuota, monthly_request_quota: monthlyRequestQuota });
   };
-
+  
   const handleSaveQuota = async () => {
     if (!editingUser) return;
     
     try {
+      setError(null);
+      setSuccess(null);
+      
       if (!supabase) {
         throw new Error('Supabase client is not initialized');
       }
       
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ daily_quota: editingUser.daily_quota, monthly_request_quota: editingUser.monthly_request_quota })
+        .update({ 
+          daily_quota: editingUser.daily_quota,
+          monthly_request_quota: editingUser.monthly_request_quota 
+        })
         .eq('id', editingUser.id);
       
       if (updateError) {
         throw updateError;
       }
       
-      // Update local state
-      setUsers(prev => 
-        prev.map(u => 
-          u.id === editingUser.id ? { ...u, daily_quota: editingUser.daily_quota, monthly_request_quota: editingUser.monthly_request_quota } : u
-        )
-      );
-      
       setSuccess(t('admin.quotaUpdated'));
       
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000);
-      
-      // Exit edit mode
+      // Refresh user list and reset editing state
+      fetchUsers();
       setEditingUser(null);
     } catch (err) {
       console.error('Error updating quota:', err);
       setError((err as Error).message);
     }
   };
-
-  const totalPages = Math.ceil(totalCount / limit);
   
   // Generate pagination buttons
   const renderPagination = () => {
@@ -424,11 +409,12 @@ const AdminUsersPage: React.FC = () => {
         onClick={() => setPage(prev => Math.max(0, prev - 1))}
         disabled={page === 0}
       >
-        {t('common.previous')}
+        &laquo;
       </PageButton>
     );
     
     // Page numbers
+    const totalPages = Math.ceil(totalCount / limit);
     const startPage = Math.max(0, page - 2);
     const endPage = Math.min(totalPages - 1, page + 2);
     
@@ -451,7 +437,7 @@ const AdminUsersPage: React.FC = () => {
         onClick={() => setPage(prev => Math.min(totalPages - 1, prev + 1))}
         disabled={page >= totalPages - 1}
       >
-        {t('common.next')}
+        &raquo;
       </PageButton>
     );
     
@@ -460,9 +446,9 @@ const AdminUsersPage: React.FC = () => {
 
   if (authLoading || isLoading) {
     return (
-      <Container>
+      <AdminContainer>
         <LoadingState>{t('common.loading')}</LoadingState>
-      </Container>
+      </AdminContainer>
     );
   }
 
@@ -470,26 +456,30 @@ const AdminUsersPage: React.FC = () => {
     return null; // Will redirect to home
   }
 
+  const totalPages = Math.ceil(totalCount / limit);
+
   return (
-    <Container>
-      <Header>
-        <Title>
-          <FiUsers /> {t('admin.manageUsers')}
-        </Title>
+    <AdminContainer>
+      <AdminHeader>
+        <AdminTitle>
+          <FiUsers style={{ marginRight: '0.5rem' }} /> {t('admin.manageUsers')}
+        </AdminTitle>
         
         <SearchBar>
-          <FiSearch style={{ color: '#666', marginRight: '0.5rem' }} />
           <SearchInput
             type="text"
             placeholder={t('common.search')}
             value={searchTerm}
-            onChange={(e) => {
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               setSearchTerm(e.target.value);
               setPage(0); // Reset to first page on search
             }}
           />
+          <IconButton aria-label={t('common.search')}>
+            <FiSearch />
+          </IconButton>
         </SearchBar>
-      </Header>
+      </AdminHeader>
       
       {error && (
         <StatusMessage>
@@ -498,124 +488,133 @@ const AdminUsersPage: React.FC = () => {
       )}
       
       {success && (
-        <Success>
-          <FiCheck />
-          {success}
-        </Success>
+        <SuccessMessage>
+          <FiCheck /> {success}
+        </SuccessMessage>
       )}
       
       {users.length > 0 ? (
         <>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHeader>{t('auth.username')}</TableHeader>
-                <TableHeader>{t('auth.email')}</TableHeader>
-                <TableHeader>{t('admin.role')}</TableHeader>
-                <TableHeader>{t('profile.quota')}</TableHeader>
-                <TableHeader>{t('profile.requestQuota', 'Monthly Requests')}</TableHeader>
-                <TableHeader>{t('common.actions')}</TableHeader>
-              </TableRow>
-            </TableHead>
-            <tbody>
-              {users.map((userProfile) => (
-                <TableRow key={userProfile.id}>
-                  <TableCell>{userProfile.username}</TableCell>
-                  <TableCell>{userProfile.email || '-'}</TableCell>
-                  <TableCell>
-                    <Badge type={userProfile.is_admin ? 'admin' : 'user'}>
-                      {userProfile.is_admin ? t('admin.adminRole') : t('admin.userRole')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {editingUser && editingUser.id === userProfile.id ? (
-                      <QuotaInput
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={editingUser.daily_quota}
-                        onChange={(e) => 
-                          setEditingUser({
-                            ...editingUser,
-                            daily_quota: parseInt(e.target.value) || 0
-                          })
-                        }
-                      />
-                    ) : (
-                      userProfile.daily_quota
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingUser && editingUser.id === userProfile.id ? (
-                      <QuotaInput
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={editingUser.monthly_request_quota}
-                        onChange={(e) => 
-                          setEditingUser({
-                            ...editingUser,
-                            monthly_request_quota: parseInt(e.target.value) || 0
-                          })
-                        }
-                      />
-                    ) : (
-                      userProfile.monthly_request_quota
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <ActionButtons>
-                      {editingUser && editingUser.id === userProfile.id ? (
-                        <>
-                          <SaveButton 
-                            title={t('common.save')}
-                            onClick={handleSaveQuota}
-                          >
-                            <FiCheck />
-                          </SaveButton>
-                          <CancelButton 
-                            title={t('common.cancel')}
-                            onClick={() => setEditingUser(null)}
-                          >
-                            <FiX />
-                          </CancelButton>
-                        </>
-                      ) : (
-                        <EditButton 
-                          title={t('admin.editQuota')}
-                          onClick={() => handleEditQuota(userProfile.id, userProfile.daily_quota, userProfile.monthly_request_quota)}
-                        >
-                          <FiEdit />
-                        </EditButton>
-                      )}
-                      
-                      {/* Don't allow toggling admin status for current user */}
-                      {userProfile.id !== user.id && (
-                        <ToggleAdminButton 
-                          isAdmin={userProfile.is_admin}
-                          onClick={() => handleToggleAdmin(userProfile.id, userProfile.is_admin)}
-                        >
-                          {userProfile.is_admin ? (
-                            <>
-                              <FiX /> {t('admin.removeAdmin')}
-                            </>
-                          ) : (
-                            <>
-                              <FiCheck /> {t('admin.makeAdmin')}
-                            </>
-                          )}
-                        </ToggleAdminButton>
-                      )}
-                    </ActionButtons>
-                  </TableCell>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeader>{t('auth.username')}</TableHeader>
+                  <TableHeader>{t('auth.email')}</TableHeader>
+                  <TableHeader>{t('admin.role')}</TableHeader>
+                  <TableHeader>{t('profile.quota')}</TableHeader>
+                  <TableHeader>{t('profile.requestQuota', 'Monthly Requests')}</TableHeader>
+                  <TableHeader>{t('common.actions')}</TableHeader>
                 </TableRow>
-              ))}
-            </tbody>
-          </Table>
+              </TableHead>
+              <tbody>
+                {users.map((userProfile) => (
+                  <TableRow key={userProfile.id}>
+                    <TableCell>{userProfile.username}</TableCell>
+                    <TableCell>{userProfile.email || '-'}</TableCell>
+                    <TableCell>
+                      <Badge variant={userProfile.is_admin ? 'admin' : 'user'}>
+                        {userProfile.is_admin ? t('admin.adminRole') : t('admin.userRole')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {editingUser && editingUser.id === userProfile.id ? (
+                        <QuotaInput
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={editingUser.daily_quota}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                            setEditingUser({
+                              ...editingUser,
+                              daily_quota: parseInt(e.target.value) || 0
+                            })
+                          }
+                        />
+                      ) : (
+                        userProfile.daily_quota
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingUser && editingUser.id === userProfile.id ? (
+                        <QuotaInput
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={editingUser.monthly_request_quota}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                            setEditingUser({
+                              ...editingUser,
+                              monthly_request_quota: parseInt(e.target.value) || 0
+                            })
+                          }
+                        />
+                      ) : (
+                        userProfile.monthly_request_quota
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <ActionButtons>
+                        {editingUser && editingUser.id === userProfile.id ? (
+                          <>
+                            <IconButton 
+                              className="save"
+                              title={t('common.save')}
+                              onClick={handleSaveQuota}
+                            >
+                              <FiCheck />
+                            </IconButton>
+                            <IconButton 
+                              className="cancel"
+                              title={t('common.cancel')}
+                              onClick={() => setEditingUser(null)}
+                            >
+                              <FiX />
+                            </IconButton>
+                          </>
+                        ) : (
+                          <IconButton 
+                            className="edit"
+                            title={t('admin.editQuota')}
+                            onClick={() => handleEditQuota(userProfile.id, userProfile.daily_quota, userProfile.monthly_request_quota)}
+                          >
+                            <FiEdit />
+                          </IconButton>
+                        )}
+                        
+                        {/* Don't allow toggling admin status for current user */}
+                        {userProfile.id !== user.id && (
+                          <ToggleAdminButton 
+                            isAdmin={userProfile.is_admin}
+                            onClick={() => handleToggleAdmin(userProfile.id, userProfile.is_admin)}
+                          >
+                            {userProfile.is_admin ? (
+                              <>
+                                <FiX /> {t('admin.removeAdmin')}
+                              </>
+                            ) : (
+                              <>
+                                <FiCheck /> {t('admin.makeAdmin')}
+                              </>
+                            )}
+                          </ToggleAdminButton>
+                        )}
+                      </ActionButtons>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </tbody>
+            </Table>
+          </TableContainer>
           
           {totalPages > 1 && (
             <Pagination>
-              {renderPagination()}
+              <PageInfo>
+                {t('common.showing')} {page * limit + 1} - {Math.min((page + 1) * limit, totalCount)} {t('common.of')} {totalCount} {t('common.results')}
+              </PageInfo>
+              <PageButtons>
+                {renderPagination()}
+              </PageButtons>
             </Pagination>
           )}
         </>
@@ -626,7 +625,7 @@ const AdminUsersPage: React.FC = () => {
             : t('admin.noUsers')}
         </EmptyState>
       )}
-    </Container>
+    </AdminContainer>
   );
 };
 
