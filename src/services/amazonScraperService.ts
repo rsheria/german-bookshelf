@@ -171,10 +171,47 @@ export const fetchBookDataFromAmazon = async (amazonUrl: string): Promise<Amazon
 const extractDataFromHtml = (html: string, asin: string, type: 'audiobook' | 'ebook'): AmazonBookData => {
   // Use regular expressions to extract information
   // This is a simplified approach, in production you should use a proper HTML parser
-  const title = extractMetaData(html, 'og:title') || extractHtmlData(html, '#productTitle');
+  
+  // Enhanced title extraction with multiple patterns
+  let title = extractMetaData(html, 'og:title') || 
+             extractHtmlData(html, '#productTitle') || 
+             extractHtmlData(html, '#ebooksProductTitle') || 
+             extractHtmlData(html, '#audibleProductTitle');
+  
+  // Clean up title - remove "Amazon.com: ", " - Kindle edition by...", etc.
+  if (title) {
+    const cleanupPatterns = [
+      /Amazon\.com: /i,
+      /Amazon\.de: /i,
+      / - Kindle edition by.*/i,
+      / \(.*?\)$/i,
+      / \[.*?\]$/i,
+      / Kindle$/i,
+      / Audible$/i,
+      / eBook$/i
+    ];
+    
+    for (const pattern of cleanupPatterns) {
+      title = title.replace(pattern, '');
+    }
+    title = title.trim();
+  }
+  
+  // Enhanced author extraction with more patterns
   const author = extractAuthor(html);
-  const description = extractMetaData(html, 'og:description') || extractHtmlData(html, '#bookDescription_feature_div');
-  const coverUrl = extractMetaData(html, 'og:image') || extractHtmlData(html, '#imgBlkFront', 'src');
+  
+  // Enhanced description extraction with multiple patterns
+  const description = extractMetaData(html, 'og:description') || 
+                     extractBookDescription(html) ||
+                     extractHtmlData(html, '#bookDescription_feature_div') ||
+                     extractHtmlData(html, '#productDescription') ||
+                     extractHtmlData(html, '#editorialReviews');
+  
+  const coverUrl = extractMetaData(html, 'og:image') || 
+                  extractHtmlData(html, '#imgBlkFront', 'src') ||
+                  extractHtmlData(html, '#ebooksImgBlkFront', 'src') ||
+                  extractHtmlData(html, '#audibleImgBlkFront', 'src');
+  
   const language = extractLanguage(html) || 'German';
   const genre = extractGenre(html) || 'Fiction';
 
@@ -200,6 +237,85 @@ const extractDataFromHtml = (html: string, asin: string, type: 'audiobook' | 'eb
   };
 };
 
+// Specialized function to extract book description (with enhanced patterns)
+const extractBookDescription = (html: string): string | null => {
+  // First try with standard book description divs
+  const descriptionPatterns = [
+    /<div id="bookDescription_feature_div"[^>]*?>(.*?)<\/div>/is,
+    /<div id="productDescription"[^>]*?>(.*?)<\/div>/is,
+    /<div id="editorialReviews"[^>]*?>(.*?)<\/div>/is,
+    /<noscript>[^<]*?<div>(.*?)<\/div>/is,
+    /<div class="a-expander-content[^"]*?"[^>]*?>(.*?)<\/div>/is
+  ];
+  
+  for (const pattern of descriptionPatterns) {
+    const match = html.match(pattern);
+    if (match && match[1]) {
+      return match[1].replace(/<[^>]*>/g, ' ').trim();
+    }
+  }
+  
+  return null;
+};
+
+// Helper function to extract author information
+const extractAuthor = (html: string): string | null => {
+  // Try with meta tags first (most reliable)
+  const authorMeta = html.match(/<meta\s+name=["']author["']\s+content=["'](.*?)["']/i);
+  if (authorMeta && authorMeta[1]) {
+    return authorMeta[1].trim();
+  }
+  
+  // Look for common author patterns
+  const authorPatterns = [
+    // Byline pattern
+    /<a id="bylineInfo"[^>]*?>(.*?)<\/a>/i,
+    // Contributor link 
+    /<a class="a-link-normal contributorNameID"[^>]*?>(.*?)<\/a>/i,
+    // Author span
+    /<span class="author[^"]*?"[^>]*?>(.*?)<\/span>/i,
+    // Author with link
+    /by\s+<a[^>]*?>(.*?)<\/a>/i,
+    // Author with span
+    /by\s+<span[^>]*?>(.*?)<\/span>/i,
+    // Kindle header author
+    /<span[^>]*?class="[^"]*?kindle-header[^"]*?"[^>]*?>.*?by\s+(.*?)<\/span>/i,
+    // Simple text pattern
+    /Author:\s*([^<\n]+)/i
+  ];
+
+  for (const pattern of authorPatterns) {
+    const match = html.match(pattern);
+    if (match && match[1]) {
+      // Clean up HTML tags
+      return match[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+  }
+  
+  // Try to find it in broader content
+  const authorContainers = [
+    /<div id="bylineInfo"[^>]*?>(.*?)<\/div>/is,
+    /<div id="authorByline"[^>]*?>(.*?)<\/div>/is,
+    /<div id="contributorByline"[^>]*?>(.*?)<\/div>/is
+  ];
+  
+  for (const container of authorContainers) {
+    const containerMatch = html.match(container);
+    if (containerMatch && containerMatch[1]) {
+      const content = containerMatch[1];
+      // Detect strings like "by Author Name" or "Author: Author Name"
+      const authorMatch = content.match(/by\s+([^<\n]+?)(?:<|\n|$)/i) || 
+                         content.match(/Author[s]?[:\.]\s+([^<\n]+?)(?:<|\n|$)/i);
+      
+      if (authorMatch && authorMatch[1]) {
+        return authorMatch[1].trim();
+      }
+    }
+  }
+
+  return null;
+};
+
 // Helper function to extract metadata from meta tags
 const extractMetaData = (html: string, property: string): string | null => {
   const regex = new RegExp(`<meta\\s+property=["']${property}["']\\s+content=["'](.*?)["']`, 'i');
@@ -221,26 +337,6 @@ const extractHtmlData = (html: string, selector: string, attribute: string = '')
   }
   
   return match[1] ? match[1].trim() : null;
-};
-
-// Helper function to extract author information
-const extractAuthor = (html: string): string | null => {
-  // Try different patterns for author extraction
-  const patterns = [
-    /<span class="author[^>]*?>(.*?)<\/span>/i,
-    /<a id="bylineInfo"[^>]*?>(.*?)<\/a>/i,
-    /<a class="a-link-normal contributorNameID"[^>]*?>(.*?)<\/a>/i
-  ];
-
-  for (const pattern of patterns) {
-    const match = html.match(pattern);
-    if (match && match[1]) {
-      // Clean up HTML tags
-      return match[1].replace(/<[^>]*>/g, '').trim();
-    }
-  }
-
-  return null;
 };
 
 // Helper function to extract language information
