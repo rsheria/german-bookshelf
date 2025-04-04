@@ -378,7 +378,9 @@ const AdminUsersPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
   const [users, setUsers] = useState<UserWithEmail[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserWithEmail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -488,6 +490,7 @@ const AdminUsersPage: React.FC = () => {
       }
       
       setUsers(data || []);
+      setFilteredUsers(data || []);
       setTotalCount(count || 0);
     } catch (err) {
       console.error('Error fetching users:', err);
@@ -664,35 +667,61 @@ const AdminUsersPage: React.FC = () => {
   const handleSaveQuota = async () => {
     if (!editingUser) return;
     
+    setIsUpdating(true);
+    setError(null);
+    setSuccess(null);
+    
     try {
-      setError(null);
-      setSuccess(null);
+      // Use the new RPC function we created
+      const { error } = await supabase.rpc('update_user_quota', {
+        p_user_id: editingUser.id,
+        p_daily_quota: editingUser.daily_quota,
+        p_monthly_request_quota: editingUser.monthly_request_quota
+      });
       
-      if (!supabase) {
-        throw new Error('Supabase client is not initialized');
+      if (error) {
+        console.error('Error updating user quota:', error);
+        setError(error.message);
+      } else {
+        setSuccess(t('quotaUpdated', 'User quota updated successfully'));
+        
+        // Update the user in the current list
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === editingUser.id 
+              ? { 
+                  ...user, 
+                  daily_quota: editingUser.daily_quota,
+                  monthly_request_quota: editingUser.monthly_request_quota 
+                } 
+              : user
+          )
+        );
+        
+        // Update the filtered list as well
+        setFilteredUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === editingUser.id 
+              ? { 
+                  ...user, 
+                  daily_quota: editingUser.daily_quota,
+                  monthly_request_quota: editingUser.monthly_request_quota 
+                } 
+              : user
+          )
+        );
+        
+        // Clear the editing state
+        setEditingUser(null);
+        
+        // Refresh the user stats
+        fetchUserStats();
       }
-      
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ 
-          daily_quota: editingUser.daily_quota,
-          monthly_request_quota: editingUser.monthly_request_quota 
-        })
-        .eq('id', editingUser.id);
-      
-      if (updateError) {
-        throw updateError;
-      }
-      
-      setSuccess(t('quotaUpdated'));
-      
-      // Refresh user list and reset editing state
-      fetchUsers();
-      fetchUserStats();
-      setEditingUser(null);
     } catch (err) {
-      console.error('Error updating quota:', err);
+      console.error('Exception updating user quota:', err);
       setError((err as Error).message);
+    } finally {
+      setIsUpdating(false);
     }
   };
   
@@ -1081,7 +1110,7 @@ const AdminUsersPage: React.FC = () => {
         </ExportButton>
       </FilterContainer>
       
-      {users.length > 0 ? (
+      {filteredUsers.length > 0 ? (
         <>
           <TableContainer>
             <Table>
@@ -1096,7 +1125,7 @@ const AdminUsersPage: React.FC = () => {
                 </TableRow>
               </TableHead>
               <tbody>
-                {users.map((userProfile) => (
+                {filteredUsers.map((userProfile) => (
                   <TableRow key={userProfile.id}>
                     <TableCell>{userProfile.username}</TableCell>
                     <TableCell>{userProfile.email || '-'}</TableCell>
@@ -1149,13 +1178,15 @@ const AdminUsersPage: React.FC = () => {
                               className="save"
                               title={t('save')}
                               onClick={handleSaveQuota}
+                              disabled={isUpdating}
                             >
-                              <FiCheck />
+                              {isUpdating ? '...' : <FiCheck />}
                             </IconButton>
                             <IconButton 
                               className="cancel"
                               title={t('cancel')}
                               onClick={() => setEditingUser(null)}
+                              disabled={isUpdating}
                             >
                               <FiX />
                             </IconButton>

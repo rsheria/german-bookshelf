@@ -232,7 +232,10 @@ const AdminUserActivity: React.FC<AdminUserActivityProps> = ({
   const getActivityTitle = (activity: ActivityLog) => {
     switch(activity.action) {
       case ActivityType.LOGIN:
-        return t('activity.userLoggedIn', '{{username}} logged in', { username: activity.username });
+        // Show both username and email for login events
+        return t('activity.userLoggedIn', '{{username}} logged in', { 
+          username: activity.username 
+        });
       case ActivityType.DOWNLOAD:
         return t('activity.userDownloadedBook', '{{username}} downloaded {{book}}', { 
           username: activity.username,
@@ -313,6 +316,9 @@ const AdminUserActivity: React.FC<AdminUserActivityProps> = ({
                 </ActivityTitle>
                 <ActivityDetails>
                   <Username>{activity.username}</Username>
+                  {activity.action === ActivityType.LOGIN && activity.entity_name && (
+                    <span> ({activity.entity_name})</span>
+                  )}
                   <TimeAgo>{formatTimeAgo(activity.created_at)}</TimeAgo>
                 </ActivityDetails>
               </ActivityContent>
