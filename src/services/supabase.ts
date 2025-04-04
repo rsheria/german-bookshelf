@@ -291,25 +291,34 @@ export const signOut = async () => {
     // Call Supabase signOut first to invalidate the token server-side
     const result = await supabase.auth.signOut();
     
-    // Then clear all possible storage locations
-    // Clear the Supabase standard token
-    const key = `sb-${supabaseUrl.split('//')[1].split('.')[0]}-auth-token`;
-    localStorage.removeItem(key);
+    // Clear all Supabase-related items from localStorage
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth')) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    // Clear session storage as well
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth')) {
+        sessionStorage.removeItem(key);
+      }
+    });
+
+    // Clear any potential cookies
+    document.cookie.split(";").forEach(function(c) {
+      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/");
+    });
+
+    // Force a page reload to clear any in-memory state
+    window.location.href = '/';
     
-    // Clear our backup storage
-    localStorage.removeItem('sb-auth-token');
-    
-    // Clear any other tokens we might have stored
-    localStorage.removeItem('sb-refresh-token');
-    localStorage.removeItem('sb-access-token');
-    localStorage.removeItem('supabase.auth.token');
-    localStorage.removeItem('user_is_admin');
-    
-    console.log('All session tokens cleared');
     return result;
   } catch (error) {
-    console.error('Sign out error:', error);
-    return { error: { message: 'Sign out failed' } };
+    console.error('Error during sign out:', error);
+    // Even if there's an error, try to force a clean state
+    window.location.href = '/';
+    return { error };
   }
 };
 
