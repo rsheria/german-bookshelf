@@ -2,15 +2,20 @@
  * amazonScraperService.ts
  * 
  * This service handles the extraction of book data from Amazon product pages.
- * It uses a proxy server for web scraping to avoid CORS issues.
+ * It uses multiple proxy servers for web scraping to avoid CORS issues.
  */
 
 import axios from 'axios';
 import { Book } from '../types/supabase';
 
-// We'll use a proxy server to avoid CORS issues when scraping
-// In a production environment, use a proper backend service or API
-const CORS_PROXY = 'https://corsproxy.io/?';
+// We'll use multiple CORS proxies to improve success rate if one fails
+const CORS_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.org/?',
+  'https://api.codetabs.com/v1/proxy/?quest=',
+  'https://thingproxy.freeboard.io/fetch/',
+  'https://cors-anywhere-production-39d0.up.railway.app/'
+];
 
 // Define the fields we need to extract from Amazon
 export interface AmazonBookData {
@@ -68,6 +73,29 @@ export const getAmazonDomain = (url: string): string => {
   }
 };
 
+// Helper function to try fetching with different proxies
+const fetchWithProxies = async (url: string, proxyIndex = 0): Promise<string> => {
+  if (proxyIndex >= CORS_PROXIES.length) {
+    throw new Error('All proxies failed to fetch the content');
+  }
+
+  try {
+    // Use a simple approach for Amazon - using fetch API directly
+    const response = await axios.get(`${CORS_PROXIES[proxyIndex]}${encodeURIComponent(url)}`, {
+      headers: {
+        'Accept': 'text/html',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      },
+      timeout: 10000 // 10 seconds timeout
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.warn(`Proxy ${CORS_PROXIES[proxyIndex]} failed. Trying next proxy...`);
+    return fetchWithProxies(url, proxyIndex + 1);
+  }
+};
+
 // Main function to fetch and extract book data from Amazon
 export const fetchBookDataFromAmazon = async (amazonUrl: string): Promise<AmazonBookData | null> => {
   try {
@@ -87,49 +115,89 @@ export const fetchBookDataFromAmazon = async (amazonUrl: string): Promise<Amazon
         ? 'audiobook' 
         : 'ebook'); // Default to ebook
 
-    // Fetch the Amazon product page
-    const response = await axios.get(`${CORS_PROXY}${amazonUrl}`, {
-      headers: {
-        'Accept': 'text/html',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    // Try to fetch with multiple proxies
+    console.log(`Attempting to fetch data from Amazon for ASIN: ${asin}`);
+    
+    try {
+      // Try to fetch with proxies
+      const html = await fetchWithProxies(amazonUrl);
+      
+      // If we get here, we have HTML content to parse
+      return extractDataFromHtml(html, asin, type);
+    } catch (proxyError) {
+      console.error('All proxies failed to fetch data:', proxyError);
+      
+      // Manual fallback with ASIN: Try to construct basic info from the URL and metadata
+      const urlParts = amazonUrl.split('/');
+      let title = 'Unknown Title';
+      
+      // Try to extract title from URL
+      for (let i = 0; i < urlParts.length; i++) {
+        if (urlParts[i] === 'dp' || urlParts[i] === 'gp' || urlParts[i].includes(asin)) {
+          if (i > 0 && urlParts[i-1] && !urlParts[i-1].includes('amazon')) {
+            title = urlParts[i-1].replace(/-/g, ' ').trim();
+            // Capitalize first letter of each word
+            title = title.split(' ')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ');
+          }
+          break;
+        }
       }
-    });
-
-    const html = response.data;
-
-    // Use regular expressions to extract information
-    // This is a simplified approach, in production you should use a proper HTML parser
-    const title = extractMetaData(html, 'og:title') || extractHtmlData(html, '#productTitle');
-    const author = extractAuthor(html);
-    const description = extractMetaData(html, 'og:description') || extractHtmlData(html, '#bookDescription_feature_div');
-    const coverUrl = extractMetaData(html, 'og:image') || extractHtmlData(html, '#imgBlkFront', 'src');
-    const language = extractLanguage(html) || 'German';
-    const genre = extractGenre(html) || 'Fiction';
-
-    // Extract additional metadata
-    const isbn = extractIsbn(html, asin);
-    const pageCount = extractPageCount(html);
-    const publishedDate = extractPublishedDate(html);
-    const publisher = extractPublisher(html);
-
-    return {
-      title: cleanupText(title) || 'Unknown Title',
-      author: cleanupText(author) || 'Unknown Author',
-      description: cleanupText(description) || 'No description available.',
-      coverUrl: coverUrl || '',
-      language,
-      genre,
-      type,
-      isbn,
-      asin,
-      pageCount: pageCount || undefined,
-      publishedDate: publishedDate || undefined,
-      publisher: cleanupText(publisher) || undefined
-    };
+      
+      // Return minimal data extracted from URL
+      return {
+        title,
+        author: 'Unknown Author',
+        description: 'No description available. Please enter manually.',
+        coverUrl: `https://m.media-amazon.com/images/P/${asin}.jpg`, // Try Amazon's image URL pattern
+        language: amazonUrl.includes('.de/') ? 'German' : 'English',
+        genre: 'Fiction',
+        type,
+        isbn: asin,
+        asin,
+        publishedDate: undefined,
+        publisher: undefined,
+        pageCount: undefined
+      };
+    }
   } catch (error) {
     console.error('Error fetching book data from Amazon:', error);
     return null;
   }
+};
+
+// Function to extract data from HTML content
+const extractDataFromHtml = (html: string, asin: string, type: 'audiobook' | 'ebook'): AmazonBookData => {
+  // Use regular expressions to extract information
+  // This is a simplified approach, in production you should use a proper HTML parser
+  const title = extractMetaData(html, 'og:title') || extractHtmlData(html, '#productTitle');
+  const author = extractAuthor(html);
+  const description = extractMetaData(html, 'og:description') || extractHtmlData(html, '#bookDescription_feature_div');
+  const coverUrl = extractMetaData(html, 'og:image') || extractHtmlData(html, '#imgBlkFront', 'src');
+  const language = extractLanguage(html) || 'German';
+  const genre = extractGenre(html) || 'Fiction';
+
+  // Extract additional metadata
+  const isbn = extractIsbn(html, asin);
+  const pageCount = extractPageCount(html);
+  const publishedDate = extractPublishedDate(html);
+  const publisher = extractPublisher(html);
+
+  return {
+    title: cleanupText(title) || 'Unknown Title',
+    author: cleanupText(author) || 'Unknown Author',
+    description: cleanupText(description) || 'No description available.',
+    coverUrl: coverUrl || `https://m.media-amazon.com/images/P/${asin}.jpg`, // Use ASIN-based image as fallback
+    language,
+    genre,
+    type,
+    isbn,
+    asin,
+    pageCount: pageCount || undefined,
+    publishedDate: publishedDate || undefined,
+    publisher: cleanupText(publisher) || undefined
+  };
 };
 
 // Helper function to extract metadata from meta tags
@@ -235,25 +303,25 @@ const extractIsbn = (html: string, asin: string): string => {
 };
 
 // Helper function to extract page count
-const extractPageCount = (html: string): number | undefined => {
+const extractPageCount = (html: string): number | null => {
   // Look for page count information
   const pageMatch = html.match(/(\d+) Seiten|(\d+) pages/i);
   if (pageMatch) {
     return parseInt(pageMatch[1] || pageMatch[2], 10);
   }
   
-  return undefined;
+  return null;
 };
 
 // Helper function to extract published date
-const extractPublishedDate = (html: string): string | undefined => {
+const extractPublishedDate = (html: string): string | null => {
   // Look for published date
   const dateMatch = html.match(/Erscheinungsdatum: ([\d\. ]+)|Publication date: ([\w\d, ]+)/i);
   if (dateMatch) {
     return (dateMatch[1] || dateMatch[2]).trim();
   }
   
-  return undefined;
+  return null;
 };
 
 // Helper function to extract publisher
