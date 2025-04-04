@@ -423,7 +423,7 @@ const BookRequestPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
+  const [submitSuccess, setSubmitSuccess] = useState<boolean | string | null>(false);
   const { remainingRequests, totalQuota, loading: quotaLoading, checkRemainingQuota } = useBookRequestQuota();
   
   const [formData, setFormData] = useState<FormData>({
@@ -438,10 +438,10 @@ const BookRequestPage: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchBookRequests();
-    } else if (!authLoading) {
+    } else {
       navigate('/login');
     }
-  }, [user, authLoading, navigate]);
+  }, [user, navigate]);
   
   // Fetch user's book requests
   const fetchBookRequests = async () => {
@@ -492,17 +492,21 @@ const BookRequestPage: React.FC = () => {
   
   // Handle deleting a request
   const handleDeleteRequest = async (id: string) => {
-    if (!confirm(t('bookRequest.confirmDelete', 'Are you sure you want to delete this request?'))) {
+    if (!window.confirm(t('bookRequest.confirmDelete', 'Are you sure you want to delete this request?'))) {
       return;
     }
     
     try {
       setIsLoading(true);
       
+      if (!user) {
+        throw new Error(t('common.loginRequired', 'You must be logged in to delete a request'));
+      }
+      
       const { error: deleteError } = await supabase
         .from('book_requests')
         .delete()
-        .eq('id', id);
+        .match({ id, user_id: user.id });
       
       if (deleteError) {
         throw new Error(deleteError.message);
@@ -513,8 +517,8 @@ const BookRequestPage: React.FC = () => {
       setSubmitSuccess(t('bookRequest.deleteSuccess', 'Request deleted successfully'));
       
       // Clear success message after 3 seconds
-      setTimeout(() => setSubmitSuccess(null), 3000);
-    } catch (error) {
+      setTimeout(() => setSubmitSuccess(false), 3000);
+    } catch (error: any) {
       if (error instanceof Error) {
         setSubmitError(error.message);
       } else {
@@ -524,7 +528,7 @@ const BookRequestPage: React.FC = () => {
       setIsLoading(false);
     }
   };
-  
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -537,7 +541,7 @@ const BookRequestPage: React.FC = () => {
         throw new Error(t('common.loginRequired', 'You must be logged in to submit a request'));
       }
       
-      const { data, error: submitError } = await supabase
+      const { error: submitError } = await supabase
         .from('book_requests')
         .insert([
           {
@@ -550,8 +554,7 @@ const BookRequestPage: React.FC = () => {
             priority: formData.priority,
             status: 'pending', // Default status
           }
-        ])
-        .select();
+        ]);
       
       if (submitError) {
         throw new Error(submitError.message);
@@ -611,14 +614,6 @@ const BookRequestPage: React.FC = () => {
       default: return 'primary';
     }
   };
-  
-  if (authLoading) {
-    return (
-      <AdminContainer>
-        <LoadingState>{t('common.loading', 'Loading...')}</LoadingState>
-      </AdminContainer>
-    );
-  }
   
   if (!user) {
     return null; // Will redirect to login
@@ -694,7 +689,7 @@ const BookRequestPage: React.FC = () => {
                 alignItems: 'center',
                 gap: '0.5rem' 
               }}>
-                <FiCheckCircle /> {t('bookRequest.submitSuccess', 'Your book request has been submitted successfully!')}
+                <FiCheckCircle /> {typeof submitSuccess === 'string' ? submitSuccess : t('bookRequest.submitSuccess', 'Your book request has been submitted successfully!')}
               </div>
             )}
             
