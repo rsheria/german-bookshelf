@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
@@ -43,13 +43,13 @@ const particlesOptions = {
   fpsLimit: 60,
   particles: {
     color: {
-      value: "#ffffff",
+      value: "#D8B589", 
     },
     links: {
-      color: "#ffffff",
+      color: "#D8B589", 
       distance: 150,
       enable: true,
-      opacity: 0.2,
+      opacity: 0.15,
       width: 1,
     },
     move: {
@@ -59,7 +59,7 @@ const particlesOptions = {
         default: "bounce" as const,
       },
       random: true,
-      speed: 1,
+      speed: 0.8,
       straight: false,
     },
     number: {
@@ -67,10 +67,10 @@ const particlesOptions = {
         enable: true,
         area: 800,
       },
-      value: 50,
+      value: 40,
     },
     opacity: {
-      value: 0.4,
+      value: 0.3,
     },
     shape: {
       type: "circle" as const,
@@ -94,11 +94,38 @@ const HeroSection = styled(motion.div)`
   position: relative;
   height: 85vh;
   max-height: 800px;
-  min-height: 500px;
-  background-color: ${theme.colors.primary};
+  min-height: 550px;
+  background: linear-gradient(
+    to bottom,
+    rgba(45, 84, 112, 0.95), 
+    rgba(30, 58, 80, 0.98)
+  );
+  position: relative;
   color: white;
   overflow: hidden;
   z-index: 1;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: linear-gradient(to bottom, #2E5470, #1E3A50);
+    background-size: cover;
+    background-position: center;
+    opacity: 0.15;
+    z-index: -1;
+  }
+  
+  body[data-theme='dark'] & {
+    background: linear-gradient(
+      to bottom,
+      rgba(41, 46, 54, 0.95), 
+      rgba(52, 59, 71, 0.98)
+    );
+  }
 `;
 
 const ParticlesContainer = styled.div`
@@ -120,22 +147,45 @@ const HeroContent = styled.div`
   text-align: center;
   height: 100%;
   padding: ${theme.spacing['3xl']} ${theme.spacing.xl};
+  max-width: 1200px;
+  margin: 0 auto;
+`;
+
+const HeroTitleWrapper = styled(motion.div)`
+  margin-bottom: ${theme.spacing.xl};
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -${theme.spacing.md};
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 3px;
+    background-color: ${theme.colors.secondary};
+    border-radius: ${theme.borderRadius.full};
+  }
 `;
 
 const HeroTitle = styled(motion.h1)`
-  font-size: clamp(2.5rem, 6vw, 4rem);
-  margin-bottom: ${theme.spacing.lg};
+  font-size: clamp(3rem, 7vw, 4.5rem);
   font-weight: ${theme.typography.fontWeight.bold};
-  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  color: #FFFFFF;
 `;
 
 const HeroSubtitle = styled(motion.p)`
-  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
   margin-bottom: ${theme.spacing.xl};
   max-width: 800px;
   opacity: 0.9;
   line-height: 1.6;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.95);
 `;
 
 const HeroActions = styled(motion.div)`
@@ -143,6 +193,7 @@ const HeroActions = styled(motion.div)`
   gap: ${theme.spacing.md};
   flex-wrap: wrap;
   justify-content: center;
+  margin-top: ${theme.spacing.lg};
   
   @media (max-width: 600px) {
     flex-direction: column;
@@ -173,23 +224,21 @@ const FeatureSection = styled.div`
 `;
 
 const FeatureCard = styled.div`
-  background-color: white;
+  background-color: ${props => props.theme.colors.card};
   padding: ${theme.spacing.xl};
-  border-radius: ${theme.borderRadius.md};
+  border-radius: ${theme.borderRadius.lg};
   box-shadow: ${theme.shadows.md};
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  
-  body[data-theme='dark'] & {
-    background-color: ${({ theme }) => theme.colors.card};
-  }
+  border: 1px solid ${props => props.theme.colors.border};
   
   &:hover {
-    transform: translateY(-5px);
+    transform: translateY(-8px);
     box-shadow: ${theme.shadows.lg};
+    border-color: ${props => props.theme.colors.secondary};
   }
 `;
 
@@ -197,23 +246,35 @@ const FeatureIcon = styled.div`
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background-color: ${theme.colors.primaryLight};
-  color: white;
+  background-color: ${theme.colors.secondary}20;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: ${theme.spacing.md};
-  font-size: 1.8rem;
+  color: ${theme.colors.secondary};
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+  
+  ${FeatureCard}:hover & {
+    background-color: ${theme.colors.secondary};
+    color: white;
+  }
   
   body[data-theme='dark'] & {
-    background-color: ${({ theme }) => theme.colors.primaryLight};
+    background-color: ${({ theme }) => theme.colors.secondary}20;
+    color: ${({ theme }) => theme.colors.secondary};
+    
+    ${FeatureCard}:hover & {
+      background-color: ${({ theme }) => theme.colors.secondary};
+      color: ${({ theme }) => theme.colors.background};
+    }
   }
 `;
 
 const FeatureTitle = styled.h3`
-  font-size: ${theme.typography.fontSize.xl};
-  margin-bottom: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.sm};
   color: ${theme.colors.primary};
+  font-weight: 600;
   
   body[data-theme='dark'] & {
     color: ${({ theme }) => theme.colors.primary};
@@ -242,25 +303,23 @@ const HomeSection = styled.div`
 const ViewAllLink = styled(Link)`
   display: inline-flex;
   align-items: center;
-  color: ${theme.colors.accent};
+  color: ${theme.colors.primary};
   font-weight: ${theme.typography.fontWeight.medium};
-  transition: color 0.3s ease, transform 0.3s ease;
+  text-decoration: none;
+  transition: all 0.3s ease;
   
-  body[data-theme='dark'] & {
-    color: ${({ theme }) => theme.colors.accent};
+  svg {
+    margin-left: ${theme.spacing.xs};
+    transition: transform 0.3s ease;
   }
   
   &:hover {
-    color: ${theme.colors.secondaryDark};
+    color: ${theme.colors.secondary};
     transform: translateX(5px);
     
     body[data-theme='dark'] & {
-      color: ${({ theme }) => theme.colors.secondaryDark};
+      color: ${({ theme }) => theme.colors.secondary};
     }
-  }
-  
-  svg {
-    transition: transform 0.3s ease;
   }
   
   &:hover svg {
@@ -269,13 +328,12 @@ const ViewAllLink = styled(Link)`
 `;
 
 // Main Component
-const HomePage: React.FC = () => {
+const HomePage = () => {
   const { t } = useTranslation();
   const [init, setInit] = useState(false);
   
+  // Initialize particles
   useEffect(() => {
-    // Wait for component to mount before initializing particles
-    // This prevents SSR issues and improves initial loading
     initParticlesEngine(async (engine: Engine) => {
       await loadFull(engine);
     }).then(() => {
@@ -283,7 +341,7 @@ const HomePage: React.FC = () => {
     });
   }, []);
   
-  // Fetch books using existing hooks
+  // Fetch latest audiobooks
   const { 
     books: latestAudiobooks, 
     isLoading: isLoadingAudiobooks, 
@@ -313,7 +371,9 @@ const HomePage: React.FC = () => {
         )}
         
         <HeroContent>
-          <HeroTitle variants={itemVariants}>{t('app.title')}</HeroTitle>
+          <HeroTitleWrapper variants={itemVariants}>
+            <HeroTitle>{t('app.title')}</HeroTitle>
+          </HeroTitleWrapper>
           <HeroSubtitle variants={itemVariants}>{t('app.tagline')}</HeroSubtitle>
           <HeroActions variants={itemVariants}>
             <Button 

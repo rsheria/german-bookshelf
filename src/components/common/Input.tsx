@@ -50,7 +50,9 @@ const RightIconWrapper = styled.div`
   justify-content: center;
 `;
 
-const StyledInput = styled.input<{ hasLeftIcon?: boolean; hasRightIcon?: boolean; hasError?: boolean }>`
+const StyledInput = styled.input.attrs<{ hasLeftIcon?: boolean; hasRightIcon?: boolean; hasError?: boolean }>(() => ({
+  // Explicitly omit custom props from DOM
+}))<{ hasLeftIcon?: boolean; hasRightIcon?: boolean; hasError?: boolean }>`
   width: 100%;
   height: 42px;
   padding: ${theme.spacing.sm} ${theme.spacing.md};

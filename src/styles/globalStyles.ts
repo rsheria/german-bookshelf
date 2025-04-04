@@ -4,9 +4,9 @@ import darkTheme from './darkTheme';
 
 const GlobalStyle = createGlobalStyle`
   /* Import premium fonts */
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap');
-  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap');
-  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
   
   *, *::before, *::after {
     box-sizing: border-box;
@@ -29,7 +29,7 @@ const GlobalStyle = createGlobalStyle`
     color: ${theme.colors.text};
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: background-color 0.4s ease-in-out, color 0.4s ease-in-out, border-color 0.4s ease-in-out;
+    transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out, border-color 0.3s ease-in-out;
     scroll-behavior: smooth;
     min-height: 100vh;
     display: flex;
@@ -49,10 +49,21 @@ const GlobalStyle = createGlobalStyle`
   
   main {
     flex: 1 0 auto;
+    padding-bottom: ${theme.spacing.xl};
   }
   
   footer {
     flex-shrink: 0;
+    padding: ${theme.spacing.lg} 0;
+    margin-top: auto;
+    background-color: ${theme.colors.backgroundAlt};
+    border-top: 1px solid ${theme.colors.border};
+    transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
+    
+    body[data-theme='dark'] & {
+      background-color: ${darkTheme.colors.backgroundAlt};
+      border-color: ${darkTheme.colors.border};
+    }
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -61,7 +72,7 @@ const GlobalStyle = createGlobalStyle`
     line-height: ${theme.typography.lineHeight.tight};
     margin-bottom: ${theme.spacing.md};
     color: ${theme.colors.primary};
-    transition: color 0.4s ease-in-out;
+    transition: color 0.3s ease-in-out;
     
     body[data-theme='dark'] & {
       color: ${darkTheme.colors.primary};
@@ -70,11 +81,13 @@ const GlobalStyle = createGlobalStyle`
   
   h1 {
     font-size: ${theme.typography.fontSize['5xl']};
-    letter-spacing: -1px;
+    letter-spacing: -0.025em;
+    margin-bottom: ${theme.spacing.lg};
   }
   
   h2 {
     font-size: ${theme.typography.fontSize['4xl']};
+    letter-spacing: -0.025em;
   }
   
   h3 {
@@ -95,24 +108,26 @@ const GlobalStyle = createGlobalStyle`
   
   p {
     margin-bottom: ${theme.spacing.md};
-    transition: color 0.4s ease-in-out;
+    line-height: ${theme.typography.lineHeight.relaxed};
+    transition: color 0.3s ease-in-out;
   }
   
   a {
-    color: ${theme.colors.accent};
+    color: ${theme.colors.primary};
     text-decoration: none;
-    transition: color 0.4s ease-in-out, text-decoration 0.4s ease-in-out;
+    transition: color 0.3s ease-in-out, text-decoration 0.3s ease-in-out;
+    font-weight: ${theme.typography.fontWeight.medium};
     
     body[data-theme='dark'] & {
-      color: ${darkTheme.colors.accent};
+      color: ${darkTheme.colors.primary};
     }
     
     &:hover {
-      color: ${theme.colors.secondaryDark};
+      color: ${theme.colors.secondary};
       text-decoration: underline;
       
       body[data-theme='dark'] & {
-        color: ${darkTheme.colors.secondaryDark};
+        color: ${darkTheme.colors.secondary};
       }
     }
   }
@@ -120,23 +135,57 @@ const GlobalStyle = createGlobalStyle`
   button {
     font-family: inherit;
     cursor: pointer;
-    outline: none;
-    transition: all 0.4s ease-in-out;
+    border: none;
+    padding: ${theme.spacing.sm} ${theme.spacing.md};
+    border-radius: ${theme.borderRadius.md};
+    font-weight: ${theme.typography.fontWeight.medium};
+    background-color: ${theme.colors.primary};
+    color: white;
+    transition: all 0.3s ease-in-out;
+    
+    &:hover {
+      background-color: ${theme.colors.primaryDark};
+    }
+    
+    &:focus {
+      outline: none;
+      box-shadow: ${theme.shadows.outline};
+    }
+    
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    body[data-theme='dark'] & {
+      background-color: ${darkTheme.colors.primary};
+      
+      &:hover {
+        background-color: ${darkTheme.colors.primaryDark};
+      }
+      
+      &:focus {
+        box-shadow: ${darkTheme.shadows.outline};
+      }
+    }
   }
   
   img {
     max-width: 100%;
     height: auto;
+    border-radius: ${theme.borderRadius.md};
   }
   
-  /* Custom Scrollbar Styling (for Webkit browsers) */
+  /* Custom Scrollbar Styling */
   ::-webkit-scrollbar {
-    width: 10px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
     background: ${theme.colors.backgroundAlt};
-    transition: background-color 0.4s ease-in-out;
+    border-radius: ${theme.borderRadius.full};
+    transition: background-color 0.3s ease-in-out;
     
     body[data-theme='dark'] & {
       background: ${darkTheme.colors.backgroundAlt};
@@ -144,14 +193,12 @@ const GlobalStyle = createGlobalStyle`
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: ${theme.colors.primaryLight};
+    background-color: ${theme.colors.border};
     border-radius: ${theme.borderRadius.full};
-    border: 2px solid ${theme.colors.backgroundAlt};
-    transition: background-color 0.4s ease-in-out, border-color 0.4s ease-in-out;
+    transition: background-color 0.3s ease-in-out;
     
     body[data-theme='dark'] & {
-      background-color: ${darkTheme.colors.primaryLight};
-      border: 2px solid ${darkTheme.colors.backgroundAlt};
+      background-color: ${darkTheme.colors.border};
     }
   }
 
@@ -164,13 +211,13 @@ const GlobalStyle = createGlobalStyle`
   }
   
   /* Focus styles for accessibility */
-  :focus {
-    outline: 3px solid ${theme.colors.accent};
-    outline-offset: 2px;
-    transition: outline-color 0.4s ease-in-out;
+  :focus-visible {
+    outline: none;
+    box-shadow: ${theme.shadows.outline};
+    transition: box-shadow 0.3s ease-in-out;
     
     body[data-theme='dark'] & {
-      outline: 3px solid ${darkTheme.colors.accent};
+      box-shadow: ${darkTheme.shadows.outline};
     }
   }
   
@@ -180,27 +227,46 @@ const GlobalStyle = createGlobalStyle`
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 ${theme.spacing.md};
+    
+    @media (max-width: 768px) {
+      padding: 0 ${theme.spacing.sm};
+    }
   }
 
   /* Fade transitions for theme switching */
   .fade-transition {
-    transition: all 0.4s ease-in-out;
+    transition: all 0.3s ease-in-out;
   }
 
   /* Ensure consistent card styling across themes */
   .card {
     background-color: ${theme.colors.card};
-    border-radius: ${theme.borderRadius.md};
+    border-radius: ${theme.borderRadius.lg};
     box-shadow: ${theme.shadows.md};
-    transition: background-color 0.4s ease-in-out, box-shadow 0.4s ease-in-out;
+    transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
+    overflow: hidden;
+    height: 100%;
+    border: 1px solid ${theme.colors.border};
+    
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: ${theme.shadows.lg};
+      border-color: ${theme.colors.secondary};
+    }
     
     body[data-theme='dark'] & {
       background-color: ${darkTheme.colors.card};
       box-shadow: ${darkTheme.shadows.md};
+      border-color: ${darkTheme.colors.border};
+      
+      &:hover {
+        box-shadow: ${darkTheme.shadows.lg};
+        border-color: ${darkTheme.colors.secondary};
+      }
     }
   }
   
-  /* Rating Badge Styling */
+  /* Rating badge styling */
   .rating-badge {
     display: inline-flex;
     align-items: center;
@@ -213,21 +279,73 @@ const GlobalStyle = createGlobalStyle`
     color: white;
     font-size: ${theme.typography.fontSize.sm};
     transition: background-color 0.3s ease;
+    box-shadow: ${theme.shadows.sm};
   }
 
   .rating-high {
     background: ${theme.colors.ratingHigh};
+    
+    body[data-theme='dark'] & {
+      background: ${darkTheme.colors.ratingHigh};
+    }
   }
 
   .rating-medium {
     background: ${theme.colors.ratingMedium};
+    
+    body[data-theme='dark'] & {
+      background: ${darkTheme.colors.ratingMedium};
+    }
   }
 
   .rating-low {
     background: ${theme.colors.ratingLow};
+    
+    body[data-theme='dark'] & {
+      background: ${darkTheme.colors.ratingLow};
+    }
   }
   
-  /* Cover Item Styling */
+  /* Input styling */
+  input, select, textarea {
+    font-family: inherit;
+    font-size: ${theme.typography.fontSize.md};
+    padding: ${theme.spacing.sm} ${theme.spacing.md};
+    border-radius: ${theme.borderRadius.md};
+    border: 1px solid ${theme.colors.border};
+    background-color: ${theme.colors.card};
+    color: ${theme.colors.text};
+    transition: all 0.3s ease-in-out;
+    width: 100%;
+    
+    &:focus {
+      outline: none;
+      border-color: ${theme.colors.secondary};
+      box-shadow: ${theme.shadows.outline};
+    }
+    
+    &::placeholder {
+      color: ${theme.colors.textLight};
+      opacity: 0.7;
+    }
+    
+    body[data-theme='dark'] & {
+      background-color: ${darkTheme.colors.card};
+      border-color: ${darkTheme.colors.border};
+      color: ${darkTheme.colors.text};
+      
+      &:focus {
+        border-color: ${darkTheme.colors.secondary};
+        box-shadow: ${darkTheme.shadows.outline};
+      }
+      
+      &::placeholder {
+        color: ${darkTheme.colors.textLight};
+      }
+    }
+  }
+  
+  /* Cover item styling */
   .cover-item {
     position: relative;
     background-size: cover;
@@ -235,12 +353,16 @@ const GlobalStyle = createGlobalStyle`
     background-repeat: no-repeat;
     border-radius: ${theme.borderRadius.md};
     overflow: hidden;
-    transition: transform 0.3s ease;
+    transition: all 0.3s ease;
     height: 0;
     padding-bottom: 150%; /* 2:3 aspect ratio for book covers */
+    box-shadow: ${theme.shadows.md};
+    border: 2px solid transparent;
     
     &:hover {
       transform: translateY(-5px);
+      box-shadow: ${theme.shadows.lg};
+      border-color: ${theme.colors.secondary};
     }
     
     .rating-badge {
@@ -248,12 +370,66 @@ const GlobalStyle = createGlobalStyle`
       top: 10px;
       right: 10px;
     }
+    
+    body[data-theme='dark'] & {
+      box-shadow: ${darkTheme.shadows.md};
+      
+      &:hover {
+        box-shadow: ${darkTheme.shadows.lg};
+        border-color: ${darkTheme.colors.secondary};
+      }
+    }
   }
   
   /* SVG Icon Styling */
   svg {
     fill: currentColor;
     transition: fill 0.3s ease;
+  }
+  
+  /* Book-specific styling */
+  .book-title {
+    font-family: ${theme.typography.fontFamily.heading};
+    font-weight: ${theme.typography.fontWeight.semibold};
+    color: ${theme.colors.primary};
+    transition: color 0.3s ease;
+    
+    body[data-theme='dark'] & {
+      color: ${darkTheme.colors.primary};
+    }
+  }
+  
+  .book-author {
+    font-style: italic;
+    color: ${theme.colors.textLight};
+    margin-bottom: ${theme.spacing.sm};
+    
+    body[data-theme='dark'] & {
+      color: ${darkTheme.colors.textLight};
+    }
+  }
+  
+  /* Page transition animations */
+  .page-transition-enter {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  
+  .page-transition-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  
+  .page-transition-exit {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .page-transition-exit-active {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.3s, transform 0.3s;
   }
 `;
 

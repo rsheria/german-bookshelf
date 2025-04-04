@@ -98,7 +98,13 @@ const getButtonSize = (size: ButtonSize) => {
   }
 };
 
-const StyledButton = styled.button<ButtonProps>`
+const StyledButton = styled.button.attrs<ButtonProps>(() => ({
+  // Explicitly omit custom props from DOM
+  variant: undefined,
+  size: undefined,
+  isFullWidth: undefined,
+  isLoading: undefined,
+}))<ButtonProps>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
