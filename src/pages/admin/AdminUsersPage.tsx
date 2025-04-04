@@ -559,7 +559,7 @@ const AdminUsersPage: React.FC = () => {
   }>({
     labels: [],
     datasets: [{
-      label: t('admin.newUsers'),
+      label: t('newUsers'),
       data: [],
       backgroundColor: 'rgba(63, 118, 156, 0.2)',
       borderColor: 'rgba(63, 118, 156, 1)'
@@ -748,31 +748,31 @@ const AdminUsersPage: React.FC = () => {
       { 
         id: '1', 
         username: 'admin', 
-        action: t('admin.activityLogin'), 
+        action: t('activityLogin'), 
         timestamp: new Date().toISOString() 
       },
       { 
         id: '2', 
         username: 'johndoe', 
-        action: t('admin.activityDownload'), 
+        action: t('activityDownload'), 
         timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() // 5 minutes ago
       },
       { 
         id: '3', 
         username: 'alice', 
-        action: t('admin.activityPasswordChange'), 
+        action: t('activityPasswordChange'), 
         timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString() // 15 minutes ago
       },
       { 
         id: '4', 
         username: 'robert', 
-        action: t('admin.activityProfileUpdate'), 
+        action: t('activityProfileUpdate'), 
         timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() // 30 minutes ago
       },
       { 
         id: '5', 
         username: 'emma', 
-        action: t('admin.activityLogin'), 
+        action: t('activityLogin'), 
         timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString() // 45 minutes ago
       }
     ];
@@ -803,7 +803,7 @@ const AdminUsersPage: React.FC = () => {
     setUserGrowthData({
       labels,
       datasets: [{
-        label: t('admin.newUsers'),
+        label: t('newUsers'),
         data,
         backgroundColor: 'rgba(63, 118, 156, 0.2)',
         borderColor: 'rgba(63, 118, 156, 1)'
@@ -830,8 +830,8 @@ const AdminUsersPage: React.FC = () => {
       }
       
       setSuccess(currentIsAdmin 
-        ? t('admin.adminRightsRemoved') 
-        : t('admin.adminRightsGranted'));
+        ? t('adminRightsRemoved') 
+        : t('adminRightsGranted'));
       
       // Refresh user list
       fetchUsers();
@@ -869,7 +869,7 @@ const AdminUsersPage: React.FC = () => {
         throw updateError;
       }
       
-      setSuccess(t('admin.quotaUpdated'));
+      setSuccess(t('quotaUpdated'));
       
       // Refresh user list and reset editing state
       fetchUsers();
@@ -907,7 +907,7 @@ const AdminUsersPage: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `german-bookshelf-users-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `users-${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -965,7 +965,7 @@ const AdminUsersPage: React.FC = () => {
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `german-bookshelf-all-users-${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute("download", `all-users-${new Date().toISOString().split('T')[0]}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -982,9 +982,9 @@ const AdminUsersPage: React.FC = () => {
     return (
       <StatsSection>
         <SectionHeader>
-          <SectionTitle>{t('admin.userStatistics')}</SectionTitle>
+          <SectionTitle>{t('userStatistics', 'User Statistics')}</SectionTitle>
           <SectionToggle onClick={() => setShowStats(!showStats)}>
-            {showStats ? t('common.hide') : t('common.show')}
+            {showStats ? t('hide') : t('show')}
           </SectionToggle>
         </SectionHeader>
         
@@ -995,19 +995,19 @@ const AdminUsersPage: React.FC = () => {
                 active={statsTab === 'overview'} 
                 onClick={() => setStatsTab('overview')}
               >
-                {t('admin.overview')}
+                {t('overview')}
               </Tab>
               <Tab 
                 active={statsTab === 'activity'} 
                 onClick={() => setStatsTab('activity')}
               >
-                {t('admin.recentActivity')}
+                {t('recentActivity')}
               </Tab>
               <Tab 
                 active={statsTab === 'growth'} 
                 onClick={() => setStatsTab('growth')}
               >
-                {t('admin.userGrowth')}
+                {t('userGrowth')}
               </Tab>
             </TabContainer>
             
@@ -1015,31 +1015,31 @@ const AdminUsersPage: React.FC = () => {
               <StatsGrid>
                 <StatCard>
                   <StatValue>{userStats.totalUsers}</StatValue>
-                  <StatLabel>{t('admin.totalUsers')}</StatLabel>
+                  <StatLabel>{t('totalUsers')}</StatLabel>
                 </StatCard>
                 <StatCard>
                   <StatValue>{userStats.adminUsers}</StatValue>
-                  <StatLabel>{t('admin.adminUsers')}</StatLabel>
+                  <StatLabel>{t('adminUsers')}</StatLabel>
                 </StatCard>
                 <StatCard>
                   <StatValue>{userStats.activeUsers}</StatValue>
-                  <StatLabel>{t('admin.activeUsers')}</StatLabel>
+                  <StatLabel>{t('activeUsers')}</StatLabel>
                 </StatCard>
                 <StatCard>
                   <StatValue>{userStats.newUsersToday}</StatValue>
-                  <StatLabel>{t('admin.newUsersToday')}</StatLabel>
+                  <StatLabel>{t('newUsersToday')}</StatLabel>
                 </StatCard>
                 <StatCard>
                   <StatValue>{userStats.newUsersThisWeek}</StatValue>
-                  <StatLabel>{t('admin.newUsersThisWeek')}</StatLabel>
+                  <StatLabel>{t('newUsersThisWeek')}</StatLabel>
                 </StatCard>
                 <StatCard>
                   <StatValue>{userStats.newUsersThisMonth}</StatValue>
-                  <StatLabel>{t('admin.newUsersThisMonth')}</StatLabel>
+                  <StatLabel>{t('newUsersThisMonth')}</StatLabel>
                 </StatCard>
                 <StatCard>
                   <StatValue>{userStats.averageDailyQuota}</StatValue>
-                  <StatLabel>{t('admin.averageQuota')}</StatLabel>
+                  <StatLabel>{t('averageQuota')}</StatLabel>
                 </StatCard>
               </StatsGrid>
             )}
@@ -1061,19 +1061,19 @@ const AdminUsersPage: React.FC = () => {
             
             {statsTab === 'growth' && (
               <ChartContainer>
-                <ChartTitle>{t('admin.userGrowthOverTime')}</ChartTitle>
+                <ChartTitle>{t('userGrowthOverTime')}</ChartTitle>
                 {/* 
                   Note: In a real implementation, you would render a Chart.js component here
                   For example: 
                   <Bar data={userGrowthData} options={{ maintainAspectRatio: false }} />
                 */}
                 <div style={{ textAlign: 'center', paddingTop: '80px', color: '#666' }}>
-                  {t('admin.chartPlaceholder')} 
+                  {t('chartPlaceholder')} 
                   <div>
-                    {t('admin.dataPoints')}: {userGrowthData.labels.join(', ')}
+                    {t('dataPoints')}: {userGrowthData.labels.join(', ')}
                   </div>
                   <div>
-                    {t('admin.values')}: {userGrowthData.datasets[0].data.join(', ')}
+                    {t('values')}: {userGrowthData.datasets[0].data.join(', ')}
                   </div>
                 </div>
               </ChartContainer>
@@ -1133,7 +1133,7 @@ const AdminUsersPage: React.FC = () => {
   if (authLoading || isLoading) {
     return (
       <AdminContainer>
-        <LoadingState>{t('common.loading')}</LoadingState>
+        <LoadingState>{t('loading')}</LoadingState>
       </AdminContainer>
     );
   }
@@ -1148,20 +1148,20 @@ const AdminUsersPage: React.FC = () => {
     <AdminContainer>
       <AdminHeader>
         <AdminTitle>
-          <FiUsers style={{ marginRight: '0.5rem' }} /> {t('admin.manageUsers')}
+          <FiUsers style={{ marginRight: '0.5rem' }} /> {t('manageUsers', 'Manage Users')}
         </AdminTitle>
         
         <SearchBar>
           <SearchInput
             type="text"
-            placeholder={t('common.search')}
+            placeholder={t('searchUsers', 'Search users...')} 
             value={searchTerm}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               setSearchTerm(e.target.value);
               setPage(0); // Reset to first page on search
             }}
           />
-          <IconButton aria-label={t('common.search')}>
+          <IconButton aria-label={t('search')}>
             <FiSearch />
           </IconButton>
         </SearchBar>
@@ -1188,19 +1188,19 @@ const AdminUsersPage: React.FC = () => {
           active={roleFilter === 'all'} 
           onClick={() => setRoleFilter('all')}
         >
-          <FiUsers /> {t('admin.allUsers')}
+          <FiUsers /> {t('allUsers')}
         </FilterButton>
         <FilterButton 
           active={roleFilter === 'admin'} 
           onClick={() => setRoleFilter('admin')}
         >
-          <FiUsers /> {t('admin.adminUsers')}
+          <FiUsers /> {t('adminUsers')}
         </FilterButton>
         <FilterButton 
           active={roleFilter === 'user'} 
           onClick={() => setRoleFilter('user')}
         >
-          <FiUsers /> {t('admin.regularUsers')}
+          <FiUsers /> {t('regularUsers')}
         </FilterButton>
         
         <DropdownFilter 
@@ -1209,9 +1209,9 @@ const AdminUsersPage: React.FC = () => {
             setActivityFilter(e.target.value as ActivityFilter)
           }
         >
-          <option value="all">{t('admin.activityAll')}</option>
-          <option value="active">{t('admin.activityActive')}</option>
-          <option value="inactive">{t('admin.activityInactive')}</option>
+          <option value="all">{t('activityAll')}</option>
+          <option value="active">{t('activityActive')}</option>
+          <option value="inactive">{t('activityInactive')}</option>
         </DropdownFilter>
         
         <DropdownFilter 
@@ -1220,9 +1220,9 @@ const AdminUsersPage: React.FC = () => {
             setQuotaFilter(e.target.value as QuotaFilter)
           }
         >
-          <option value="all">{t('admin.quotaAll')}</option>
-          <option value="high">{t('admin.quotaHigh')}</option>
-          <option value="low">{t('admin.quotaLow')}</option>
+          <option value="all">{t('quotaAll')}</option>
+          <option value="high">{t('quotaHigh')}</option>
+          <option value="low">{t('quotaLow')}</option>
         </DropdownFilter>
         
         <DateFilterContainer>
@@ -1233,7 +1233,7 @@ const AdminUsersPage: React.FC = () => {
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
               setDateRange(prev => ({ ...prev, from: e.target.value }))
             }
-            placeholder={t('admin.dateFrom')}
+            placeholder={t('dateFrom')}
           />
           <span>-</span>
           <DateInput 
@@ -1242,16 +1242,16 @@ const AdminUsersPage: React.FC = () => {
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
               setDateRange(prev => ({ ...prev, to: e.target.value }))
             }
-            placeholder={t('admin.dateTo')}
+            placeholder={t('dateTo')}
           />
         </DateFilterContainer>
         
         <ExportButton onClick={handleExportUsers}>
-          <FiDownload /> {t('admin.exportCurrentUsers')}
+          <FiDownload /> {t('exportCurrentUsers')}
         </ExportButton>
         
         <ExportButton onClick={handleExportAllUsers}>
-          <FiDownload /> {t('admin.exportAllUsers')}
+          <FiDownload /> {t('exportAllUsers')}
         </ExportButton>
       </FilterContainer>
       
@@ -1261,12 +1261,12 @@ const AdminUsersPage: React.FC = () => {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableHeader>{t('auth.username')}</TableHeader>
-                  <TableHeader>{t('auth.email')}</TableHeader>
-                  <TableHeader>{t('admin.role')}</TableHeader>
-                  <TableHeader>{t('profile.quota')}</TableHeader>
-                  <TableHeader>{t('profile.requestQuota', 'Monthly Requests')}</TableHeader>
-                  <TableHeader>{t('common.actions')}</TableHeader>
+                  <TableHeader>{t('username')}</TableHeader>
+                  <TableHeader>{t('email')}</TableHeader>
+                  <TableHeader>{t('role')}</TableHeader>
+                  <TableHeader>{t('quota')}</TableHeader>
+                  <TableHeader>{t('requestQuota', 'Monthly Requests')}</TableHeader>
+                  <TableHeader>{t('actions')}</TableHeader>
                 </TableRow>
               </TableHead>
               <tbody>
@@ -1276,7 +1276,7 @@ const AdminUsersPage: React.FC = () => {
                     <TableCell>{userProfile.email || '-'}</TableCell>
                     <TableCell>
                       <Badge variant={userProfile.is_admin ? 'admin' : 'user'}>
-                        {userProfile.is_admin ? t('admin.adminRole') : t('admin.userRole')}
+                        {userProfile.is_admin ? t('adminRole') : t('userRole')}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -1321,14 +1321,14 @@ const AdminUsersPage: React.FC = () => {
                           <>
                             <IconButton 
                               className="save"
-                              title={t('common.save')}
+                              title={t('save')}
                               onClick={handleSaveQuota}
                             >
                               <FiCheck />
                             </IconButton>
                             <IconButton 
                               className="cancel"
-                              title={t('common.cancel')}
+                              title={t('cancel')}
                               onClick={() => setEditingUser(null)}
                             >
                               <FiX />
@@ -1337,7 +1337,7 @@ const AdminUsersPage: React.FC = () => {
                         ) : (
                           <IconButton 
                             className="edit"
-                            title={t('admin.editQuota')}
+                            title={t('editQuota')}
                             onClick={() => handleEditQuota(userProfile.id, userProfile.daily_quota, userProfile.monthly_request_quota)}
                           >
                             <FiEdit />
@@ -1352,11 +1352,11 @@ const AdminUsersPage: React.FC = () => {
                           >
                             {userProfile.is_admin ? (
                               <>
-                                <FiX /> {t('admin.removeAdmin')}
+                                <FiX /> {t('removeAdmin')}
                               </>
                             ) : (
                               <>
-                                <FiCheck /> {t('admin.makeAdmin')}
+                                <FiCheck /> {t('makeAdmin')}
                               </>
                             )}
                           </SafeToggleAdminButton>
@@ -1372,7 +1372,7 @@ const AdminUsersPage: React.FC = () => {
           {totalPages > 1 && (
             <Pagination>
               <PageInfo>
-                {t('common.showing')} {page * limit + 1} - {Math.min((page + 1) * limit, totalCount)} {t('common.of')} {totalCount} {t('common.results')}
+                {t('showing')} {page * limit + 1} - {Math.min((page + 1) * limit, totalCount)} {t('of')} {totalCount} {t('results')}
               </PageInfo>
               <PageButtons>
                 {renderPagination()}
@@ -1383,8 +1383,8 @@ const AdminUsersPage: React.FC = () => {
       ) : (
         <EmptyState>
           {searchTerm 
-            ? t('admin.noMatchingUsers') 
-            : t('admin.noUsers')}
+            ? t('noMatchingUsers') 
+            : t('noUsers')}
         </EmptyState>
       )}
     </AdminContainer>

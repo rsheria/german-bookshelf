@@ -478,7 +478,7 @@ const AdminBooksPage: React.FC = () => {
   if (authLoading || isLoading) {
     return (
       <AdminContainer>
-        <LoadingState>{t('common.loading')}</LoadingState>
+        <LoadingState>{t('common.loading', 'Loading...')}</LoadingState>
       </AdminContainer>
     );
   }
@@ -492,8 +492,13 @@ const AdminBooksPage: React.FC = () => {
   return (
     <AdminContainer>
       <AdminHeader>
-        <AdminTitle>{t('admin.manageBooks')}</AdminTitle>
-        <AdminSubtitle>{t('admin.manageBooksSubtitle')}</AdminSubtitle>
+        <AdminTitle>
+          <FiBook style={{ marginRight: '0.5rem' }} />
+          {t('manageBooks', 'Manage Books')}
+        </AdminTitle>
+        <AdminSubtitle>
+          {t('manageBooksSubtitle', 'View, edit and delete books in your library')}
+        </AdminSubtitle>
       </AdminHeader>
       
       <StatsRow>
@@ -503,7 +508,7 @@ const AdminBooksPage: React.FC = () => {
           </div>
           <div className="content">
             <div className="value">{bookStats.total}</div>
-            <div className="label">{t('admin.totalBooks')}</div>
+            <div className="label">{t('totalBooks', 'Total Books')}</div>
           </div>
         </StatsCard>
         
@@ -513,7 +518,7 @@ const AdminBooksPage: React.FC = () => {
           </div>
           <div className="content">
             <div className="value">{bookStats.ebooks}</div>
-            <div className="label">{t('books.ebook', 'E-Books')}</div>
+            <div className="label">{t('totalEbooks', 'E-books')}</div>
           </div>
         </StatsCard>
         
@@ -523,7 +528,7 @@ const AdminBooksPage: React.FC = () => {
           </div>
           <div className="content">
             <div className="value">{bookStats.audiobooks}</div>
-            <div className="label">{t('books.audiobook', 'Audiobooks')}</div>
+            <div className="label">{t('totalAudiobooks', 'Audiobooks')}</div>
           </div>
         </StatsCard>
         
@@ -533,45 +538,47 @@ const AdminBooksPage: React.FC = () => {
           </div>
           <div className="content">
             <div className="value">{bookStats.totalDownloads}</div>
-            <div className="label">{t('admin.totalDownloads')}</div>
+            <div className="label">{t('totalDownloads', 'Total Downloads')}</div>
           </div>
         </StatsCard>
       </StatsRow>
       
       <ControlsContainer>
         <SearchBar>
-          <input
-            type="text"
-            placeholder={t('common.search')}
+          <input 
+            type="text" 
+            placeholder={t('searchBooks', 'Search books...')} 
             value={searchTerm}
             onChange={handleSearch}
           />
-          <IconButton aria-label={t('common.search')}>
-            <FiSearch />
+          <IconButton style={{ width: 'auto', paddingLeft: '1rem', paddingRight: '1rem' }}>
+            <FiSearch style={{ marginRight: '0.5rem' }} />
+            {t('search', 'Search')}
           </IconButton>
         </SearchBar>
         
-        <FilterDropdown
-          value={typeFilter}
-          onChange={(e) => handleTypeFilterChange(e.target.value as 'all' | 'ebook' | 'audiobook')}
-        >
-          <option value="all">{t('admin.allTypes')}</option>
-          <option value="ebook">{t('books.ebook')}</option>
-          <option value="audiobook">{t('books.audiobook')}</option>
+        <FilterDropdown>
+          <label>{t('filterByType', 'Filter by Type:')}</label>
+          <select value={typeFilter} onChange={(e) => handleTypeFilterChange(e.target.value as any)}>
+            <option value="all">{t('allTypes', 'All Types')}</option>
+            <option value="ebook">{t('ebook', 'E-book')}</option>
+            <option value="audiobook">{t('audiobook', 'Audiobook')}</option>
+          </select>
         </FilterDropdown>
         
-        <FilterDropdown
-          value={levelFilter}
-          onChange={(e) => handleLevelFilterChange(e.target.value as 'all' | 'beginner' | 'intermediate' | 'advanced')}
-        >
-          <option value="all">{t('admin.allLevels')}</option>
-          <option value="beginner">{t('levels.beginner')}</option>
-          <option value="intermediate">{t('levels.intermediate')}</option>
-          <option value="advanced">{t('levels.advanced')}</option>
+        <FilterDropdown>
+          <label>{t('filterByLevel', 'Filter by Level:')}</label>
+          <select value={levelFilter} onChange={(e) => handleLevelFilterChange(e.target.value as any)}>
+            <option value="all">{t('allLevels', 'All Levels')}</option>
+            <option value="beginner">{t('beginner', 'Beginner')}</option>
+            <option value="intermediate">{t('intermediate', 'Intermediate')}</option>
+            <option value="advanced">{t('advanced', 'Advanced')}</option>
+          </select>
         </FilterDropdown>
         
         <ActionButton onClick={() => navigate('/admin/books/add')}>
-          <FiPlus /> {t('admin.addBook')}
+          <FiPlus style={{ marginRight: '0.5rem' }} />
+          {t('addBook', 'Add Book')}
         </ActionButton>
       </ControlsContainer>
       
@@ -579,13 +586,13 @@ const AdminBooksPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableHeader>{t('books.title')}</TableHeader>
-              <TableHeader>{t('books.author')}</TableHeader>
-              <TableHeader>{t('books.type')}</TableHeader>
-              <TableHeader>{t('books.level')}</TableHeader>
-              <TableHeader>{t('books.publishedAt')}</TableHeader>
-              <TableHeader>{t('books.downloadCount')}</TableHeader>
-              <TableHeader>{t('common.actions')}</TableHeader>
+              <TableHeader>{t('title', 'Title')}</TableHeader>
+              <TableHeader>{t('author', 'Author')}</TableHeader>
+              <TableHeader>{t('type', 'Type')}</TableHeader>
+              <TableHeader>{t('level', 'Level')}</TableHeader>
+              <TableHeader>{t('published', 'Published')}</TableHeader>
+              <TableHeader>{t('downloads', 'Downloads')}</TableHeader>
+              <TableHeader>{t('actions', 'Actions')}</TableHeader>
             </TableRow>
           </TableHead>
           <tbody>
@@ -596,13 +603,13 @@ const AdminBooksPage: React.FC = () => {
                 <TableCell>
                   <Chip variant={book.type}>
                     {book.type === 'audiobook' 
-                      ? t('books.audiobook') 
-                      : t('books.ebook')}
+                      ? t('audiobook') 
+                      : t('ebook')}
                   </Chip>
                 </TableCell>
                 <TableCell>
                   <Chip variant={book.level}>
-                    {t(`levels.${book.level}`)}
+                    {t(`${book.level}`)}
                   </Chip>
                 </TableCell>
                 <TableCell>{formatDate(book.published_at)}</TableCell>
@@ -612,21 +619,21 @@ const AdminBooksPage: React.FC = () => {
                     <IconButton 
                       className="view"
                       onClick={() => navigate(`/books/${book.id}`)} 
-                      aria-label={t('common.view')}
+                      aria-label={t('view')}
                     >
                       <FiEye size={16} />
                     </IconButton>
                     <IconButton 
                       className="edit"
                       onClick={() => navigate(`/admin/books/edit/${book.id}`)} 
-                      aria-label={t('common.edit')}
+                      aria-label={t('edit')}
                     >
                       <FiEdit size={16} />
                     </IconButton>
                     <IconButton 
                       className="delete"
                       onClick={() => handleDeleteClick(book)} 
-                      aria-label={t('common.delete')}
+                      aria-label={t('delete')}
                     >
                       <FiTrash2 size={16} />
                     </IconButton>
@@ -639,8 +646,8 @@ const AdminBooksPage: React.FC = () => {
               <TableRow>
                 <TableCell colSpan={7} style={{ textAlign: 'center' }}>
                   {searchTerm || typeFilter !== 'all' || levelFilter !== 'all'
-                    ? t('admin.noSearchResults')
-                    : t('admin.noBooks')}
+                    ? t('noSearchResults', 'No matching books found')
+                    : t('noBooks', 'No books in the library yet')}
                 </TableCell>
               </TableRow>
             )}
@@ -651,7 +658,7 @@ const AdminBooksPage: React.FC = () => {
       {totalPages > 1 && (
         <Pagination>
           <PageInfo>
-            {t('admin.showingResults', {
+            {t('showingResults', {
               from: page * pageSize + 1,
               to: Math.min((page + 1) * pageSize, totalBooks),
               total: totalBooks
@@ -662,7 +669,7 @@ const AdminBooksPage: React.FC = () => {
             <PageButton 
               onClick={() => handlePageChange(page - 1)} 
               disabled={page === 0}
-              aria-label={t('pagination.previous')}
+              aria-label={t('previous')}
             >
               &laquo;
             </PageButton>
@@ -694,7 +701,7 @@ const AdminBooksPage: React.FC = () => {
             <PageButton 
               onClick={() => handlePageChange(page + 1)} 
               disabled={page === totalPages - 1}
-              aria-label={t('pagination.next')}
+              aria-label={t('next')}
             >
               &raquo;
             </PageButton>
@@ -705,18 +712,18 @@ const AdminBooksPage: React.FC = () => {
       {deleteModalOpen && bookToDelete && (
         <ConfirmationModal>
           <ModalContent>
-            <h3>{t('admin.deleteBookConfirmTitle')}</h3>
+            <h3>{t('deleteBookConfirmTitle', 'Delete Book')}</h3>
             <p>
-              {t('admin.deleteBookConfirmMessage', {
+              {t('deleteBookConfirmMessage', {
                 title: bookToDelete.title
               })}
             </p>
             <ModalButtons>
               <CancelButton onClick={() => setDeleteModalOpen(false)}>
-                {t('common.cancel')}
+                {t('cancel', 'Cancel')}
               </CancelButton>
               <DeleteButton onClick={handleDeleteConfirm}>
-                {t('common.delete')}
+                {t('delete', 'Delete')}
               </DeleteButton>
             </ModalButtons>
           </ModalContent>
