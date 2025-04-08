@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
-import { FiGlobe, FiX, FiUsers, FiCalendar } from 'react-icons/fi';
-import { HiOutlineBan as FiBan } from 'react-icons/hi';
+import { FiGlobe, FiX, FiBan, FiAlertCircle, FiMap, FiUsers, FiCalendar } from 'react-icons/fi';
 import { getUserIpLogs } from '../../services/ipTrackingService';
 import { getBansByIp, banUser } from '../../services/userBanService';
 import { Profile, IpLog, UserBan } from '../../types/supabase';
@@ -185,6 +184,11 @@ const MetaItem = styled.div`
   gap: 0.5rem;
 `;
 
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 0.5rem;
+`;
+
 const Button = styled.button`
   padding: 0.5rem 0.75rem;
   border-radius: ${props => props.theme.borderRadius.md};
@@ -210,6 +214,52 @@ const BanButton = styled(Button)`
   &:hover:not(:disabled) {
     background-color: ${props => props.theme.colors.dangerDark};
   }
+`;
+
+const UsersList = styled.div`
+  margin-top: 1.5rem;
+`;
+
+const UsersListHeader = styled.div`
+  font-weight: ${props => props.theme.typography.fontWeight.semibold};
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid ${props => props.theme.colors.border};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const UserItem = styled.div`
+  padding: 0.75rem;
+  border-bottom: 1px solid ${props => props.theme.colors.borderLight};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+  
+  &:hover {
+    background-color: ${props => props.theme.colors.backgroundAlt};
+  }
+`;
+
+const Username = styled.div`
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+`;
+
+const LoadingState = styled.div`
+  padding: 2rem;
+  text-align: center;
+  color: ${props => props.theme.colors.textDim};
+`;
+
+const EmptyState = styled.div`
+  padding: 2rem;
+  text-align: center;
+  color: ${props => props.theme.colors.textDim};
 `;
 
 const BanFormOverlay = styled.div`
@@ -323,7 +373,7 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
   onClose,
   onAction 
 }) => {
-  const { t: _t } = useTranslation();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('ip-logs');
   const [ipLogs, setIpLogs] = useState<IpLog[]>([]);
   const [ipBans, setIpBans] = useState<Record<string, UserBan[]>>({});
@@ -332,9 +382,9 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
   // Ban form state
   const [showBanForm, setShowBanForm] = useState(false);
   const [selectedIp, setSelectedIp] = useState('');
-  const [banDuration, setBanDuration] = useState<'permanent' | '1day' | '7days' | '30days' | 'custom'>('7days');
-  const [customDays, setCustomDays] = useState(7);
   const [reason, setReason] = useState('');
+  const [banDuration, setBanDuration] = useState('permanent');
+  const [customDays, setCustomDays] = useState(7);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
@@ -447,11 +497,11 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
   
   const renderIpLogs = () => {
     if (isLoading) {
-      return <div>Loading...</div>;
+      return <LoadingState>{t('loading', 'Loading...')}</LoadingState>;
     }
     
     if (ipLogs.length === 0) {
-      return <div>No IP logs found for this user</div>;
+      return <EmptyState>{t('noIpLogs', 'No IP logs found for this user')}</EmptyState>;
     }
     
     // Group by IP address
@@ -473,23 +523,23 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
               {ip}
               {isIpBanned(ip) && (
                 <BanStatus $active={true}>
-                  Banned
+                  {t('banned', 'Banned')}
                 </BanStatus>
               )}
             </IpAddress>
             <IpMeta>
               <MetaItem>
                 <FiCalendar size={14} />
-                Last seen: {format(new Date(logs[0].created_at), 'MMM d, yyyy HH:mm')}
+                {t('lastSeen', 'Last seen')}: {format(new Date(logs[0].created_at), 'MMM d, yyyy HH:mm')}
               </MetaItem>
               <MetaItem>
                 <FiUsers size={14} />
-                Occurrences: {logs.length}
+                {t('occurrences', 'Occurrences')}: {logs.length}
               </MetaItem>
               {!isIpBanned(ip) && (
                 <BanButton onClick={() => handleBanIp(ip)}>
                   <FiBan size={14} />
-                  Ban IP
+                  {t('banIp', 'Ban IP')}
                 </BanButton>
               )}
             </IpMeta>
@@ -501,13 +551,13 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
   
   const renderBans = () => {
     if (isLoading) {
-      return <div>Loading...</div>;
+      return <LoadingState>{t('loading', 'Loading...')}</LoadingState>;
     }
     
     const allBans = Object.values(ipBans).flat();
     
     if (allBans.length === 0) {
-      return <div>No IP bans found for this user</div>;
+      return <EmptyState>{t('noIpBans', 'No IP bans found for this user')}</EmptyState>;
     }
     
     return (
@@ -519,24 +569,24 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
                 {ban.ip_address}
               </BanInfo>
               <BanStatus $active={ban.is_active}>
-                {ban.is_active ? 'Active' : 'Inactive'}
+                {ban.is_active ? t('active', 'Active') : t('inactive', 'Inactive')}
               </BanStatus>
             </BanHeader>
             <BanMeta>
               <MetaItem>
                 <FiCalendar size={14} />
-                Banned on: {format(new Date(ban.banned_at), 'MMM d, yyyy')}
+                {t('bannedOn', 'Banned on')}: {format(new Date(ban.banned_at), 'MMM d, yyyy')}
               </MetaItem>
               {ban.expires_at && (
                 <MetaItem>
                   <FiCalendar size={14} />
-                  Expires on: {format(new Date(ban.expires_at), 'MMM d, yyyy')}
+                  {t('expiresOn', 'Expires on')}: {format(new Date(ban.expires_at), 'MMM d, yyyy')}
                 </MetaItem>
               )}
             </BanMeta>
             {ban.reason && (
               <BanReason>
-                Reason: {ban.reason}
+                {t('reason', 'Reason')}: {ban.reason}
               </BanReason>
             )}
           </BanItem>
@@ -552,7 +602,7 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
           <ModalHeader>
             <h2>
               <FiGlobe />
-              User IP Tracking - {user.username}
+              {t('userIpTracking', 'User IP Tracking')} - {user.username}
             </h2>
             <CloseButton onClick={onClose}>
               <FiX />
@@ -565,14 +615,14 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
               onClick={() => setActiveTab('ip-logs')}
             >
               <FiGlobe />
-              IP Logs
+              {t('ipLogs', 'IP Logs')}
             </Tab>
             <Tab 
               $active={activeTab === 'bans'} 
               onClick={() => setActiveTab('bans')}
             >
               <FiBan />
-              IP Bans
+              {t('ipBans', 'IP Bans')}
             </Tab>
           </TabContainer>
           
@@ -586,7 +636,7 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
             <ModalHeader>
               <h2>
                 <FiBan />
-                Ban IP Address - {selectedIp}
+                {t('banIpAddress', 'Ban IP Address')} - {selectedIp}
               </h2>
               <CloseButton onClick={cancelBan}>
                 <FiX />
@@ -595,7 +645,7 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
             
             <form onSubmit={handleSubmitBan}>
               <FormGroup>
-                <label>Ban Duration:</label>
+                <label>{t('banDuration', 'Ban Duration')}:</label>
                 <RadioOption>
                   <input 
                     type="radio" 
@@ -605,7 +655,7 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
                     checked={banDuration === 'permanent'}
                     onChange={() => setBanDuration('permanent')}
                   />
-                  <label htmlFor="permanent">Permanent</label>
+                  <label htmlFor="permanent">{t('permanentBan', 'Permanent')}</label>
                 </RadioOption>
                 <RadioOption>
                   <input 
@@ -616,7 +666,7 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
                     checked={banDuration === '1day'}
                     onChange={() => setBanDuration('1day')}
                   />
-                  <label htmlFor="1day">1 Day</label>
+                  <label htmlFor="1day">{t('1dayBan', '1 Day')}</label>
                 </RadioOption>
                 <RadioOption>
                   <input 
@@ -627,7 +677,7 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
                     checked={banDuration === '7days'}
                     onChange={() => setBanDuration('7days')}
                   />
-                  <label htmlFor="7days">7 Days</label>
+                  <label htmlFor="7days">{t('7daysBan', '7 Days')}</label>
                 </RadioOption>
                 <RadioOption>
                   <input 
@@ -638,7 +688,7 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
                     checked={banDuration === '30days'}
                     onChange={() => setBanDuration('30days')}
                   />
-                  <label htmlFor="30days">30 Days</label>
+                  <label htmlFor="30days">{t('30daysBan', '30 Days')}</label>
                 </RadioOption>
                 <RadioOption>
                   <input 
@@ -649,7 +699,7 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
                     checked={banDuration === 'custom'}
                     onChange={() => setBanDuration('custom')}
                   />
-                  <label htmlFor="custom">Custom Days:</label>
+                  <label htmlFor="custom">{t('customDaysBan', 'Custom Days')}:</label>
                   {banDuration === 'custom' && (
                     <Input 
                       type="number" 
@@ -664,12 +714,12 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
               </FormGroup>
               
               <FormGroup>
-                <label htmlFor="reason">Reason for Ban:</label>
+                <label htmlFor="reason">{t('banReason', 'Reason for Ban')}:</label>
                 <Textarea 
                   id="reason"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  placeholder="Enter a reason for this ban..."
+                  placeholder={t('banReasonPlaceholder', 'Enter a reason for this ban...')}
                   required
                 />
               </FormGroup>
@@ -677,13 +727,13 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
               <ModalFooter>
                 <CancelButton type="button" onClick={cancelBan} disabled={isSubmitting}>
                   <FiX />
-                  Cancel
+                  {t('cancel', 'Cancel')}
                 </CancelButton>
                 <BanButton type="submit" disabled={isSubmitting}>
                   <FiBan />
                   {isSubmitting 
-                    ? 'Banning...' 
-                    : 'Confirm Ban'}
+                    ? t('banning', 'Banning...') 
+                    : t('confirmBan', 'Confirm Ban')}
                 </BanButton>
               </ModalFooter>
             </form>
