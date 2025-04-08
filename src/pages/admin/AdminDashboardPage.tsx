@@ -145,6 +145,90 @@ const StatLabel = styled.div`
   color: ${props => props.theme.colors.textDim};
 `;
 
+interface StatChangeProps {
+  positive?: boolean;
+}
+
+const StatChange = styled.div<StatChangeProps>`
+  display: flex;
+  align-items: center;
+  font-size: ${props => props.theme.typography.fontSize.xs};
+  color: ${props => props.positive ? props.theme.colors.success : props.theme.colors.danger};
+  margin-top: 0.25rem;
+`;
+
+const SectionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid ${props => props.theme.colors.borderLight};
+`;
+
+const SectionTitle = styled.h3`
+  margin: 0;
+  font-size: ${props => props.theme.typography.fontSize.lg};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const CardContent = styled.div`
+  padding: 1.5rem;
+`;
+
+const SystemAlertsList = styled.div`
+  margin-top: 1rem;
+`;
+
+const AlertItem = styled.div`
+  padding: 1rem;
+  border-radius: ${props => props.theme.borderRadius.md};
+  background-color: rgba(241, 196, 15, 0.1);
+  border-left: 4px solid ${props => props.theme.colors.warning};
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+  
+  svg {
+    color: ${props => props.theme.colors.warning};
+    flex-shrink: 0;
+  }
+`;
+
+const AlertContent = styled.div`
+  flex: 1;
+`;
+
+const AlertTitle = styled.div`
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  margin-bottom: 0.25rem;
+`;
+
+const AlertDescription = styled.div`
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  color: ${props => props.theme.colors.textDim};
+`;
+
+const AlertMeta = styled.div`
+  display: flex;
+  font-size: ${props => props.theme.typography.fontSize.xs};
+  color: ${props => props.theme.colors.textDim};
+  margin-top: 0.5rem;
+`;
+
+const LoadingState = styled.div`
+  padding: 2rem;
+  text-align: center;
+  color: ${props => props.theme.colors.textDim};
+`;
+
 interface TopBook {
   book_id: string;
   title: string;
