@@ -20,8 +20,7 @@ import {
   EmptyState,
   ActionButtons,
   IconButton,
-  SectionTitle,
-  Button
+  SectionTitle
 } from '../../styles/adminStyles';
 
 interface EditingPlan extends Omit<Plan, 'id' | 'created_at' | 'updated_at'> {
@@ -442,6 +441,32 @@ const ErrorMessage = styled.div`
   padding: 0.75rem 1rem;
   border-radius: ${props => props.theme.borderRadius.md};
   margin-bottom: 1rem;
+`;
+
+const Button = styled.button<{ primary?: boolean }>`
+  padding: 0.75rem 1.25rem;
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: ${props => props.theme.typography.fontSize.md};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  background-color: ${props => props.primary ? props.theme.colors.primary : props.theme.colors.background};
+  color: ${props => props.primary ? 'white' : props.theme.colors.text};
+  border: 1px solid ${props => props.primary ? 'transparent' : props.theme.colors.border};
+  
+  &:hover {
+    transform: translateY(-2px);
+    background-color: ${props => props.primary ? props.theme.colors.primaryDark : props.theme.colors.backgroundAlt};
+  }
+  
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
 `;
 
 const PlanForm = styled.div`

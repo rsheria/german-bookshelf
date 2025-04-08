@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS user_ips (
   is_blocked BOOLEAN DEFAULT FALSE,
   block_reason TEXT,
   first_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, ip_address)
 );
 
 -- 4. Create a unified activity logs table with enhanced tracking
@@ -132,7 +133,46 @@ CREATE POLICY "System can insert activity logs"
     )
   );
 
--- 7. Helper functions for the subscription system
+-- Check if IP is blocked
+CREATE OR REPLACE FUNCTION is_ip_blocked(ip TEXT)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM user_ips
+        WHERE ip_address = ip
+        AND is_blocked = TRUE
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to block an IP address
+CREATE OR REPLACE FUNCTION block_ip(ip TEXT, reason TEXT)
+RETURNS BOOLEAN AS $$
+BEGIN
+    UPDATE user_ips
+    SET 
+        is_blocked = TRUE,
+        block_reason = reason
+    WHERE ip_address = ip;
+    
+    RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to record user IP (called on each login)
+CREATE OR REPLACE FUNCTION record_user_ip(user_id UUID, ip TEXT, device TEXT DEFAULT NULL)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO user_ips (user_id, ip_address, device_info)
+    VALUES (user_id, ip, device)
+    ON CONFLICT (user_id, ip_address) 
+    DO UPDATE SET 
+        last_seen = NOW(),
+        device_info = COALESCE(device, user_ips.device_info);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 7. Helper functions for the subscription system that reference activity_logs
 CREATE OR REPLACE FUNCTION assign_plan_to_user(user_id UUID, new_plan_id UUID, months INTEGER DEFAULT 1)
 RETURNS BOOLEAN AS $$
 DECLARE
@@ -235,33 +275,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to block an IP address
-CREATE OR REPLACE FUNCTION block_ip(ip TEXT, reason TEXT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    UPDATE user_ips
-    SET 
-        is_blocked = TRUE,
-        block_reason = reason
-    WHERE ip_address = ip;
-    
-    RETURN FOUND;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function to record user IP (called on each login)
-CREATE OR REPLACE FUNCTION record_user_ip(user_id UUID, ip TEXT, device TEXT DEFAULT NULL)
-RETURNS VOID AS $$
-BEGIN
-    INSERT INTO user_ips (user_id, ip_address, device_info)
-    VALUES (user_id, ip, device)
-    ON CONFLICT (user_id, ip_address) 
-    DO UPDATE SET 
-        last_seen = NOW(),
-        device_info = COALESCE(device, user_ips.device_info);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
 -- Trigger to check if a user is banned before allowing login
 CREATE OR REPLACE FUNCTION check_user_ban_status()
 RETURNS TRIGGER AS $$
@@ -277,17 +290,5 @@ BEGIN
     END IF;
     
     RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Check if IP is blocked
-CREATE OR REPLACE FUNCTION is_ip_blocked(ip TEXT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    RETURN EXISTS (
-        SELECT 1 FROM user_ips
-        WHERE ip_address = ip
-        AND is_blocked = TRUE
-    );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
