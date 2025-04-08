@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
@@ -9,7 +9,6 @@ import OnlineUsersPanel from '../../components/admin/OnlineUsersPanel';
 import UserStatsPanel from '../../components/admin/UserStatsPanel';
 import { getActivityStats } from '../../services/activityService';
 import { getDownloadStats } from '../../services/downloadService';
-import { getSessionStats } from '../../services/onlineUserService';
 import { supabase } from '../../services/supabase';
 import {
   AdminContainer,
@@ -168,34 +167,14 @@ const SectionHeader = styled.div`
 
 const SectionTitle = styled.h3`
   margin: 0;
-  font-size: ${props => props.theme.typography.fontSize.lg};
+  font-size: ${props => props.theme.typography.fontSize.md};
+  font-weight: ${props => props.theme.typography.fontWeight.semibold};
   display: flex;
   align-items: center;
   gap: 0.5rem;
-`;
-
-const RefreshButton = styled.button`
-  background: none;
-  border: none;
-  color: ${props => props.theme.colors.primary};
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: ${props => props.theme.typography.fontSize.sm};
-  padding: 0.25rem 0.5rem;
-  border-radius: ${props => props.theme.borderRadius.sm};
-  
-  &:hover {
-    background-color: rgba(52, 152, 219, 0.1);
-  }
   
   svg {
-    transition: all 0.3s ease;
-  }
-  
-  &:active svg {
-    transform: rotate(180deg);
+    color: ${props => props.theme.colors.primary};
   }
 `;
 
@@ -276,12 +255,6 @@ interface ActivityStats {
   byAction: Record<string, number>;
 }
 
-interface OnlineStats {
-  activeUsers: number;
-  activeSessions: number;
-  totalSessions: number;
-}
-
 interface Stats {
   totalUsers: number;
   activeUsers: number;
@@ -294,23 +267,15 @@ const AdminDashboardPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Dashboard stats
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
     activeUsers: 0,
     totalBooks: 0,
-    totalDownloads: 0,
+    totalDownloads: 0
   });
-  const [onlineStats, setOnlineStats] = useState<OnlineStats>({
-    activeUsers: 0,
-    activeSessions: 0,
-    totalSessions: 0
-  });
-  const [activityStats, setActivityStats] = useState<ActivityStats>({
-    today: 0,
-    week: 0,
-    month: 0,
-    byAction: {}
-  });
+  
   const [downloadStats, setDownloadStats] = useState<DownloadStats>({
     totalDownloads: 0,
     downloadsToday: 0,
@@ -318,23 +283,26 @@ const AdminDashboardPage = () => {
     downloadsThisMonth: 0,
     topBooks: []
   });
-
+  
+  const [activityStats, setActivityStats] = useState<ActivityStats>({
+    today: 0,
+    week: 0,
+    month: 0,
+    byAction: {}
+  });
+  
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
+    if (user) {
+      fetchDashboardData();
     }
-    
-    fetchDashboardData();
-  }, [user, navigate]);
-
+  }, [user]);
+  
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
       // Fetch all stats in parallel
-      const [userCount, onlineStatsData, activityStatsData, downloadStatsData, booksCount] = await Promise.all([
+      const [userCount, activityStatsData, downloadStatsData, booksCount] = await Promise.all([
         fetchUserStats(),
-        getSessionStats(),
         getActivityStats(),
         getDownloadStats(),
         fetchBookCount()
@@ -343,12 +311,11 @@ const AdminDashboardPage = () => {
       setStats({
         ...stats,
         totalUsers: userCount || 0,
-        activeUsers: onlineStatsData.activeUsers || 0,
+        activeUsers: 0,
         totalBooks: booksCount || 0,
         totalDownloads: downloadStatsData.totalDownloads || 0,
       });
       
-      setOnlineStats(onlineStatsData);
       setActivityStats(activityStatsData);
       setDownloadStats(downloadStatsData);
     } catch (error) {
@@ -404,21 +371,6 @@ const AdminDashboardPage = () => {
               <AlertTitle>{t('highDownloadVolume', 'High Download Volume')}</AlertTitle>
               <AlertDescription>
                 {t('highDownloadVolumeDesc', 'There are {{count}} downloads today, which is higher than usual.', { count: downloadStats.downloadsToday })}
-              </AlertDescription>
-              <AlertMeta>
-                {t('detectedJustNow', 'Detected just now')}
-              </AlertMeta>
-            </AlertContent>
-          </AlertItem>
-        )}
-        
-        {stats.activeUsers > 20 && (
-          <AlertItem>
-            <FiAlertCircle size={24} />
-            <AlertContent>
-              <AlertTitle>{t('highActiveUsers', 'High Active Users')}</AlertTitle>
-              <AlertDescription>
-                {t('highActiveUsersDesc', 'There are {{count}} active users online now.', { count: stats.activeUsers })}
               </AlertDescription>
               <AlertMeta>
                 {t('detectedJustNow', 'Detected just now')}

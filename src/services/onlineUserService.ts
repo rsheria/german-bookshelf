@@ -20,7 +20,8 @@ export const getSessionId = (): string => {
       localStorage.setItem('app_session_id', currentSessionId);
     }
   }
-  return currentSessionId;
+  // Ensure we return a string, not null
+  return currentSessionId || uuidv4();
 };
 
 /**

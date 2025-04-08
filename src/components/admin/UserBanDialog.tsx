@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
-import { FiBan, FiX, FiCalendar, FiAlertTriangle } from 'react-icons/fi';
+import { FiX, FiAlertTriangle } from 'react-icons/fi';
+import { HiOutlineBan as FiBan } from 'react-icons/hi';
 import { banUser } from '../../services/userBanService';
 import { Profile } from '../../types/supabase';
 
