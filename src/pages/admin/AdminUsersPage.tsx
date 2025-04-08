@@ -2,16 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { 
-  FiUsers, FiEdit, FiCheck, FiX, FiSearch, FiDownload, 
-  FiPackage, FiGlobe, FiUserX, FiUnlock, FiActivity 
-} from 'react-icons/fi';
+import { FiUsers, FiEdit, FiCheck, FiX, FiSearch, FiDownload, FiCalendar, FiBarChart2, FiPieChart, FiActivity } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
-import { Profile, UserStatus, Plan } from '../../types/supabase';
-import UserBanDialog from '../../components/admin/UserBanDialog';
-import UserPlanDialog from '../../components/admin/UserPlanDialog';
-import UserIpTrackingDialog from '../../components/admin/UserIpTrackingDialog';
+import { Profile } from '../../types/supabase';
+import AdminUserActivity from './AdminUserActivity';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
 import {
   AdminContainer,
   AdminHeader,
@@ -33,64 +30,52 @@ import {
   Pagination
 } from '../../styles/adminStyles';
 
-// Custom Button component since it's not exported from adminStyles
-// const Button = styled.button`
-//   background-color: ${props => props.theme.colors.primary};
-//   color: white;
-//   padding: 0.5rem 1rem;
-//   border: none;
-//   border-radius: ${props => props.theme.borderRadius.md};
-//   cursor: pointer;
-//   font-size: ${props => props.theme.typography.fontSize.md};
-//   display: flex;
-//   align-items: center;
-//   gap: 0.5rem;
-//   transition: all 0.2s;
-  
-//   &:hover {
-//     background-color: ${props => props.theme.colors.primaryHover || props.theme.colors.primary};
-//     transform: translateY(-2px);
-//   }
-  
-//   &:disabled {
-//     opacity: 0.6;
-//     cursor: not-allowed;
-//   }
-// `;
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const StatsSection = styled.div`
   margin-bottom: 2rem;
-  padding: 1rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
 `;
 
 const StatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
 `;
 
 const StatCard = styled.div`
-  padding: 1rem;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: 1.5rem;
+  box-shadow: ${props => props.theme.shadows.sm};
   display: flex;
   align-items: center;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: ${props => props.theme.shadows.md};
+  }
 `;
 
 const StatIcon = styled.div`
-  background-color: ${props => props.theme.colors.primary || '#007bff'};
-  color: white;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   margin-right: 1rem;
+  background-color: rgba(63, 118, 156, 0.1);
+  color: ${props => props.theme.colors.primary};
   
   svg {
     width: 20px;
@@ -98,18 +83,78 @@ const StatIcon = styled.div`
   }
 `;
 
-const StatContent = styled.div`
-  flex: 1;
-`;
-
 const StatValue = styled.div`
-  font-size: 1.5rem;
-  font-weight: bold;
+  font-size: ${props => props.theme.typography.fontSize.xl};
+  font-weight: ${props => props.theme.typography.fontWeight.semibold};
+  margin-bottom: 0.25rem;
 `;
 
 const StatLabel = styled.div`
-  color: #6c757d;
-  font-size: 0.875rem;
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  color: ${props => props.theme.colors.textDim};
+`;
+
+const ChartContainer = styled.div`
+  height: 400px;
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.md};
+  box-shadow: ${props => props.theme.shadows.sm};
+`;
+
+const UserStatsOverview = styled.div`
+  padding: 1.5rem;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-top: 1rem;
+  
+  p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+`;
+
+const TabContainer = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+`;
+
+const Tab = styled.button<{ active?: boolean }>`
+  padding: 0.5rem 1rem;
+  background-color: ${props => props.active 
+    ? props.theme.colors.primary 
+    : props.theme.colors.backgroundAlt};
+  color: ${props => props.active 
+    ? 'white' 
+    : props.theme.colors.text};
+  border: none;
+  border-radius: ${props => props.theme.borderRadius.md};
+  cursor: pointer;
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.active 
+      ? props.theme.colors.primary 
+      : props.theme.colors.backgroundAltHover};
+    transform: translateY(-2px);
+  }
+`;
+
+const SectionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
 `;
 
 const SectionToggle = styled.button`
@@ -271,6 +316,12 @@ const SafeToggleAdminButton = styled.button<{ $isAdmin: boolean }>`
   }
 `;
 
+const StatContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+`;
+
 const StatusMessage = styled.div`
   padding: 1rem;
   background-color: ${props => props.theme.colors.backgroundAlt};
@@ -298,15 +349,6 @@ const PageButtons = styled.div`
   align-items: center;
 `;
 
-const SectionHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-`;
-
 interface UserWithEmail extends Profile {
   email?: string;
   last_sign_in?: string;
@@ -329,26 +371,33 @@ interface UserStats {
 }
 
 type UserRole = 'all' | 'admin' | 'user';
-type UserStatusFilter = 'all' | 'active' | 'banned' | 'suspended';
+type StatsTab = 'overview' | 'recentActivity' | 'userGrowth';
 
 const AdminUsersPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
   const [users, setUsers] = useState<UserWithEmail[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserWithEmail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
-  const [limit] = useState(20);
   const [totalCount, setTotalCount] = useState(0);
-  const [roleFilter, setRoleFilter] = useState<UserRole>('all');
-  const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all');
-  const [showStatsSection, setShowStatsSection] = useState(true);
-  const [dateRange, setDateRange] = useState({ from: '', to: '' });
   const [editingUser, setEditingUser] = useState<EditingUser | null>(null);
+  
+  // New filters
+  const [roleFilter, setRoleFilter] = useState<UserRole>('all');
+  const [dateRange, setDateRange] = useState<{from: string; to: string}>({
+    from: '',
+    to: ''
+  });
+  
+  // Stats and activity tracking
+  const [showStats, setShowStats] = useState(true);
+  const [statsTab, setStatsTab] = useState<StatsTab>('overview');
   const [userStats, setUserStats] = useState<UserStats>({
     totalUsers: 0,
     adminUsers: 0,
@@ -358,40 +407,40 @@ const AdminUsersPage: React.FC = () => {
     newUsersThisMonth: 0,
     averageDailyQuota: 0
   });
+  const [userGrowthData, setUserGrowthData] = useState<{
+    labels: string[];
+    datasets: {
+      label: string;
+      data: number[];
+      backgroundColor: string;
+      borderColor: string;
+    }[];
+  }>({
+    labels: [],
+    datasets: [{
+      label: t('newUsers', 'New Users'),
+      data: [],
+      backgroundColor: 'rgba(63, 118, 156, 0.2)',
+      borderColor: 'rgba(63, 118, 156, 1)'
+    }]
+  });
   
-  // State for modals
-  const [selectedUser, setSelectedUser] = useState<UserWithEmail | null>(null);
-  const [showBanDialog, setShowBanDialog] = useState(false);
-  const [showPlanDialog, setShowPlanDialog] = useState(false);
-  const [showIpTrackingDialog, setShowIpTrackingDialog] = useState(false);
-  const [plans, setPlans] = useState<Plan[]>([]);
+  const limit = 10;
 
-  const totalPages = Math.ceil(totalCount / limit);
+  useEffect(() => {
+    // Redirect if not admin
+    if (!authLoading && (!user || !isAdmin)) {
+      navigate('/');
+    }
+  }, [user, isAdmin, authLoading, navigate]);
 
   useEffect(() => {
     if (user && isAdmin) {
       fetchUsers();
       fetchUserStats();
-      fetchPlans();
+      fetchUserGrowthData();
     }
-  }, [user, isAdmin, page, limit, roleFilter, statusFilter, dateRange]);
-  
-  // Function to fetch plans
-  const fetchPlans = async () => {
-    if (!user || !isAdmin) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('plans')
-        .select('*')
-        .order('price', { ascending: true });
-        
-      if (error) throw error;
-      setPlans(data || []);
-    } catch (error) {
-      console.error('Error fetching plans:', error);
-    }
-  };
+  }, [user, isAdmin, searchTerm, page, roleFilter, dateRange]);
 
   const fetchUsers = async () => {
     if (!user || !isAdmin) return;
@@ -420,12 +469,7 @@ const AdminUsersPage: React.FC = () => {
         query = query.eq('is_admin', false);
       }
       
-      // Status filter (new)
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
-      
-      // Date range filters
+      // Date range filter
       if (dateRange.from) {
         query = query.gte('created_at', dateRange.from);
       }
@@ -446,6 +490,7 @@ const AdminUsersPage: React.FC = () => {
       }
       
       setUsers(data || []);
+      setFilteredUsers(data || []);
       setTotalCount(count || 0);
     } catch (err) {
       console.error('Error fetching users:', err);
@@ -454,176 +499,136 @@ const AdminUsersPage: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-  const handleEditQuota = (userId: string, currentQuota: number, monthlyRequestQuota: number) => {
-    setEditingUser({ id: userId, daily_quota: currentQuota, monthly_request_quota: monthlyRequestQuota });
-  };
-
-  // New handlers for user actions
-  const handleBanUser = (user: UserWithEmail) => {
-    setSelectedUser(user);
-    setShowBanDialog(true);
-  };
-
-  const handleUnbanUser = async (userId: string) => {
-    try {
-      setIsUpdating(true);
-      setError(null);
-      setSuccess(null);
-      
-      const { error: unbanError } = await supabase.rpc('unban_user', {
-        user_id: userId
-      });
-      
-      if (unbanError) throw unbanError;
-      
-      setSuccess(t('userUnbanned'));
-      fetchUsers();
-    } catch (err: any) {
-      console.error('Error unbanning user:', err.message);
-      setError(err.message);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleManagePlan = (user: UserWithEmail) => {
-    setSelectedUser(user);
-    setShowPlanDialog(true);
-  };
-
-  const handleViewIps = (user: UserWithEmail) => {
-    setSelectedUser(user);
-    setShowIpTrackingDialog(true);
-  };
-
-  const getUserStatusBadge = (status?: UserStatus) => {
-    if (!status || status === 'active') {
-      return <StatusBadge status="active">{t('active')}</StatusBadge>;
-    } else if (status === 'banned') {
-      return <StatusBadge status="banned">{t('banned')}</StatusBadge>;
-    } else if (status === 'suspended') {
-      return <StatusBadge status="suspended">{t('suspended')}</StatusBadge>;
-    }
-    
-    return null;
-  };
   
-  const getPlanName = (planId?: string) => {
-    if (!planId) return t('noPlan');
+  const fetchUserStats = async () => {
+    if (!user || !isAdmin) return;
     
-    const plan = plans.find(p => p.id === planId);
-    return plan ? plan.name : t('unknownPlan');
-  };
-
-  const handleExportUsers = () => {
-    // Convert users data to CSV format
-    let csvContent = "data:text/csv;charset=utf-8,";
-    
-    // Add headers
-    csvContent += "ID,Username,Email,Role,Status,Plan,Daily Quota,Monthly Quota,Created At\n";
-    
-    // Add data rows
-    users.forEach(userProfile => {
-      const row = [
-        userProfile.id,
-        userProfile.username,
-        userProfile.email || '-',
-        userProfile.is_admin ? 'Admin' : 'User',
-        userProfile.status || 'active',
-        getPlanName(userProfile.plan_id),
-        userProfile.daily_quota,
-        userProfile.monthly_request_quota,
-        userProfile.created_at
-      ].join(',');
-      csvContent += row + "\n";
-    });
-    
-    // Create download link and trigger download
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `users-${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-  
-  const handleExportAllUsers = async () => {
     try {
-      setIsLoading(true);
-      setError(null);
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
       
-      // Fetch all users without pagination
-      let query = supabase
+      // Get total users
+      const { count: totalUsers } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*', { count: 'exact', head: true });
       
-      // Apply the same filters as current view
-      if (roleFilter === 'admin') {
-        query = query.eq('is_admin', true);
-      } else if (roleFilter === 'user') {
-        query = query.eq('is_admin', false);
+      // Get admin users
+      const { count: adminUsers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_admin', true);
+      
+      // Get active users (last sign in within 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const { count: activeUsers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('last_sign_in', thirtyDaysAgo.toISOString());
+      
+      // Get new users today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const { count: newUsersToday } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', today.toISOString());
+      
+      // Get new users this week
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      const { count: newUsersThisWeek } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', oneWeekAgo.toISOString());
+      
+      // Get new users this month
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      const { count: newUsersThisMonth } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', oneMonthAgo.toISOString());
+      
+      // Get average daily quota
+      const { data: quotaData } = await supabase
+        .from('profiles')
+        .select('daily_quota');
+      
+      let totalQuota = 0;
+      if (quotaData) {
+        quotaData.forEach(item => {
+          totalQuota += item.daily_quota;
+        });
       }
       
-      // Status filter
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
+      const averageDailyQuota = quotaData?.length 
+        ? parseFloat((totalQuota / quotaData.length).toFixed(2)) 
+        : 0;
       
-      // Date range filters
-      if (dateRange.from) {
-        query = query.gte('created_at', dateRange.from);
-      }
-      if (dateRange.to) {
-        query = query.lte('created_at', dateRange.to);
-      }
-      
-      const { data, error: fetchError } = await query.order('created_at', { ascending: false });
-      
-      if (fetchError) {
-        throw fetchError;
-      }
-      
-      // Convert all users data to CSV
-      let csvContent = "data:text/csv;charset=utf-8,";
-      
-      // Add headers
-      csvContent += "ID,Username,Email,Role,Status,Plan,Daily Quota,Monthly Quota,Created At\n";
-      
-      // Add data rows
-      data?.forEach(userProfile => {
-        const row = [
-          userProfile.id,
-          userProfile.username,
-          userProfile.email || '-',
-          userProfile.is_admin ? 'Admin' : 'User',
-          userProfile.status || 'active',
-          getPlanName(userProfile.plan_id),
-          userProfile.daily_quota,
-          userProfile.monthly_request_quota,
-          userProfile.created_at
-        ].join(',');
-        csvContent += row + "\n";
+      setUserStats({
+        totalUsers: totalUsers || 0,
+        adminUsers: adminUsers || 0,
+        activeUsers: activeUsers || 0,
+        newUsersToday: newUsersToday || 0,
+        newUsersThisWeek: newUsersThisWeek || 0,
+        newUsersThisMonth: newUsersThisMonth || 0,
+        averageDailyQuota
       });
       
-      // Create download link and trigger download
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `all-users-${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-    } catch (err) {
-      console.error('Error exporting all users:', err);
-      setError((err as Error).message);
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
     }
   };
-
+  
+  const fetchUserGrowthData = async () => {
+    // For user growth data, we'll query the profiles table by month
+    try {
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      
+      const currentMonth = new Date().getMonth();
+      const labels = [];
+      const data = [];
+      
+      // Get data for the last 6 months
+      for (let i = 5; i >= 0; i--) {
+        const monthIndex = (currentMonth - i + 12) % 12;
+        labels.push(months[monthIndex]);
+        
+        // Calculate start and end of that month
+        const year = new Date().getFullYear() - (monthIndex > currentMonth ? 1 : 0);
+        const month = monthIndex;
+        
+        const startDate = new Date(year, month, 1);
+        const endDate = new Date(year, month + 1, 0); // Last day of month
+        
+        const { count } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', endDate.toISOString());
+        
+        data.push(count || 0);
+      }
+      
+      setUserGrowthData({
+        labels,
+        datasets: [{
+          label: t('newUsers', 'New Users'),
+          data,
+          backgroundColor: 'rgba(63, 118, 156, 0.2)',
+          borderColor: 'rgba(63, 118, 156, 1)'
+        }]
+      });
+    } catch (error) {
+      console.error('Error fetching user growth data:', error);
+    }
+  };
+  
   const handleToggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
     try {
       setError(null);
@@ -648,12 +653,17 @@ const AdminUsersPage: React.FC = () => {
       
       // Refresh user list
       fetchUsers();
+      fetchUserStats();
     } catch (err) {
       console.error('Error updating admin status:', err);
       setError((err as Error).message);
     }
   };
-
+  
+  const handleEditQuota = (userId: string, currentQuota: number, monthlyRequestQuota: number) => {
+    setEditingUser({ id: userId, daily_quota: currentQuota, monthly_request_quota: monthlyRequestQuota });
+  };
+  
   const handleSaveQuota = async () => {
     if (!editingUser) return;
     
@@ -662,33 +672,51 @@ const AdminUsersPage: React.FC = () => {
     setSuccess(null);
     
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          daily_quota: editingUser.daily_quota,
-          monthly_request_quota: editingUser.monthly_request_quota
-        })
-        .eq('id', editingUser.id);
+      // Use the new RPC function we created
+      const { error } = await supabase.rpc('update_user_quota', {
+        p_user_id: editingUser.id,
+        p_daily_quota: editingUser.daily_quota,
+        p_monthly_request_quota: editingUser.monthly_request_quota
+      });
       
-      if (error) throw error;
-      
-      setSuccess(t('quotaUpdated', 'User quota updated successfully'));
-      
-      // Update the user in the current list
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.id === editingUser.id 
-            ? { 
-                ...user, 
-                daily_quota: editingUser.daily_quota,
-                monthly_request_quota: editingUser.monthly_request_quota 
-              } 
-            : user
-        )
-      );
-      
-      // Clear the editing state
-      setEditingUser(null);
+      if (error) {
+        console.error('Error updating user quota:', error);
+        setError(error.message);
+      } else {
+        setSuccess(t('quotaUpdated', 'User quota updated successfully'));
+        
+        // Update the user in the current list
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === editingUser.id 
+              ? { 
+                  ...user, 
+                  daily_quota: editingUser.daily_quota,
+                  monthly_request_quota: editingUser.monthly_request_quota 
+                } 
+              : user
+          )
+        );
+        
+        // Update the filtered list as well
+        setFilteredUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === editingUser.id 
+              ? { 
+                  ...user, 
+                  daily_quota: editingUser.daily_quota,
+                  monthly_request_quota: editingUser.monthly_request_quota 
+                } 
+              : user
+          )
+        );
+        
+        // Clear the editing state
+        setEditingUser(null);
+        
+        // Refresh the user stats
+        fetchUserStats();
+      }
     } catch (err) {
       console.error('Exception updating user quota:', err);
       setError((err as Error).message);
@@ -696,6 +724,258 @@ const AdminUsersPage: React.FC = () => {
       setIsUpdating(false);
     }
   };
+  
+  const handleExportUsers = () => {
+    // Convert users data to CSV format
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // Add headers
+    csvContent += "ID,Username,Email,Role,Daily Quota,Monthly Quota,Created At,Last Sign In\n";
+    
+    // Add data rows
+    users.forEach(userProfile => {
+      const row = [
+        userProfile.id,
+        userProfile.username,
+        userProfile.email || '-',
+        userProfile.is_admin ? 'Admin' : 'User',
+        userProfile.daily_quota,
+        userProfile.monthly_request_quota,
+        userProfile.created_at,
+        userProfile.last_sign_in || '-'
+      ].join(',');
+      csvContent += row + "\n";
+    });
+    
+    // Create download link and trigger download
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `users-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const handleExportAllUsers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+      
+      // Fetch all users without pagination
+      let query = supabase
+        .from('profiles')
+        .select('*');
+      
+      // Apply the same filters as current view
+      if (roleFilter === 'admin') {
+        query = query.eq('is_admin', true);
+      } else if (roleFilter === 'user') {
+        query = query.eq('is_admin', false);
+      }
+      
+      const { data, error: fetchError } = await query.order('created_at', { ascending: false });
+      
+      if (fetchError) {
+        throw fetchError;
+      }
+      
+      // Convert all users data to CSV
+      let csvContent = "data:text/csv;charset=utf-8,";
+      
+      // Add headers
+      csvContent += "ID,Username,Email,Role,Daily Quota,Monthly Quota,Created At,Last Sign In\n";
+      
+      // Add data rows
+      data?.forEach(userProfile => {
+        const row = [
+          userProfile.id,
+          userProfile.username,
+          userProfile.email || '-',
+          userProfile.is_admin ? 'Admin' : 'User',
+          userProfile.daily_quota,
+          userProfile.monthly_request_quota,
+          userProfile.created_at,
+          userProfile.last_sign_in || '-'
+        ].join(',');
+        csvContent += row + "\n";
+      });
+      
+      // Create download link and trigger download
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `all-users-${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+    } catch (err) {
+      console.error('Error exporting all users:', err);
+      setError((err as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const renderStatsSection = () => {
+    if (!showStats) return null;
+    
+    return (
+      <StatsSection>
+        <SectionHeader>
+          <SectionTitle>{t('userStatistics', 'User Statistics')}</SectionTitle>
+          <SectionToggle onClick={() => setShowStats(false)}>
+            {t('hide', 'Hide')}
+          </SectionToggle>
+        </SectionHeader>
+        
+        <StatsGrid>
+          <StatCard>
+            <StatIcon>
+              <FiUsers />
+            </StatIcon>
+            <StatContent>
+              <StatValue>{userStats.totalUsers}</StatValue>
+              <StatLabel>{t('totalUsers', 'Total Users')}</StatLabel>
+            </StatContent>
+          </StatCard>
+          
+          <StatCard>
+            <StatIcon style={{ color: '#3498db' }}>
+              <FiActivity />
+            </StatIcon>
+            <StatContent>
+              <StatValue>{userStats.activeUsers}</StatValue>
+              <StatLabel>{t('activeUsers', 'Active Users')}</StatLabel>
+            </StatContent>
+          </StatCard>
+          
+          <StatCard>
+            <StatIcon style={{ color: '#2ecc71' }}>
+              <FiUsers />
+            </StatIcon>
+            <StatContent>
+              <StatValue>{userStats.newUsersToday}</StatValue>
+              <StatLabel>{t('newUsersToday', 'New Today')}</StatLabel>
+            </StatContent>
+          </StatCard>
+          
+          <StatCard>
+            <StatIcon style={{ color: '#f39c12' }}>
+              <FiUsers />
+            </StatIcon>
+            <StatContent>
+              <StatValue>{userStats.newUsersThisWeek}</StatValue>
+              <StatLabel>{t('newUsersWeek', 'New This Week')}</StatLabel>
+            </StatContent>
+          </StatCard>
+          
+          <StatCard>
+            <StatIcon style={{ color: '#e74c3c' }}>
+              <FiUsers />
+            </StatIcon>
+            <StatContent>
+              <StatValue>{userStats.newUsersThisMonth}</StatValue>
+              <StatLabel>{t('newUsersMonth', 'New This Month')}</StatLabel>
+            </StatContent>
+          </StatCard>
+          
+          <StatCard>
+            <StatIcon style={{ color: '#9b59b6' }}>
+              <FiDownload />
+            </StatIcon>
+            <StatContent>
+              <StatValue>{userStats.averageDailyQuota}</StatValue>
+              <StatLabel>{t('averageQuota', 'Avg. Daily Quota')}</StatLabel>
+            </StatContent>
+          </StatCard>
+        </StatsGrid>
+        
+        <TabContainer>
+          <Tab 
+            active={statsTab === 'overview'} 
+            onClick={() => setStatsTab('overview')}
+          >
+            <FiBarChart2 /> {t('overview', 'Overview')}
+          </Tab>
+          <Tab 
+            active={statsTab === 'recentActivity'} 
+            onClick={() => setStatsTab('recentActivity')}
+          >
+            <FiActivity /> {t('recentActivity', 'Recent Activity')}
+          </Tab>
+          <Tab 
+            active={statsTab === 'userGrowth'} 
+            onClick={() => setStatsTab('userGrowth')}
+          >
+            <FiPieChart /> {t('userGrowth', 'User Growth')}
+          </Tab>
+        </TabContainer>
+        
+        {statsTab === 'overview' && (
+          <UserStatsOverview>
+            <p>{t('userStatsOverview', 'Your platform has {{totalUsers}} total users, with {{activeUsers}} active users in the last 30 days. {{adminCount}} users have admin privileges.', {
+              totalUsers: userStats.totalUsers,
+              activeUsers: userStats.activeUsers,
+              adminCount: userStats.adminUsers
+            })}</p>
+            <p>{t('growthStats', 'You have {{newToday}} new users today, {{newWeek}} this week, and {{newMonth}} this month.', {
+              newToday: userStats.newUsersToday,
+              newWeek: userStats.newUsersThisWeek,
+              newMonth: userStats.newUsersThisMonth
+            })}</p>
+          </UserStatsOverview>
+        )}
+        
+        {statsTab === 'recentActivity' && (
+          <AdminUserActivity 
+            title={t('userActivity', 'User Activity')}
+            limit={8}
+            autoRefresh={true}
+          />
+        )}
+        
+        {statsTab === 'userGrowth' && (
+          <ChartContainer>
+            <Bar 
+              data={userGrowthData}
+              options={{
+                responsive: true,
+                plugins: {
+                  legend: {
+                    position: 'top' as const,
+                  },
+                  title: {
+                    display: true,
+                    text: t('newUsersByMonth', 'New Users by Month')
+                  },
+                },
+              }}
+            />
+          </ChartContainer>
+        )}
+      </StatsSection>
+    );
+  };
+
+  if (authLoading || isLoading) {
+    return (
+      <AdminContainer>
+        <LoadingState>{t('loading')}</LoadingState>
+      </AdminContainer>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return null; // Will redirect to home
+  }
+
+  const totalPages = Math.ceil(totalCount / limit);
 
   const renderPagination = () => {
     const buttons = [];
@@ -741,186 +1021,74 @@ const AdminUsersPage: React.FC = () => {
     return buttons;
   };
 
-  const fetchUserStats = async () => {
-    if (!user || !isAdmin) return;
-    
-    try {
-      if (!supabase) {
-        throw new Error('Supabase client is not initialized');
-      }
-      
-      // Get total users
-      const { count: totalUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-      
-      // Get admin users
-      const { count: adminUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_admin', true);
-      
-      // Get active users
-      const { count: activeUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
-      
-      // Get new users today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const { count: newUsersToday } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', today.toISOString());
-      
-      // Get new users this week
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      const { count: newUsersThisWeek } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', oneWeekAgo.toISOString());
-      
-      // Get new users this month
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-      const { count: newUsersThisMonth } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', oneMonthAgo.toISOString());
-      
-      // Get average daily quota
-      const { data: quotaData } = await supabase
-        .from('profiles')
-        .select('daily_quota');
-      
-      let totalQuota = 0;
-      if (quotaData) {
-        quotaData.forEach(item => {
-          totalQuota += item.daily_quota || 0;
-        });
-      }
-      
-      const averageDailyQuota = quotaData?.length 
-        ? parseFloat((totalQuota / quotaData.length).toFixed(2)) 
-        : 0;
-      
-      setUserStats({
-        totalUsers: totalUsers || 0,
-        adminUsers: adminUsers || 0,
-        activeUsers: activeUsers || 0,
-        newUsersToday: newUsersToday || 0,
-        newUsersThisWeek: newUsersThisWeek || 0,
-        newUsersThisMonth: newUsersThisMonth || 0,
-        averageDailyQuota
-      });
-      
-    } catch (error) {
-      console.error('Error fetching user stats:', error);
-    }
-  };
-
-  if (!user) {
-    navigate('/');
-    return null;
-  }
-
   return (
     <AdminContainer>
       <AdminHeader>
         <AdminTitle>
-          <FiUsers /> {t('userManagement')}
+          <FiUsers style={{ marginRight: '0.5rem' }} /> {t('manageUsers', 'Manage Users')}
         </AdminTitle>
         
         <SearchBar>
-          <SearchInput 
+          <SearchInput
             type="text"
-            placeholder={t('searchUsers')}
+            placeholder={t('searchUsers', 'Search users...')} 
             value={searchTerm}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-            onKeyDown={(e: React.KeyboardEvent) => {
-              if (e.key === 'Enter') {
-                fetchUsers();
-              }
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              setSearchTerm(e.target.value);
+              setPage(0); // Reset to first page on search
             }}
           />
-          <IconButton 
-            title={t('search')}
-            onClick={fetchUsers}
-          >
+          <IconButton aria-label={t('search')}>
             <FiSearch />
           </IconButton>
-          <ExportButton onClick={() => handleExportUsers()}>
-            <FiDownload /> {t('export')}
-          </ExportButton>
-          <ExportButton onClick={() => handleExportAllUsers()}>
-            <FiDownload /> {t('exportAll')}
-          </ExportButton>
         </SearchBar>
       </AdminHeader>
       
-      <SectionHeader>
-        <SectionToggle onClick={() => setShowStatsSection(!showStatsSection)}>
-          {showStatsSection ? t('hideStats') : t('showStats')}
-        </SectionToggle>
-        
-        <FilterContainer>
-          <FilterButton 
-            active={roleFilter === 'all'} 
-            onClick={() => setRoleFilter('all')}
-          >
-            {t('allUsers')}
-          </FilterButton>
-          <FilterButton 
-            active={roleFilter === 'admin'} 
-            onClick={() => setRoleFilter('admin')}
-          >
-            {t('adminUsers')}
-          </FilterButton>
-          <FilterButton 
-            active={roleFilter === 'user'} 
-            onClick={() => setRoleFilter('user')}
-          >
-            {t('normalUsers')}
-          </FilterButton>
-        </FilterContainer>
-        
-        {/* New status filter */}
-        <FilterContainer>
-          <FilterButton 
-            active={statusFilter === 'all'} 
-            onClick={() => setStatusFilter('all')}
-          >
-            {t('allStatuses')}
-          </FilterButton>
-          <FilterButton 
-            active={statusFilter === 'active'} 
-            onClick={() => setStatusFilter('active')}
-          >
-            {t('activeUsers')}
-          </FilterButton>
-          <FilterButton 
-            active={statusFilter === 'banned'} 
-            onClick={() => setStatusFilter('banned')}
-          >
-            {t('bannedUsers')}
-          </FilterButton>
-          <FilterButton 
-            active={statusFilter === 'suspended'} 
-            onClick={() => setStatusFilter('suspended')}
-          >
-            {t('suspendedUsers')}
-          </FilterButton>
-        </FilterContainer>
+      {error && (
+        <StatusMessage>
+          <FiX /> {error}
+        </StatusMessage>
+      )}
+      
+      {success && (
+        <SuccessMessage>
+          <FiCheck /> {success}
+        </SuccessMessage>
+      )}
+      
+      {/* User Statistics Section */}
+      {renderStatsSection()}
+      
+      {/* Filters */}
+      <FilterContainer>
+        <FilterButton 
+          active={roleFilter === 'all'} 
+          onClick={() => setRoleFilter('all')}
+        >
+          <FiUsers /> {t('allUsers')}
+        </FilterButton>
+        <FilterButton 
+          active={roleFilter === 'admin'} 
+          onClick={() => setRoleFilter('admin')}
+        >
+          <FiUsers /> {t('adminUsers')}
+        </FilterButton>
+        <FilterButton 
+          active={roleFilter === 'user'} 
+          onClick={() => setRoleFilter('user')}
+        >
+          <FiUsers /> {t('regularUsers')}
+        </FilterButton>
         
         <DateFilterContainer>
+          <FiCalendar />
           <DateInput 
             type="date"
             value={dateRange.from}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
               setDateRange(prev => ({ ...prev, from: e.target.value }))
             }
+            placeholder={t('dateFrom')}
           />
           <span>-</span>
           <DateInput 
@@ -929,94 +1097,20 @@ const AdminUsersPage: React.FC = () => {
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
               setDateRange(prev => ({ ...prev, to: e.target.value }))
             }
+            placeholder={t('dateTo')}
           />
         </DateFilterContainer>
-      </SectionHeader>
+        
+        <ExportButton onClick={handleExportUsers}>
+          <FiDownload /> {t('exportCurrentUsers')}
+        </ExportButton>
+        
+        <ExportButton onClick={handleExportAllUsers}>
+          <FiDownload /> {t('exportAllUsers')}
+        </ExportButton>
+      </FilterContainer>
       
-      {showStatsSection && (
-        <StatsSection>
-          <SectionTitle>{t('userStatistics')}</SectionTitle>
-          
-          <StatsGrid>
-            <StatCard>
-              <StatIcon>
-                <FiActivity />
-              </StatIcon>
-              <StatContent>
-                <StatValue>{userStats.totalUsers}</StatValue>
-                <StatLabel>{t('totalUsers')}</StatLabel>
-              </StatContent>
-            </StatCard>
-            
-            <StatCard>
-              <StatIcon>
-                <FiActivity />
-              </StatIcon>
-              <StatContent>
-                <StatValue>{userStats.adminUsers}</StatValue>
-                <StatLabel>{t('adminUsers')}</StatLabel>
-              </StatContent>
-            </StatCard>
-            
-            <StatCard>
-              <StatIcon>
-                <FiActivity />
-              </StatIcon>
-              <StatContent>
-                <StatValue>{userStats.activeUsers}</StatValue>
-                <StatLabel>{t('activeUsers')}</StatLabel>
-              </StatContent>
-            </StatCard>
-            
-            <StatCard>
-              <StatIcon>
-                <FiActivity />
-              </StatIcon>
-              <StatContent>
-                <StatValue>{userStats.newUsersToday}</StatValue>
-                <StatLabel>{t('newUsersToday')}</StatLabel>
-              </StatContent>
-            </StatCard>
-            
-            <StatCard>
-              <StatIcon>
-                <FiActivity />
-              </StatIcon>
-              <StatContent>
-                <StatValue>{userStats.newUsersThisWeek}</StatValue>
-                <StatLabel>{t('newUsersThisWeek')}</StatLabel>
-              </StatContent>
-            </StatCard>
-            
-            <StatCard>
-              <StatIcon>
-                <FiActivity />
-              </StatIcon>
-              <StatContent>
-                <StatValue>{userStats.newUsersThisMonth}</StatValue>
-                <StatLabel>{t('newUsersThisMonth')}</StatLabel>
-              </StatContent>
-            </StatCard>
-            
-            <StatCard>
-              <StatIcon>
-                <FiActivity />
-              </StatIcon>
-              <StatContent>
-                <StatValue>{userStats.averageDailyQuota}</StatValue>
-                <StatLabel>{t('averageDailyQuota')}</StatLabel>
-              </StatContent>
-            </StatCard>
-          </StatsGrid>
-        </StatsSection>
-      )}
-      
-      {error && <StatusMessage>{error}</StatusMessage>}
-      {success && <SuccessMessage>{success}</SuccessMessage>}
-      
-      {isLoading ? (
-        <LoadingState>{t('loadingUsers')}</LoadingState>
-      ) : users.length > 0 ? (
+      {filteredUsers.length > 0 ? (
         <>
           <TableContainer>
             <Table>
@@ -1025,38 +1119,27 @@ const AdminUsersPage: React.FC = () => {
                   <TableHeader>{t('username')}</TableHeader>
                   <TableHeader>{t('email')}</TableHeader>
                   <TableHeader>{t('role')}</TableHeader>
-                  <TableHeader>{t('status')}</TableHeader>
-                  <TableHeader>{t('plan')}</TableHeader>
-                  <TableHeader>{t('created')}</TableHeader>
                   <TableHeader>{t('quota')}</TableHeader>
-                  <TableHeader>{t('monthlyQuota')}</TableHeader>
+                  <TableHeader>{t('requestQuota', 'Monthly Requests')}</TableHeader>
                   <TableHeader>{t('actions')}</TableHeader>
                 </TableRow>
               </TableHead>
               <tbody>
-                {users.map((userProfile) => (
+                {filteredUsers.map((userProfile) => (
                   <TableRow key={userProfile.id}>
                     <TableCell>{userProfile.username}</TableCell>
                     <TableCell>{userProfile.email || '-'}</TableCell>
                     <TableCell>
                       <Badge variant={userProfile.is_admin ? 'admin' : 'user'}>
-                        {userProfile.is_admin ? t('admin') : t('user')}
+                        {userProfile.is_admin ? t('adminRole') : t('userRole')}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {getUserStatusBadge(userProfile.status as UserStatus)}
-                    </TableCell>
-                    <TableCell>
-                      {getPlanName(userProfile.plan_id)}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(userProfile.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
                       {editingUser && editingUser.id === userProfile.id ? (
                         <QuotaInput
                           type="number"
                           min="0"
+                          max="100"
                           value={editingUser.daily_quota}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                             setEditingUser({
@@ -1109,52 +1192,13 @@ const AdminUsersPage: React.FC = () => {
                             </IconButton>
                           </>
                         ) : (
-                          <>
-                            <IconButton 
-                              className="edit"
-                              title={t('editQuota')}
-                              onClick={() => handleEditQuota(
-                                userProfile.id, 
-                                userProfile.daily_quota, 
-                                userProfile.monthly_request_quota
-                              )}
-                            >
-                              <FiEdit />
-                            </IconButton>
-                            
-                            <IconButton 
-                              title={t('managePlan')}
-                              onClick={() => handleManagePlan(userProfile)}
-                            >
-                              <FiPackage />
-                            </IconButton>
-                            
-                            <IconButton 
-                              title={t('viewIpAddresses')}
-                              onClick={() => handleViewIps(userProfile)}
-                            >
-                              <FiGlobe />
-                            </IconButton>
-                            
-                            {/* Status dependent action buttons */}
-                            {(!userProfile.status || userProfile.status === 'active') ? (
-                              <IconButton 
-                                className="danger"
-                                title={t('banUser')}
-                                onClick={() => handleBanUser(userProfile)}
-                              >
-                                <FiUserX />
-                              </IconButton>
-                            ) : (
-                              <IconButton 
-                                className="success"
-                                title={t('unbanUser')}
-                                onClick={() => handleUnbanUser(userProfile.id)}
-                              >
-                                <FiUnlock />
-                              </IconButton>
-                            )}
-                          </>
+                          <IconButton 
+                            className="edit"
+                            title={t('editQuota')}
+                            onClick={() => handleEditQuota(userProfile.id, userProfile.daily_quota, userProfile.monthly_request_quota)}
+                          >
+                            <FiEdit />
+                          </IconButton>
                         )}
                         
                         {/* Don't allow toggling admin status for current user */}
@@ -1200,124 +1244,8 @@ const AdminUsersPage: React.FC = () => {
             : t('noUsers')}
         </EmptyState>
       )}
-      
-      {/* Dialog components */}
-      {selectedUser && showBanDialog && (
-        <UserBanDialog 
-          user={selectedUser} 
-          isOpen={showBanDialog}
-          onClose={() => {
-            setShowBanDialog(false);
-            setSelectedUser(null);
-          }}
-          onBanUser={async (userId, reason, duration) => {
-            try {
-              const { error } = await supabase
-                .from('profiles')
-                .update({
-                  status: 'banned',
-                  ban_reason: reason,
-                  banned_until: duration ? new Date(new Date().getTime() + duration * 86400000).toISOString() : null
-                })
-                .eq('id', userId);
-                
-              if (error) throw error;
-              
-              setSuccess(t('userBannedSuccess'));
-              setTimeout(() => setSuccess(null), 3000);
-              fetchUsers();
-            } catch (error) {
-              console.error('Error banning user:', error);
-              setError(t('errorBanningUser'));
-              setTimeout(() => setError(null), 3000);
-            }
-            
-            setShowBanDialog(false);
-            setSelectedUser(null);
-          }}
-        />
-      )}
-      
-      {selectedUser && showPlanDialog && (
-        <UserPlanDialog
-          user={selectedUser}
-          plans={plans}
-          isOpen={showPlanDialog}
-          onClose={() => {
-            setShowPlanDialog(false);
-            setSelectedUser(null);
-          }}
-          onUpdatePlan={async (userId, planId, dailyQuota, monthlyRequestQuota) => {
-            try {
-              const { error } = await supabase
-                .from('profiles')
-                .update({
-                  plan_id: planId,
-                  daily_quota: dailyQuota,
-                  monthly_request_quota: monthlyRequestQuota
-                })
-                .eq('id', userId);
-                
-              if (error) throw error;
-              
-              setSuccess(t('userPlanUpdatedSuccess'));
-              setTimeout(() => setSuccess(null), 3000);
-              fetchUsers();
-            } catch (error) {
-              console.error('Error updating user plan:', error);
-              setError(t('errorUpdatingPlan'));
-              setTimeout(() => setError(null), 3000);
-            }
-            
-            setShowPlanDialog(false);
-            setSelectedUser(null);
-          }}
-        />
-      )}
-      
-      {selectedUser && showIpTrackingDialog && (
-        <UserIpTrackingDialog
-          user={selectedUser}
-          isOpen={showIpTrackingDialog}
-          onClose={() => {
-            setShowIpTrackingDialog(false);
-            setSelectedUser(null);
-          }}
-        />
-      )}
     </AdminContainer>
   );
 };
-
-const StatusBadge = styled.span<{ status: UserStatus }>`
-  padding: 0.25rem 0.5rem;
-  border-radius: ${props => props.theme.borderRadius.md};
-  font-size: ${props => props.theme.typography.fontSize.sm};
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  
-  ${props => {
-    switch (props.status) {
-      case 'active':
-        return `
-          background-color: ${props.theme.colors.success}20;
-          color: ${props.theme.colors.success};
-        `;
-      case 'banned':
-        return `
-          background-color: ${props.theme.colors.danger}20;
-          color: ${props.theme.colors.danger};
-        `;
-      case 'suspended':
-        return `
-          background-color: ${props.theme.colors.warning}20;
-          color: ${props.theme.colors.warning};
-        `;
-      default:
-        return '';
-    }
-  }}
-`;
 
 export default AdminUsersPage;

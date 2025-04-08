@@ -23,8 +23,6 @@ export interface Book {
   page_count?: number; // Number of pages (for ebooks)
 }
 
-export type UserStatus = 'active' | 'banned' | 'suspended';
-
 export interface Profile {
   id: string;
   username: string;
@@ -36,49 +34,6 @@ export interface Profile {
   website?: string;
   is_admin: boolean;
   monthly_request_quota: number;
-  
-  // New subscription and ban fields
-  status?: UserStatus;
-  ban_reason?: string;
-  banned_until?: string;
-  plan_id?: string;
-  subscription_start_date?: string;
-  subscription_end_date?: string;
-}
-
-export interface Plan {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  daily_quota: number;
-  monthly_request_quota: number;
-  features: Record<string, any>;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface UserIp {
-  id: string;
-  user_id: string;
-  ip_address: string;
-  location?: string;
-  device_info?: string;
-  is_blocked: boolean;
-  block_reason?: string;
-  first_seen: string;
-  last_seen: string;
-}
-
-export interface ActivityLog {
-  id: string;
-  user_id: string;
-  activity_type: string;
-  entity_type?: string;
-  entity_id?: string;
-  ip_address?: string;
-  details: Record<string, any>;
-  created_at: string;
 }
 
 export interface DownloadLog {
@@ -105,43 +60,6 @@ export interface Database {
         Row: DownloadLog;
         Insert: Omit<DownloadLog, 'id' | 'downloaded_at'>;
         Update: Partial<Omit<DownloadLog, 'id' | 'downloaded_at'>>;
-      };
-      plans: {
-        Row: Plan;
-        Insert: Omit<Plan, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Plan, 'id' | 'created_at' | 'updated_at'>>;
-      };
-      user_ips: {
-        Row: UserIp;
-        Insert: Omit<UserIp, 'id' | 'first_seen' | 'last_seen'>;
-        Update: Partial<Omit<UserIp, 'id' | 'first_seen' | 'last_seen'>>;
-      };
-      activity_logs: {
-        Row: ActivityLog;
-        Insert: Omit<ActivityLog, 'id' | 'created_at'>;
-        Update: Partial<Omit<ActivityLog, 'id' | 'created_at'>>;
-      };
-    };
-    Functions: {
-      assign_plan_to_user: {
-        Args: { user_id: string; new_plan_id: string; months?: number };
-        Returns: boolean;
-      };
-      ban_user: {
-        Args: { user_id: string; reason: string; ban_days?: number };
-        Returns: boolean;
-      };
-      unban_user: {
-        Args: { user_id: string };
-        Returns: boolean;
-      };
-      block_ip: {
-        Args: { ip: string; reason: string };
-        Returns: boolean;
-      };
-      is_ip_blocked: {
-        Args: { ip: string };
-        Returns: boolean;
       };
     };
   };
