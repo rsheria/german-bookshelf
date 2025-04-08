@@ -6,6 +6,7 @@ import { useAuth } from './context/AuthContext';
 import { bypassRefreshIssue } from './services/refreshBypass';
 import { startSessionKeepalive } from './services/supabase';
 import { initializeLocalAuth, isLoggedIn } from './services/localAuth';
+import { trackUserActivity, trackPageView, endUserSession } from './services/trackingService';
 import styled from 'styled-components';
 
 // Import components
@@ -316,9 +317,36 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 };
 
 const AppRoutes: React.FC = () => {
+  const ScrollToTop = getScrollToTop();
+  const location = useLocation();
+  const { user } = useAuth();
   const { i18n } = useTranslation();
   const { emergencyMode } = useEmergencyMode();
   
+  // Track page views whenever route changes
+  useEffect(() => {
+    if (user) {
+      trackPageView(user.id, location.pathname);
+    }
+  }, [location.pathname, user]);
+  
+  // Track user activity periodically
+  useEffect(() => {
+    if (user) {
+      // Initial tracking when component mounts
+      trackUserActivity(user.id);
+      
+      // Continue tracking while user is active
+      const interval = setInterval(() => {
+        trackUserActivity(user.id);
+      }, 60000); // Track every minute
+      
+      return () => {
+        clearInterval(interval);
+      };
+    }
+  }, [user]);
+
   // Set language from localStorage on app load
   useEffect(() => {
     const savedLanguage = localStorage.getItem('language');
@@ -326,16 +354,16 @@ const AppRoutes: React.FC = () => {
       i18n.changeLanguage(savedLanguage);
     }
   }, [i18n]);
-  
+
   // NUCLEAR OPTION: In emergency mode, render all routes without protection
   if (emergencyMode) {
     console.log(" EMERGENCY MODE ACTIVE: Rendering all routes without protection");
     return (
-      <ErrorBoundary>
+      <>
         <AppContainer>
           <Navbar />
           <MainContent>
-            {getScrollToTop()}
+            {ScrollToTop}
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/audiobooks" element={<AudiobooksPage />} />
@@ -360,7 +388,7 @@ const AppRoutes: React.FC = () => {
           <Footer />
           <DebugInfo />
         </AppContainer>
-      </ErrorBoundary>
+      </>
     );
   }
 
@@ -369,7 +397,7 @@ const AppRoutes: React.FC = () => {
       <AppContainer>
         <Navbar />
         <MainContent>
-          {getScrollToTop()}
+          {ScrollToTop}
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/audiobooks" element={<AudiobooksPage />} />
@@ -461,120 +489,95 @@ const AppRoutes: React.FC = () => {
   );
 };
 
-const App: React.FC = () => {
+// Enhanced AuthProvider with tracking built in
+const EnhancedAuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+  const authContext = useAuth();
+  const { user, signOut: originalSignOut } = authContext;
+  
+  // Enhance signOut to track session end
+  useEffect(() => {
+    if (typeof window !== 'undefined' && user) {
+      // Store the original signOut function
+      const origSignOut = originalSignOut;
+      
+      // Add our enhanced version that tracks session end
+      const enhancedSignOut = async () => {
+        try {
+          // End tracking session
+          await endUserSession(user.id);
+          console.log('User session ended for tracking on logout');
+        } catch (error) {
+          console.error('Error ending tracking session:', error);
+        }
+        
+        // Call original signOut
+        return origSignOut();
+      };
+      
+      // Expose the enhanced version globally for debugging
+      // @ts-ignore - intentionally extending window
+      window.__trackingEnhancedSignOut = enhancedSignOut;
+    }
+  }, [user, originalSignOut]);
+  
+  return children;
+};
+
+function App() {
+  const [emergencyMode, setEmergencyMode] = useState(false);
+  const { user } = useAuth();
+  
   // Start session keepalive when the app loads
   useEffect(() => {
     // Start the session keepalive mechanism to prevent timeouts
-    console.log('Starting session keepalive mechanism');
-    const cleanup = startSessionKeepalive();
+    startSessionKeepalive();
     
-    // Cleanup when component unmounts
+    // Return cleanup function
     return () => {
-      cleanup();
+      console.log('Cleaning up session keepalive');
     };
   }, []);
 
-  // NUCLEAR OPTION: Add emergency mode state
-  const [emergencyMode, setEmergencyMode] = useState(false);
-  
   // Initialize local auth as an additional safeguard
   useEffect(() => {
     console.log('Initializing local auth safeguard');
     
     // Initialize the local auth system
     initializeLocalAuth();
-    
-    // Set up a global error handler to catch auth issues
-    window.addEventListener('error', (event) => {
-      console.log('Global error caught:', event.error);
-      
-      // If we detect an auth error, activate emergency mode
-      if (event.error && 
-          (String(event.error).includes('auth') || 
-           String(event.error).includes('token') ||
-           String(event.error).includes('session'))) {
-        console.log('Auth-related error detected, activating emergency mode');
-        setEmergencyMode(true);
-      }
-    });
-    
-    // Set up a visibility change handler to refresh auth when tab becomes visible
-    document.addEventListener('visibilitychange', () => {
+  }, []);
+
+  // Add tracking hooks for auth events
+  useEffect(() => {
+    // Track user activity on visibility change
+    const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log('Tab became visible, checking auth status');
+        
+        // Track activity if user is logged in
+        if (user) {
+          trackUserActivity(user.id);
+        }
+        
         if (isLoggedIn()) {
           console.log('Local auth detects user is logged in');
         }
       }
-    });
-    
-    // Create a watchdog that monitors for content rendering
-    const contentWatchdog = setInterval(() => {
-      // Check if main content is visible
-      const mainContent = document.querySelector('main');
-      const navbar = document.querySelector('nav');
-      
-      if (!mainContent || !navbar) {
-        console.log('Content not rendering properly, activating emergency mode');
-        setEmergencyMode(true);
-      }
-    }, 5000);
-    
-    return () => {
-      clearInterval(contentWatchdog);
     };
-  }, []);
 
-  // Check for emergency mode in localStorage or sessionStorage
-  useEffect(() => {
-    const storedEmergencyMode = localStorage.getItem('emergency_mode') === 'true' || 
-                               sessionStorage.getItem('emergency_mode') === 'true';
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    if (storedEmergencyMode) {
-      console.log(" EMERGENCY MODE detected from storage");
-      setEmergencyMode(true);
-    }
-    
-    // Automatically activate emergency mode after a crash or if app is stuck for more than 8 seconds
-    const emergencyTimer = setTimeout(() => {
-      console.log(" EMERGENCY MODE activated automatically after timeout");
-      setEmergencyMode(true);
-      localStorage.setItem('emergency_mode', 'true');
-      sessionStorage.setItem('emergency_mode', 'true');
-    }, 8000);
-    
-    // Also detect refresh events to enable emergency mode
-    const isAfterRefresh = window.performance && 
-                          window.performance.navigation && 
-                          window.performance.navigation.type === 1;
-                          
-    if (isAfterRefresh) {
-      console.log(" EMERGENCY MODE activated after page refresh");
-      setEmergencyMode(true);
-      localStorage.setItem('emergency_mode', 'true');
-      sessionStorage.setItem('emergency_mode', 'true');
-    }
-    
-    // Special emergency trigger for apps that crash after a few seconds
-    let contentVisibleCount = 0;
-    const watchContentVisibility = setInterval(() => {
-      // If the main content is visible, increment the counter
-      if (document.querySelector('main')) {
-        contentVisibleCount++;
-        
-        // If content has been visible for 3 checks, clear the emergency timer
-        if (contentVisibleCount >= 3) {
-          clearTimeout(emergencyTimer);
-          clearInterval(watchContentVisibility);
-        }
-      }
-    }, 1000);
-    
+    // Cleanup function
     return () => {
-      clearTimeout(emergencyTimer);
-      clearInterval(watchContentVisibility);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      
+      // When app unmounts or user changes, end the tracking session
+      if (user) {
+        endUserSession(user.id).catch(err => 
+          console.error('Error ending user session:', err)
+        );
+      }
     };
-  }, []);
+  }, [user]);
 
   // Add a forced panic mode that will bypass any loading states
   const [panicMode, setPanicMode] = useState(false);
@@ -620,13 +623,15 @@ const App: React.FC = () => {
       <PanicModeContext.Provider value={panicMode}>
         <ThemeProvider>
           <AuthProvider>
-            <GlobalStyles />
-            <AppRoutes />
+            <EnhancedAuthProvider>
+              <GlobalStyles />
+              <AppRoutes />
+            </EnhancedAuthProvider>
           </AuthProvider>
         </ThemeProvider>
       </PanicModeContext.Provider>
     </EmergencyModeContext.Provider>
   );
-};
+}
 
 export default App;
