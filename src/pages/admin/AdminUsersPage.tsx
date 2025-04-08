@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiUsers, FiEdit, FiCheck, FiX, FiSearch, FiDownload, FiCalendar, FiBarChart2, FiPieChart, FiActivity } from 'react-icons/fi';
+import { FiUsers, FiEdit, FiCheck, FiX, FiSearch, FiDownload, FiCalendar, FiBarChart2, FiPieChart, FiActivity, FiGlobe } from 'react-icons/fi';
+import { HiOutlineBan as FiBan } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import { Profile } from '../../types/supabase';
 import AdminUserActivity from './AdminUserActivity';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+import UserBanDialog from '../../components/admin/UserBanDialog';
+import UserIpTrackingDialog from '../../components/admin/UserIpTrackingDialog';
+import { isUserBanned } from '../../services/userBanService';
 import {
   AdminContainer,
   AdminHeader,
@@ -31,6 +33,9 @@ import {
 } from '../../styles/adminStyles';
 
 // Register ChartJS components
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -349,6 +354,68 @@ const PageButtons = styled.div`
   align-items: center;
 `;
 
+const UserActionButton = styled.button`
+  padding: 0.5rem;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border: none;
+  border-radius: ${props => props.theme.borderRadius.sm};
+  color: ${props => props.theme.colors.text};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.theme.colors.backgroundAltHover};
+    transform: translateY(-2px);
+  }
+  
+  &.ban {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: ${props => props.theme.colors.danger};
+    
+    &:hover {
+      background-color: rgba(231, 76, 60, 0.2);
+    }
+  }
+  
+  &.ip {
+    background-color: rgba(52, 152, 219, 0.1);
+    color: ${props => props.theme.colors.primary};
+    
+    &:hover {
+      background-color: rgba(52, 152, 219, 0.2);
+    }
+  }
+  
+  &.activity {
+    background-color: rgba(46, 204, 113, 0.1);
+    color: ${props => props.theme.colors.success};
+    
+    &:hover {
+      background-color: rgba(46, 204, 113, 0.2);
+    }
+  }
+`;
+
+const UserActionsContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+`;
+
+const BannedIndicator = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  background-color: rgba(231, 76, 60, 0.1);
+  color: ${props => props.theme.colors.danger};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  font-size: ${props => props.theme.typography.fontSize.xs};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+`;
+
 interface UserWithEmail extends Profile {
   email?: string;
   last_sign_in?: string;
@@ -425,6 +492,16 @@ const AdminUsersPage: React.FC = () => {
     }]
   });
   
+  // State for user ban dialog
+  const [showBanDialog, setShowBanDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+  
+  // State for IP tracking dialog
+  const [showIpTrackingDialog, setShowIpTrackingDialog] = useState(false);
+  
+  // State for tracking banned users
+  const [bannedUsers, setBannedUsers] = useState<Record<string, boolean>>({});
+  
   const limit = 10;
 
   useEffect(() => {
@@ -441,6 +518,27 @@ const AdminUsersPage: React.FC = () => {
       fetchUserGrowthData();
     }
   }, [user, isAdmin, searchTerm, page, roleFilter, dateRange]);
+
+  useEffect(() => {
+    const checkBannedStatus = async () => {
+      if (!users.length) return;
+      
+      const bannedStatuses: Record<string, boolean> = {};
+      
+      for (const userProfile of users) {
+        try {
+          bannedStatuses[userProfile.id] = await isUserBanned(userProfile.id);
+        } catch (error) {
+          console.error('Error checking banned status:', error);
+          bannedStatuses[userProfile.id] = false;
+        }
+      }
+      
+      setBannedUsers(bannedStatuses);
+    };
+    
+    checkBannedStatus();
+  }, [users]);
 
   const fetchUsers = async () => {
     if (!user || !isAdmin) return;
@@ -662,6 +760,26 @@ const AdminUsersPage: React.FC = () => {
   
   const handleEditQuota = (userId: string, currentQuota: number, monthlyRequestQuota: number) => {
     setEditingUser({ id: userId, daily_quota: currentQuota, monthly_request_quota: monthlyRequestQuota });
+  };
+  
+  const handleBanUser = (userProfile: Profile) => {
+    setSelectedUser(userProfile);
+    setShowBanDialog(true);
+  };
+  
+  const handleViewIps = (userProfile: Profile) => {
+    setSelectedUser(userProfile);
+    setShowIpTrackingDialog(true);
+  };
+  
+  const handleViewActivity = (userId: string) => {
+    navigate(`/admin/users/${userId}`);
+  };
+  
+  const handleBanComplete = () => {
+    setShowBanDialog(false);
+    // Refresh banned status
+    fetchUsers();
   };
   
   const handleSaveQuota = async () => {
@@ -1127,7 +1245,15 @@ const AdminUsersPage: React.FC = () => {
               <tbody>
                 {filteredUsers.map((userProfile) => (
                   <TableRow key={userProfile.id}>
-                    <TableCell>{userProfile.username}</TableCell>
+                    <TableCell>
+                      {userProfile.username}
+                      {bannedUsers[userProfile.id] && (
+                        <BannedIndicator>
+                          <FiBan size={12} />
+                          {t('banned')}
+                        </BannedIndicator>
+                      )}
+                    </TableCell>
                     <TableCell>{userProfile.email || '-'}</TableCell>
                     <TableCell>
                       <Badge variant={userProfile.is_admin ? 'admin' : 'user'}>
@@ -1201,6 +1327,33 @@ const AdminUsersPage: React.FC = () => {
                           </IconButton>
                         )}
                         
+                        {/* User actions container with new buttons */}
+                        <UserActionsContainer>
+                          <UserActionButton 
+                            className="ban"
+                            title={t('banUser')}
+                            onClick={() => handleBanUser(userProfile)}
+                          >
+                            <FiBan size={16} />
+                          </UserActionButton>
+                          
+                          <UserActionButton 
+                            className="ip"
+                            title={t('viewIPs')}
+                            onClick={() => handleViewIps(userProfile)}
+                          >
+                            <FiGlobe size={16} />
+                          </UserActionButton>
+                          
+                          <UserActionButton 
+                            className="activity"
+                            title={t('viewActivity')}
+                            onClick={() => handleViewActivity(userProfile.id)}
+                          >
+                            <FiActivity size={16} />
+                          </UserActionButton>
+                        </UserActionsContainer>
+                        
                         {/* Don't allow toggling admin status for current user */}
                         {userProfile.id !== user.id && (
                           <SafeToggleAdminButton 
@@ -1243,6 +1396,26 @@ const AdminUsersPage: React.FC = () => {
             ? t('noMatchingUsers') 
             : t('noUsers')}
         </EmptyState>
+      )}
+      
+      {/* Ban dialog */}
+      {showBanDialog && selectedUser && (
+        <UserBanDialog 
+          user={selectedUser}
+          adminId={user.id}
+          onClose={() => setShowBanDialog(false)}
+          onBanComplete={handleBanComplete}
+        />
+      )}
+      
+      {/* IP tracking dialog */}
+      {showIpTrackingDialog && selectedUser && (
+        <UserIpTrackingDialog 
+          user={selectedUser}
+          adminId={user.id}
+          onClose={() => setShowIpTrackingDialog(false)}
+          onAction={() => fetchUsers()}
+        />
       )}
     </AdminContainer>
   );

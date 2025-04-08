@@ -17,6 +17,7 @@
     "@tsparticles/react": "^3.0.0",
     "axios": "^1.4.0",
     "chart.js": "^4.4.8",
+    "date-fns": "^4.1.0",
     "framer-motion": "^10.18.0",
     "i18next": "^23.16.8",
     "react": "^18.2.0",

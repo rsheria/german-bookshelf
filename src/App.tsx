@@ -29,6 +29,7 @@ import EditBookPage from './pages/admin/EditBookPage';
 import DebugPage from './pages/DebugPage';
 import BookRequestPage from './pages/BookRequestPage';
 import AdminBookRequestsPage from './pages/admin/AdminBookRequestsPage';
+import UserActivityPage from './pages/admin/UserActivityPage';
 
 // Import context and i18n
 import { AuthProvider } from './context/AuthContext';
@@ -350,6 +351,7 @@ const AppRoutes: React.FC = () => {
               <Route path="/admin/books/add" element={<AddBookPage />} />
               <Route path="/admin/books/edit/:id" element={<EditBookPage />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/admin/users/:userId" element={<UserActivityPage />} />
               <Route path="/admin/book-requests" element={<AdminBookRequestsPage />} />
               <Route path="/debug" element={<DebugPage />} />
               <Route path="*" element={<Navigate to="/" />} />
@@ -429,6 +431,14 @@ const AppRoutes: React.FC = () => {
               element={
                 <AdminRoute>
                   <AdminUsersPage />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/users/:userId" 
+              element={
+                <AdminRoute>
+                  <UserActivityPage />
                 </AdminRoute>
               } 
             />
