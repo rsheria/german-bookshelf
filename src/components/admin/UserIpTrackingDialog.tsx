@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
-import { FiGlobe, FiX, FiBan, FiAlertCircle, FiMap, FiUsers, FiCalendar } from 'react-icons/fi';
+import { FiGlobe, FiX, FiUserX, FiUsers, FiClock } from 'react-icons/fi';
 import { getUserIpLogs } from '../../services/ipTrackingService';
 import { getBansByIp, banUser } from '../../services/userBanService';
 import { Profile, IpLog, UserBan } from '../../types/supabase';
@@ -184,11 +184,6 @@ const MetaItem = styled.div`
   gap: 0.5rem;
 `;
 
-const ActionButtons = styled.div`
-  display: flex;
-  gap: 0.5rem;
-`;
-
 const Button = styled.button`
   padding: 0.5rem 0.75rem;
   border-radius: ${props => props.theme.borderRadius.md};
@@ -214,40 +209,6 @@ const BanButton = styled(Button)`
   &:hover:not(:disabled) {
     background-color: ${props => props.theme.colors.dangerDark};
   }
-`;
-
-const UsersList = styled.div`
-  margin-top: 1.5rem;
-`;
-
-const UsersListHeader = styled.div`
-  font-weight: ${props => props.theme.typography.fontWeight.semibold};
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid ${props => props.theme.colors.border};
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const UserItem = styled.div`
-  padding: 0.75rem;
-  border-bottom: 1px solid ${props => props.theme.colors.borderLight};
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  
-  &:last-child {
-    border-bottom: none;
-  }
-  
-  &:hover {
-    background-color: ${props => props.theme.colors.backgroundAlt};
-  }
-`;
-
-const Username = styled.div`
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
 `;
 
 const LoadingState = styled.div`
@@ -529,7 +490,7 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
             </IpAddress>
             <IpMeta>
               <MetaItem>
-                <FiCalendar size={14} />
+                <FiClock size={14} />
                 {t('lastSeen', 'Last seen')}: {format(new Date(logs[0].created_at), 'MMM d, yyyy HH:mm')}
               </MetaItem>
               <MetaItem>
@@ -537,10 +498,10 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
                 {t('occurrences', 'Occurrences')}: {logs.length}
               </MetaItem>
               {!isIpBanned(ip) && (
-                <BanButton onClick={() => handleBanIp(ip)}>
-                  <FiBan size={14} />
-                  {t('banIp', 'Ban IP')}
-                </BanButton>
+                <Button onClick={() => handleBanIp(ip)}>
+                  <FiUserX size={16} />
+                  {t('banThisIp', 'Ban this IP')}
+                </Button>
               )}
             </IpMeta>
           </IpItem>
@@ -566,7 +527,10 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
           <BanItem key={ban.id}>
             <BanHeader>
               <BanInfo>
-                {ban.ip_address}
+                <strong>
+                  <FiUserX size={16} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+                  {ban.ip_address}
+                </strong>
               </BanInfo>
               <BanStatus $active={ban.is_active}>
                 {ban.is_active ? t('active', 'Active') : t('inactive', 'Inactive')}
@@ -574,12 +538,12 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
             </BanHeader>
             <BanMeta>
               <MetaItem>
-                <FiCalendar size={14} />
+                <FiClock size={14} />
                 {t('bannedOn', 'Banned on')}: {format(new Date(ban.banned_at), 'MMM d, yyyy')}
               </MetaItem>
               {ban.expires_at && (
                 <MetaItem>
-                  <FiCalendar size={14} />
+                  <FiClock size={14} />
                   {t('expiresOn', 'Expires on')}: {format(new Date(ban.expires_at), 'MMM d, yyyy')}
                 </MetaItem>
               )}
@@ -621,7 +585,7 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
               $active={activeTab === 'bans'} 
               onClick={() => setActiveTab('bans')}
             >
-              <FiBan />
+              <FiUserX />
               {t('ipBans', 'IP Bans')}
             </Tab>
           </TabContainer>
@@ -635,7 +599,7 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
           <BanFormContent onClick={e => e.stopPropagation()}>
             <ModalHeader>
               <h2>
-                <FiBan />
+                <FiUserX />
                 {t('banIpAddress', 'Ban IP Address')} - {selectedIp}
               </h2>
               <CloseButton onClick={cancelBan}>
@@ -730,7 +694,7 @@ const UserIpTrackingDialog: React.FC<UserIpTrackingDialogProps> = ({
                   {t('cancel', 'Cancel')}
                 </CancelButton>
                 <BanButton type="submit" disabled={isSubmitting}>
-                  <FiBan />
+                  <FiUserX />
                   {isSubmitting 
                     ? t('banning', 'Banning...') 
                     : t('confirmBan', 'Confirm Ban')}
