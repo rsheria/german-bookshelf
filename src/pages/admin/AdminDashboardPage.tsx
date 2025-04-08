@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiUsers, FiBarChart2, FiBook, FiDownload, FiActivity, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
+import { FiUsers, FiBarChart2, FiBook, FiDownload, FiActivity, FiRefreshCw, FiAlertCircle, FiPlus, FiSearch } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import AdminUserActivity from './AdminUserActivity';
 import OnlineUsersPanel from '../../components/admin/OnlineUsersPanel';
@@ -257,6 +257,53 @@ interface Stats {
   totalDownloads: number;
 }
 
+const QuickActionButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: ${props => props.theme.colors.card};
+  color: ${props => props.theme.colors.text};
+  border: none;
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: 1rem;
+  font-size: ${props => props.theme.typography.fontSize.base};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: ${props => props.theme.shadows.sm};
+  text-align: left;
+  width: 100%;
+  
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: ${props => props.theme.shadows.md};
+    background-color: ${props => props.theme.colors.backgroundAlt};
+  }
+  
+  svg {
+    color: ${props => props.theme.colors.primary};
+    font-size: 1.25rem;
+  }
+`;
+
+const QuickActionsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
+`;
+
+const SectionDivider = styled.h2`
+  font-size: ${props => props.theme.typography.fontSize.lg};
+  font-weight: ${props => props.theme.typography.fontWeight.semibold};
+  color: ${props => props.theme.colors.text};
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid ${props => props.theme.colors.borderLight};
+`;
+
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -296,7 +343,7 @@ const AdminDashboardPage = () => {
     setIsLoading(true);
     try {
       // Fetch all the data in parallel
-      const [userCount, bookCount, downloadStatsData, activityStatsData, onlineStatsData] = await Promise.all([
+      const [userStatsData, bookStatsData, downloadStatsData, activityStatsData, onlineStatsData] = await Promise.all([
         fetchUserStats(),
         fetchBookCount(),
         getDownloadStats(),
@@ -305,9 +352,9 @@ const AdminDashboardPage = () => {
       ]);
       
       setStats({
-        totalUsers: userCount || 0,
+        totalUsers: userStatsData.totalUsers || 0,
         activeUsers: onlineStatsData.activeUsers || 0,
-        totalBooks: bookCount || 0,
+        totalBooks: bookStatsData.totalBooks || 0,
         totalDownloads: downloadStatsData.totalDownloads || 0,
       });
       
@@ -322,50 +369,45 @@ const AdminDashboardPage = () => {
 
   const fetchUserStats = async () => {
     try {
-      const { count, error } = await supabase
+      const { count } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
       
-      if (error) {
-        console.error('Error fetching user count:', error);
-        return 0;
-      }
-      
-      return count;
+      return {
+        totalUsers: count || 0,
+        activeUsers: 0 // Will be updated from online stats
+      };
     } catch (error) {
-      console.error('Exception fetching user count:', error);
-      return 0;
+      console.error('Error fetching user stats:', error);
+      return { totalUsers: 0, activeUsers: 0 };
     }
   };
 
   const fetchBookCount = async () => {
     try {
-      const { count, error } = await supabase
+      const { count } = await supabase
         .from('books')
         .select('*', { count: 'exact', head: true });
       
-      if (error) {
-        console.error('Error fetching book count:', error);
-        return 0;
-      }
-      
-      return count;
+      return {
+        totalBooks: count || 0
+      };
     } catch (error) {
-      console.error('Exception fetching book count:', error);
-      return 0;
+      console.error('Error fetching book count:', error);
+      return { totalBooks: 0 };
     }
   };
 
   const renderSystemAlerts = () => {
     return (
       <SystemAlertsList>
-        {downloadStats.downloadsToday > 50 && (
+        {downloadStats.downloadsToday > 10 && (
           <AlertItem>
             <FiAlertCircle size={24} />
             <AlertContent>
-              <AlertTitle>{t('highDownloadVolume', 'High Download Volume')}</AlertTitle>
+              <AlertTitle>{t('highDownloads', 'High Download Activity')}</AlertTitle>
               <AlertDescription>
-                {t('highDownloadVolumeDesc', 'There are {{count}} downloads today, which is higher than usual.', { count: downloadStats.downloadsToday })}
+                {t('highDownloadsDesc', 'There have been {{count}} downloads today.', { count: downloadStats.downloadsToday })}
               </AlertDescription>
               <AlertMeta>
                 {t('detectedJustNow', 'Detected just now')}
@@ -414,6 +456,35 @@ const AdminDashboardPage = () => {
         <LoadingState>{t('loading', 'Loading...')}</LoadingState>
       ) : (
         <>
+          {/* Quick Actions Section */}
+          <SectionDivider>{t('admin.quickActions', 'Quick Actions')}</SectionDivider>
+          <QuickActionsGrid>
+            <QuickActionButton onClick={() => navigate('/admin/books/add')}>
+              <FiPlus />
+              {t('admin.addNewBook', 'Add New Book')}
+            </QuickActionButton>
+            
+            <QuickActionButton onClick={() => navigate('/admin/scrape-amazon')}>
+              <FiSearch />
+              {t('admin.fetchAmazonBook', 'Fetch Book from Amazon')}
+            </QuickActionButton>
+            
+            <QuickActionButton onClick={() => navigate('/admin/scrape-lehmanns')}>
+              <FiSearch />
+              {t('admin.fetchLehmannsBook', 'Fetch Book from Lehmanns')}
+            </QuickActionButton>
+            
+            <QuickActionButton onClick={() => navigate('/admin/users')}>
+              <FiUsers />
+              {t('admin.manageUsers', 'Manage Users')}
+            </QuickActionButton>
+            
+            <QuickActionButton onClick={() => navigate('/admin/books')}>
+              <FiBook />
+              {t('admin.manageBooks', 'Manage Books')}
+            </QuickActionButton>
+          </QuickActionsGrid>
+        
           <StatsGrid>
             <StatCard>
               <StatIcon>

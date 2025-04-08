@@ -27,8 +27,10 @@ import AdminBooksPage from './pages/admin/AdminBooksPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AddBookPage from './pages/admin/AddBookPage';
 import EditBookPage from './pages/admin/EditBookPage';
-import DebugPage from './pages/DebugPage';
+import AmazonScraperPage from './pages/admin/AmazonScraperPage';
+import LehmannsScraperPage from './pages/admin/LehmannsScraperPage';
 import BookRequestPage from './pages/BookRequestPage';
+import DebugPage from './pages/DebugPage';
 import AdminBookRequestsPage from './pages/admin/AdminBookRequestsPage';
 import UserActivityPage from './pages/admin/UserActivityPage';
 
@@ -381,6 +383,8 @@ const AppRoutes: React.FC = () => {
               <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/admin/users/:userId" element={<UserActivityPage />} />
               <Route path="/admin/book-requests" element={<AdminBookRequestsPage />} />
+              <Route path="/admin/scrape-amazon" element={<AmazonScraperPage />} />
+              <Route path="/admin/scrape-lehmanns" element={<LehmannsScraperPage />} />
               <Route path="/debug" element={<DebugPage />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
@@ -475,6 +479,22 @@ const AppRoutes: React.FC = () => {
               element={
                 <AdminRoute>
                   <AdminBookRequestsPage />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/scrape-amazon" 
+              element={
+                <AdminRoute>
+                  <AmazonScraperPage />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/scrape-lehmanns" 
+              element={
+                <AdminRoute>
+                  <LehmannsScraperPage />
                 </AdminRoute>
               } 
             />
