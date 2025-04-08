@@ -52,13 +52,30 @@ $$;
 GRANT EXECUTE ON FUNCTION public.update_user_quota TO authenticated;
 
 -- 3. Create a policy to allow admins to update user quotas
-CREATE POLICY IF NOT EXISTS admin_update_user_quota
-  ON public.profiles
-  FOR UPDATE
-  USING (
-    -- Allow admins to update any user profile
-    auth.uid() IN (SELECT id FROM public.profiles WHERE is_admin = true)
-  );
+-- First check if the policy already exists, if not create it
+DO $$
+DECLARE
+  policy_exists BOOLEAN;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1 
+    FROM pg_policies 
+    WHERE schemaname = 'public' 
+    AND tablename = 'profiles' 
+    AND policyname = 'admin_update_user_quota'
+  ) INTO policy_exists;
+  
+  IF NOT policy_exists THEN
+    EXECUTE 'CREATE POLICY admin_update_user_quota 
+      ON public.profiles
+      FOR UPDATE
+      USING (
+        -- Allow admins to update any user profile
+        auth.uid() IN (SELECT id FROM public.profiles WHERE is_admin = true)
+      )';
+  END IF;
+END
+$$;
 
 -- 4. Ensure the RLS is enabled on the profiles table
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;

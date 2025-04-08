@@ -100,8 +100,11 @@ CREATE TRIGGER on_download_insert
   FOR EACH ROW
   EXECUTE FUNCTION public.log_download_activity();
 
--- 5. Update the user_activity_stats view to include online users
-CREATE OR REPLACE VIEW public.user_activity_stats AS
+-- 5. First drop the existing view to avoid column renaming issues
+DROP VIEW IF EXISTS public.user_activity_stats;
+
+-- Then create the view with all needed columns
+CREATE VIEW public.user_activity_stats AS
 SELECT
   (SELECT COUNT(*) FROM public.profiles) as total_users,
   (SELECT COUNT(*) FROM public.profiles WHERE is_admin = true) as admin_users,
@@ -113,7 +116,8 @@ SELECT
   (SELECT AVG(daily_quota) FROM public.profiles) as average_daily_quota;
 
 -- 6. Create a view specifically for recent downloads
-CREATE OR REPLACE VIEW public.recent_downloads AS
+DROP VIEW IF EXISTS public.recent_downloads;
+CREATE VIEW public.recent_downloads AS
 SELECT 
   a.id,
   a.user_id,
