@@ -318,41 +318,49 @@ const UserActivityPage: React.FC = () => {
   }, [activeTab]);
   
   const fetchUserData = async () => {
-    setIsLoading(true);
+    if (!userId) return;
+    
     try {
-      // Get user profile data
-      const { data: profile, error: profileError } = await supabase
+      setIsLoading(true);
+      
+      // Instead of using admin.getUserById, use the profiles table
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
-      
+        
       if (profileError) {
         console.error('Error fetching user profile:', profileError);
+        setIsLoading(false);
         return;
       }
       
-      // Get user email
-      const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId!);
-      
-      if (authError) {
-        console.error('Error fetching user auth data:', authError);
-      }
+      // Get the user's last active status from user_sessions
+      const { data: sessionData } = await supabase
+        .from('user_sessions')
+        .select('last_active_at')
+        .eq('user_id', userId)
+        .order('last_active_at', { ascending: false })
+        .limit(1)
+        .single();
       
       // Check if user is banned
-      const isBanned = await isUserBanned(userId!);
+      const userBanned = await isUserBanned(userId);
       
-      // Combine data
-      setUserData({
-        id: profile.id,
-        username: profile.username,
-        email: authUser?.user?.email,
-        created_at: profile.created_at,
-        last_sign_in_at: authUser?.user?.last_sign_in_at,
-        is_admin: profile.is_admin || false,
-        daily_quota: profile.daily_quota || 0,
-        is_banned: isBanned
-      });
+      // Construct a user data object
+      const user: UserData = {
+        id: profileData.id,
+        username: profileData.username,
+        email: profileData.email || '',
+        created_at: profileData.created_at,
+        last_sign_in_at: profileData.last_sign_in || (sessionData?.last_active_at || null),
+        is_admin: profileData.is_admin || false,
+        daily_quota: profileData.daily_quota || 10,
+        is_banned: userBanned
+      };
+      
+      setUserData(user);
       
     } catch (error) {
       console.error('Exception fetching user data:', error);
