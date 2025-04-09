@@ -255,6 +255,7 @@ interface Stats {
   activeUsers: number;
   totalBooks: number;
   totalDownloads: number;
+  newUsersToday: number;
 }
 
 const QuickActionButton = styled.button`
@@ -314,7 +315,8 @@ const AdminDashboardPage = () => {
     totalUsers: 0,
     activeUsers: 0,
     totalBooks: 0,
-    totalDownloads: 0
+    totalDownloads: 0,
+    newUsersToday: 0
   });
   const [downloadStats, setDownloadStats] = useState<DownloadStats>({
     totalDownloads: 0,
@@ -356,6 +358,7 @@ const AdminDashboardPage = () => {
         activeUsers: onlineStatsData.activeUsers || 0,
         totalBooks: bookStatsData.totalBooks || 0,
         totalDownloads: downloadStatsData.totalDownloads || 0,
+        newUsersToday: userStatsData.newUsersToday || 0
       });
       
       setActivityStats(activityStatsData);
@@ -373,13 +376,19 @@ const AdminDashboardPage = () => {
         .from('profiles')
         .select('*', { count: 'exact', head: true });
       
+      const { count: newUsersCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString());
+      
       return {
         totalUsers: count || 0,
-        activeUsers: 0 // Will be updated from online stats
+        activeUsers: 0, // Will be updated from online stats
+        newUsersToday: newUsersCount || 0
       };
     } catch (error) {
       console.error('Error fetching user stats:', error);
-      return { totalUsers: 0, activeUsers: 0 };
+      return { totalUsers: 0, activeUsers: 0, newUsersToday: 0 };
     }
   };
 
@@ -494,7 +503,7 @@ const AdminDashboardPage = () => {
                 <StatValue>{stats.totalUsers}</StatValue>
                 <StatLabel>{t('totalUsers', 'Total Users')}</StatLabel>
                 <StatChange positive={true}>
-                  {activityStats.today > 5 && `+${Math.round(activityStats.today / 10)} ${t('today', 'today')}`}
+                  {stats.newUsersToday > 0 && `+${stats.newUsersToday} ${t('today', 'today')}`}
                 </StatChange>
               </StatContent>
             </StatCard>
