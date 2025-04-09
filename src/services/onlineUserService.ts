@@ -62,6 +62,7 @@ export const endUserSession = async (userId: string): Promise<void> => {
  */
 export const getOnlineUsers = async (): Promise<OnlineUser[]> => {
   try {
+    // Use the function that returns the complete set of online users
     const { data, error } = await supabase.rpc('get_online_users');
     
     if (error) {
@@ -131,43 +132,53 @@ export const getSessionStats = async (): Promise<{
   totalSessions: number;
 }> => {
   try {
-    // Count active users (distinct)
-    const { data: onlineUsers, error: onlineError } = await supabase.rpc('get_online_users');
+    // Use the optimized function that returns all stats at once
+    const { data, error } = await supabase.rpc('get_session_stats');
     
-    if (onlineError) {
-      console.error('Error fetching online users count:', onlineError);
-    }
-    
-    // Count active sessions
-    const { count: activeSessions, error: activeError } = await supabase
-      .from('user_sessions')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_active', true);
-    
-    if (activeError) {
-      console.error('Error fetching active sessions count:', activeError);
-    }
-    
-    // Count total sessions
-    const { count: totalSessions, error: totalError } = await supabase
-      .from('user_sessions')
-      .select('*', { count: 'exact', head: true });
-    
-    if (totalError) {
-      console.error('Error fetching total sessions count:', totalError);
+    if (error) {
+      console.error('Error fetching session stats:', error);
+      return {
+        activeUsers: 0,
+        activeSessions: 0,
+        totalSessions: 0
+      };
     }
     
     return {
-      activeUsers: onlineUsers?.length || 0,
-      activeSessions: activeSessions || 0,
-      totalSessions: totalSessions || 0
+      activeUsers: data?.active_users || 0,
+      activeSessions: data?.last_hour_sessions || 0,
+      totalSessions: data?.total_sessions || 0
     };
   } catch (error) {
     console.error('Exception fetching session stats:', error);
-    return {
-      activeUsers: 0,
-      activeSessions: 0,
-      totalSessions: 0
-    };
+    // Fallback to individual queries if the optimized function fails
+    try {
+      // Count active users (distinct)
+      const { data: onlineUsers } = await supabase.rpc('get_online_users');
+      
+      // Count active sessions
+      const { count: activeSessions } = await supabase
+        .from('user_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
+      
+      // Count total sessions
+      const { count: totalSessions } = await supabase
+        .from('user_sessions')
+        .select('*', { count: 'exact', head: true });
+      
+      return {
+        activeUsers: onlineUsers?.length || 0,
+        activeSessions: activeSessions || 0,
+        totalSessions: totalSessions || 0
+      };
+    } catch (fbError) {
+      console.error('Even fallback session stats failed:', fbError);
+      return {
+        activeUsers: 0,
+        activeSessions: 0,
+        totalSessions: 0
+      };
+    }
   }
 };

@@ -230,42 +230,44 @@ const AdminUserActivity: React.FC<AdminUserActivityProps> = ({
   };
   
   const getActivityTitle = (activity: ActivityLog) => {
-    // First check if it's a known activity type
-    switch(activity.action) {
+    // Fallback username if not provided
+    const displayUsername = activity.username || 'User';
+    
+    // Map action types to readable messages
+    switch (activity.action) {
       case ActivityType.LOGIN:
         return t('activity.userLoggedIn', '{{username}} logged in', { 
-          username: activity.username 
+          username: displayUsername 
         });
       case ActivityType.LOGOUT:
         return t('activity.userLoggedOut', '{{username}} logged out', { 
-          username: activity.username 
+          username: displayUsername 
         });
       case ActivityType.DOWNLOAD:
-        return t('activity.userDownloadedBook', '{{username}} downloaded {{book}}', { 
-          username: activity.username,
-          book: activity.entity_name || t('activity.aBook', 'a book')
+        return t('activity.userDownloadedBook', '{{username}} downloaded a book', { 
+          username: displayUsername 
         });
       case ActivityType.PROFILE_UPDATE:
         return t('activity.userUpdatedProfile', '{{username}} updated their profile', { 
-          username: activity.username 
+          username: displayUsername 
         });
       case ActivityType.PASSWORD_CHANGE:
         return t('activity.userChangedPassword', '{{username}} changed their password', { 
-          username: activity.username 
+          username: displayUsername 
         });
       case ActivityType.BOOK_REQUEST:
         return t('activity.userRequestedBook', '{{username}} requested a book', { 
-          username: activity.username 
+          username: displayUsername 
         });
       case ActivityType.ADMIN_ACTION:
         return t('activity.adminAction', '{{username}} performed admin action', { 
-          username: activity.username 
+          username: displayUsername 
         });
       case 'page_view':
         // For page views, show the page they viewed
         const pagePath = activity.details?.page || '';
         return t('activity.userViewedPage', '{{username}} viewed {{page}}', { 
-          username: activity.username,
+          username: displayUsername,
           page: pagePath 
         });
     }
@@ -280,14 +282,21 @@ const AdminUserActivity: React.FC<AdminUserActivityProps> = ({
         .join(' ');
         
       return t('activity.userSpecificAction', '{{username}} {{action}}', { 
-        username: activity.username,
+        username: displayUsername,
         action: readableAction 
+      });
+    }
+    
+    // Determine username from entity_id if we don't have a username
+    if (!activity.username && activity.entity_id) {
+      return t('activity.userPerformedAction', 'User {{id}} performed an action', { 
+        id: activity.entity_id.substring(0, 8) 
       });
     }
     
     // Fallback for unknown actions
     return t('activity.userPerformedAction', '{{username}} performed an action', { 
-      username: activity.username 
+      username: displayUsername 
     });
   };
   
