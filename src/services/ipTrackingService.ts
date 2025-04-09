@@ -1,5 +1,21 @@
 import { supabase } from './supabase';
 import { IpLog } from '../types/supabase';
+import axios from 'axios';
+
+/**
+ * Get the client's IP address using an external service
+ * This provides more accurate IP data than relying on Supabase headers
+ */
+export const getClientIp = async (): Promise<string> => {
+  try {
+    // Using ipify API - a free service to get client IP
+    const response = await axios.get('https://api.ipify.org?format=json');
+    return response.data.ip;
+  } catch (error) {
+    console.error('Error fetching client IP:', error);
+    return '0.0.0.0'; // Fallback value
+  }
+};
 
 /**
  * Get IP logs for a specific user
@@ -149,17 +165,23 @@ export const getUsersByIp = async (ipAddress: string): Promise<IpLog[]> => {
  */
 export const recordIpLog = async (
   userId: string,
-  ipAddress: string,
+  ipAddress?: string,
   userAgent?: string
 ): Promise<string | null> => {
   try {
+    // If no IP address is provided, get it from the client
+    const finalIpAddress = ipAddress || await getClientIp();
+    
+    // Get user agent from browser if not provided
+    const finalUserAgent = userAgent || window.navigator.userAgent;
+    
     const { data, error } = await supabase
       .from('ip_logs')
       .insert([
         {
           user_id: userId,
-          ip_address: ipAddress,
-          user_agent: userAgent
+          ip_address: finalIpAddress,
+          user_agent: finalUserAgent
         }
       ])
       .select()

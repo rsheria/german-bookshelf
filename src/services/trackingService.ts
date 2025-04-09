@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { v4 as uuidv4 } from 'uuid';
+import { getClientIp } from './ipTrackingService';
 
 // Session ID management
 let currentSessionId: string | null = null;
@@ -31,13 +32,31 @@ export const trackUserActivity = async (userId: string): Promise<void> => {
   
   try {
     const sessionId = getSessionId();
-    await supabase.rpc('update_user_last_active', { 
+    
+    // Get client IP for more accurate tracking
+    const ipAddress = await getClientIp();
+    
+    // Call our custom RPC that logs IP address
+    await supabase.rpc('update_user_last_active_with_ip', { 
       p_user_id: userId, 
-      p_session_id: sessionId 
+      p_session_id: sessionId,
+      p_ip_address: ipAddress,
+      p_user_agent: window.navigator.userAgent
     });
+    
     console.log('User activity tracked successfully');
   } catch (error) {
     console.error('Error tracking user activity:', error);
+    // Fallback to original function if the custom one fails
+    try {
+      const sessionId = getSessionId();
+      await supabase.rpc('update_user_last_active', { 
+        p_user_id: userId, 
+        p_session_id: sessionId 
+      });
+    } catch (fbError) {
+      console.error('Fallback tracking also failed:', fbError);
+    }
   }
 };
 
@@ -48,13 +67,29 @@ export const trackPageView = async (userId: string, pagePath: string): Promise<v
   if (!userId) return;
   
   try {
-    await supabase.rpc('track_page_view', {
+    // Get client IP for more accurate tracking
+    const ipAddress = await getClientIp();
+    
+    // Call our custom RPC that includes IP address
+    await supabase.rpc('track_page_view_with_ip', {
       p_user_id: userId,
       p_page_path: pagePath,
-      p_session_id: getSessionId()
+      p_session_id: getSessionId(),
+      p_ip_address: ipAddress,
+      p_user_agent: window.navigator.userAgent
     });
   } catch (error) {
-    console.error('Error tracking page view:', error);
+    console.error('Error tracking page view with IP:', error);
+    // Fallback to original function if the custom one fails
+    try {
+      await supabase.rpc('track_page_view', {
+        p_user_id: userId,
+        p_page_path: pagePath,
+        p_session_id: getSessionId()
+      });
+    } catch (fbError) {
+      console.error('Fallback page view tracking also failed:', fbError);
+    }
   }
 };
 
@@ -66,15 +101,33 @@ export const endUserSession = async (userId: string): Promise<void> => {
   
   try {
     const sessionId = getSessionId();
-    await supabase.rpc('end_user_session', { 
+    // Get client IP for more accurate tracking
+    const ipAddress = await getClientIp();
+    
+    // Call our custom RPC that includes IP address
+    await supabase.rpc('end_user_session_with_ip', { 
       p_user_id: userId, 
-      p_session_id: sessionId 
+      p_session_id: sessionId,
+      p_ip_address: ipAddress,
+      p_user_agent: window.navigator.userAgent
     });
     
     // Clear session
     localStorage.removeItem('app_session_id');
     currentSessionId = null;
   } catch (error) {
-    console.error('Error ending user session:', error);
+    console.error('Error ending user session with IP:', error);
+    // Fallback to original function if the custom one fails
+    try {
+      const sessionId = getSessionId();
+      await supabase.rpc('end_user_session', { 
+        p_user_id: userId, 
+        p_session_id: sessionId 
+      });
+      localStorage.removeItem('app_session_id');
+      currentSessionId = null;
+    } catch (fbError) {
+      console.error('Fallback session ending also failed:', fbError);
+    }
   }
 };

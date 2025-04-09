@@ -230,10 +230,14 @@ const AdminUserActivity: React.FC<AdminUserActivityProps> = ({
   };
   
   const getActivityTitle = (activity: ActivityLog) => {
+    // First check if it's a known activity type
     switch(activity.action) {
       case ActivityType.LOGIN:
-        // Show both username and email for login events
         return t('activity.userLoggedIn', '{{username}} logged in', { 
+          username: activity.username 
+        });
+      case ActivityType.LOGOUT:
+        return t('activity.userLoggedOut', '{{username}} logged out', { 
           username: activity.username 
         });
       case ActivityType.DOWNLOAD:
@@ -253,11 +257,38 @@ const AdminUserActivity: React.FC<AdminUserActivityProps> = ({
         return t('activity.userRequestedBook', '{{username}} requested a book', { 
           username: activity.username 
         });
-      default:
-        return t('activity.userPerformedAction', '{{username}} performed an action', { 
+      case ActivityType.ADMIN_ACTION:
+        return t('activity.adminAction', '{{username}} performed admin action', { 
           username: activity.username 
         });
+      case 'page_view':
+        // For page views, show the page they viewed
+        const pagePath = activity.details?.page || '';
+        return t('activity.userViewedPage', '{{username}} viewed {{page}}', { 
+          username: activity.username,
+          page: pagePath 
+        });
     }
+    
+    // If not a known type but we have action, use it directly
+    if (activity.action) {
+      // Convert the action string to a readable format (e.g., "page_view" → "Page View")
+      const readableAction = activity.action
+        .toLowerCase()
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+        
+      return t('activity.userSpecificAction', '{{username}} {{action}}', { 
+        username: activity.username,
+        action: readableAction 
+      });
+    }
+    
+    // Fallback for unknown actions
+    return t('activity.userPerformedAction', '{{username}} performed an action', { 
+      username: activity.username 
+    });
   };
   
   const formatTimeAgo = (timestamp: string) => {
