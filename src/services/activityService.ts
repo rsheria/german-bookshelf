@@ -125,10 +125,10 @@ export const getRecentActivities = async (limit = 10): Promise<ActivityLog[]> =>
  */
 export const getUserActivities = async (userId: string, limit = 20): Promise<ActivityLog[]> => {
   try {
-    // Try to use our optimized function first
-    const { data, error } = await supabase.rpc('get_user_activity', { 
-      p_user_id: userId,
-      limit_count: limit 
+    // Try to use our new renamed function first
+    const { data, error } = await supabase.rpc('get_user_activities', { 
+      user_id_param: userId,
+      limit_param: limit 
     });
 
     if (error) {
@@ -138,7 +138,8 @@ export const getUserActivities = async (userId: string, limit = 20): Promise<Act
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('activity_logs')
           .select('*')
-          .eq('user_id', userId)
+          .eq('entity_id', userId)
+          .eq('entity_type', 'user')
           .order('created_at', { ascending: false })
           .limit(limit);
         
