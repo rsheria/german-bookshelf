@@ -14,6 +14,7 @@ import Navbar from './components/Navbar';
 import LoginForm from './components/LoginForm';
 import SignupForm from './components/SignupForm';
 import Footer from './components/common/Footer';
+import ActivityTracker from './components/ActivityTracker'; // Import the ActivityTracker component
 
 // Import pages
 import HomePage from './pages/HomePage';
@@ -645,6 +646,7 @@ function App() {
           <AuthProvider>
             <EnhancedAuthProvider>
               <GlobalStyles />
+              <ActivityTracker /> {/* Add the ActivityTracker component here */}
               <AppRoutes />
             </EnhancedAuthProvider>
           </AuthProvider>

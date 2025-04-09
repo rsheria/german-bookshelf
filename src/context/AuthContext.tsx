@@ -323,6 +323,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Immediately save to local auth system
         setUserFromSupabase(data.session.user, isUserAdmin);
         
+        // Log the login activity in our tracking system
+        try {
+          await supabase.rpc('log_login_activity', { 
+            user_id_param: data.session.user.id 
+          });
+          console.log('Login activity tracked successfully');
+        } catch (trackError) {
+          console.error('Error tracking login:', trackError);
+          // Non-critical error, continue with login
+        }
+        
         // Show success toast or notification here if needed
         console.log('Login successful - all auth states updated');
         
