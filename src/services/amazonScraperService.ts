@@ -9,7 +9,7 @@ import axios from 'axios';
 import { Book } from '../types/supabase';
 
 // URL of the scraper server
-const SCRAPER_API_URL = 'https://amazon-scraper-server.onrender.com/api/scrape';
+const SCRAPER_API_URL = 'https://amazon-scraper-server-1.onrender.com/api/scrape';
 
 // Define the fields we need to extract from Amazon (for backwards compatibility)
 export interface AmazonBookData {
