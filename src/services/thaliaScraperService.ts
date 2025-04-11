@@ -55,7 +55,10 @@ export const fetchBookDataFromThalia = async (thaliaUrl: string): Promise<Thalia
 
     try {
       // Get the API URL from environment variables
-      const apiUrl = import.meta.env.VITE_THALIA_SCRAPER_URL;
+      // const apiUrl = import.meta.env.VITE_THALIA_SCRAPER_URL;
+      
+      // TEMPORARY FIX: Hard-code the correct endpoint URL instead of using env variable
+      const apiUrl = 'https://amazon-scraper-server-1.onrender.com/api/scrape-thalia';
       console.log('Using Thalia scraper API URL:', apiUrl);
       
       // Log the request details
