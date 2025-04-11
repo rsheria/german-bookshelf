@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiSave, FiX, FiUpload, FiAlertCircle, FiSearch, FiLoader } from 'react-icons/fi';
+import { FiSave, FiX, FiUpload, FiAlertCircle, FiSearch, FiLoader, FiBookOpen, FiHash } from 'react-icons/fi';
 import { supabase } from '../../services/supabase';
 import { Book } from '../../types/supabase';
-import { fetchBookDataFromAmazon, isValidAmazonUrl } from '../../services/amazonScraperService';
+import { fetchBookDataFromThalia, isValidThaliaUrl } from '../../services/thaliaScraperService';
 import { fetchBookDataFromLehmanns, isValidLehmannsUrl } from '../../services/lehmannsScraperService';
+import { getBookData } from '../../services/bookDataService';
 
 interface BookFormProps {
   book?: Book;
@@ -252,6 +253,29 @@ const FetchButton = styled(Button)`
   }
 `;
 
+const DataSourceToggle = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+`;
+
+const DataSourceButton = styled.button<{ active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  background-color: ${props => props.active ? '#3498db' : '#f5f5f5'};
+  color: ${props => props.active ? 'white' : '#333'};
+  border: 1px solid ${props => props.active ? '#3498db' : '#ddd'};
+  font-size: 1rem;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: ${props => props.active ? '#2980b9' : '#e0e0e0'};
+  }
+`;
+
 const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -276,104 +300,101 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
-  // New states for book data extraction
-  const [sourceType, setSourceType] = useState<'amazon' | 'lehmanns'>('amazon');
-  const [bookUrl, setBookUrl] = useState('');
-  const [isExtractingData, setIsExtractingData] = useState(false);
-  const [dataExtractionError, setDataExtractionError] = useState<string | null>(null);
-  const [dataExtractionSuccess, setDataExtractionSuccess] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState<'url' | 'isbn'>('url');
+  const [thaliaUrl, setThaliaUrl] = useState('');
+  const [lehmannsUrl, setLehmannsUrl] = useState('');
+  const [isbnInput, setIsbnInput] = useState('');
+  const [activeTab, setActiveTab] = useState<'thalia' | 'lehmanns'>('thalia');
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractError, setExtractError] = useState('');
+  const [extractSuccess, setExtractSuccess] = useState('');
 
-  // Function to extract data from URL
   const extractBookData = async () => {
-    if (!bookUrl) {
-      setDataExtractionError(t('admin.urlEmpty', 'Please enter a book URL'));
-      return;
-    }
-
-    // Validate URL based on source type
-    if (sourceType === 'amazon' && !isValidAmazonUrl(bookUrl)) {
-      setDataExtractionError(t('admin.invalidUrl', 'Invalid Amazon URL. Please use a valid Amazon book URL'));
-      return;
-    } else if (sourceType === 'lehmanns' && !isValidLehmannsUrl(bookUrl)) {
-      setDataExtractionError(t('admin.invalidUrl', 'Invalid Lehmanns URL. Please use a valid Lehmanns book URL'));
-      return;
-    }
-
-    setIsExtractingData(true);
-    setDataExtractionError(null);
-    setDataExtractionSuccess(null);
-
+    setIsExtracting(true);
+    setExtractError('');
+    setExtractSuccess('');
+    
     try {
-      if (sourceType === 'amazon') {
-        const amazonData = await fetchBookDataFromAmazon(bookUrl);
-        
-        if (!amazonData) {
-          throw new Error(t('admin.failedToExtractData', 'Failed to extract data from the provided URL'));
+      if (dataSource === 'url') {
+        if (activeTab === 'thalia') {
+          if (!isValidThaliaUrl(thaliaUrl)) {
+            throw new Error(t('admin.invalidThaliaUrl', 'Invalid Thalia URL'));
+          }
+          
+          const thaliaData = await fetchBookDataFromThalia(thaliaUrl);
+          if (!thaliaData) {
+            throw new Error(t('admin.failedToExtract', 'Failed to extract book data'));
+          }
+          
+          setTitle(thaliaData.title);
+          setAuthor(thaliaData.author);
+          setDescription(thaliaData.description);
+          setCoverUrl(thaliaData.coverUrl);
+          setLanguage(thaliaData.language || 'german');
+          setGenre(thaliaData.genre || '');
+          setType(thaliaData.type || 'ebook');
+          setIsbn(thaliaData.isbn || '');
+          setExternalId(thaliaData.ean || '');
+          setPublisher(thaliaData.publisher || '');
+          setPublishedDate(thaliaData.publishedDate || '');
+          if (thaliaData.pageCount) {
+            setPageCount(thaliaData.pageCount.toString());
+          }
+          setExtractSuccess(t('admin.dataExtracted', 'Book data successfully extracted'));
+        } else if (activeTab === 'lehmanns') {
+          if (!isValidLehmannsUrl(lehmannsUrl)) {
+            throw new Error(t('admin.invalidLehmannsUrl', 'Invalid Lehmanns URL'));
+          }
+          
+          const lehmannsData = await fetchBookDataFromLehmanns(lehmannsUrl);
+          if (!lehmannsData) {
+            throw new Error(t('admin.failedToExtract', 'Failed to extract book data'));
+          }
+          
+          setTitle(lehmannsData.title);
+          setAuthor(lehmannsData.author);
+          setDescription(lehmannsData.description);
+          setCoverUrl(lehmannsData.coverUrl);
+          setLanguage(lehmannsData.language || 'german');
+          setGenre(lehmannsData.genre || '');
+          setType(lehmannsData.type || 'ebook');
+          setIsbn(lehmannsData.isbn || '');
+          if (lehmannsData.pageCount) {
+            setPageCount(lehmannsData.pageCount.toString());
+          }
+          setExtractSuccess(t('admin.dataExtracted', 'Book data successfully extracted'));
         }
-
-        // Set the data from Amazon
-        setTitle(amazonData.title);
-        setAuthor(amazonData.author);
-        setGenre(amazonData.genre);
-        setLanguage(amazonData.language);
-        setDescription(amazonData.description);
-        setType(amazonData.type);
-        setCoverUrl(amazonData.coverUrl);
-        setIsbn(amazonData.isbn);
-        setExternalId(amazonData.asin);
-        
-        if (amazonData.pageCount) {
-          setPageCount(amazonData.pageCount.toString());
+      } else {
+        if (!isbnInput.trim()) {
+          throw new Error(t('admin.invalidIsbn', 'Please enter a valid ISBN'));
         }
         
-        if (amazonData.publishedDate) {
-          setPublishedDate(amazonData.publishedDate);
+        const bookData = await getBookData(isbnInput.trim());
+        if (!bookData) {
+          throw new Error(t('admin.failedToFetchByIsbn', 'Failed to fetch book data for this ISBN'));
         }
         
-        if (amazonData.publisher) {
-          setPublisher(amazonData.publisher);
+        setTitle(bookData.title);
+        setAuthor(bookData.author);
+        setDescription(bookData.description);
+        setCoverUrl(bookData.coverUrl);
+        setLanguage(bookData.language || 'german');
+        setGenre(bookData.genre || '');
+        setType(bookData.type as 'ebook' | 'audiobook');
+        setIsbn(bookData.isbn || isbnInput);
+        setExternalId(bookData.asin || '');
+        setPublisher(bookData.publisher || '');
+        setPublishedDate(bookData.publishedDate || '');
+        if (bookData.pageCount) {
+          setPageCount(bookData.pageCount.toString());
         }
-      } else if (sourceType === 'lehmanns') {
-        const lehmannsData = await fetchBookDataFromLehmanns(bookUrl);
-        
-        if (!lehmannsData) {
-          throw new Error(t('admin.failedToExtractData', 'Failed to extract data from the provided URL'));
-        }
-
-        // Set the data from Lehmanns
-        setTitle(lehmannsData.title);
-        setAuthor(lehmannsData.author);
-        setGenre(lehmannsData.genre);
-        setLanguage(lehmannsData.language);
-        setDescription(lehmannsData.description);
-        setType(lehmannsData.type);
-        setCoverUrl(lehmannsData.coverUrl);
-        setIsbn(lehmannsData.isbn);
-        setExternalId(lehmannsData.external_id);
-        
-        if (lehmannsData.pageCount) {
-          setPageCount(lehmannsData.pageCount.toString());
-        }
-        
-        if (lehmannsData.publishedDate) {
-          setPublishedDate(lehmannsData.publishedDate);
-        }
-        
-        if (lehmannsData.publisher) {
-          setPublisher(lehmannsData.publisher);
-        }
+        setExtractSuccess(t('admin.isbnDataExtracted', 'Book data successfully extracted from ISBN'));
       }
-
-      setDataExtractionSuccess(t('admin.dataExtracted', 'Book data successfully extracted'));
-    } catch (err) {
-      console.error('Error extracting data:', err);
-      setDataExtractionError(
-        err instanceof Error 
-          ? err.message 
-          : t('admin.unknownError', 'An unknown error occurred')
-      );
+    } catch (error) {
+      console.error('Error extracting book data:', error);
+      setExtractError((error as Error).message);
     } finally {
-      setIsExtractingData(false);
+      setIsExtracting(false);
     }
   };
 
@@ -382,7 +403,6 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
       const file = e.target.files[0];
       setCoverFile(file);
       
-      // Create a preview URL
       const reader = new FileReader();
       reader.onload = (event) => {
         setCoverUrl(event.target?.result as string);
@@ -396,15 +416,9 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
       throw new Error('No cover file to upload');
     }
     
-    // Generate a unique file name
     const fileExt = coverFile.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
     const filePath = `covers/${fileName}`;
-    
-    // Upload to Supabase Storage
-    if (!supabase) {
-      throw new Error('Supabase client is not initialized');
-    }
     
     const { error: uploadError } = await supabase.storage
       .from('book-covers')
@@ -414,7 +428,6 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
       throw uploadError;
     }
     
-    // Get the public URL
     const { data } = supabase.storage
       .from('book-covers')
       .getPublicUrl(filePath);
@@ -422,30 +435,23 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
     return data.publicUrl;
   };
   
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
     setSuccess(null);
     
     try {
-      // Validate form
       if (!title || !author || !genre || !language || !description || !type || !downloadUrl) {
         throw new Error(t('admin.formValidationError'));
       }
       
-      // Upload cover if there's a new file
       let finalCoverUrl = coverUrl;
       if (coverFile) {
         finalCoverUrl = await uploadCover();
       }
       
       if (isEdit && book) {
-        // Update existing book
-        if (!supabase) {
-          throw new Error('Supabase client is not initialized');
-        }
-        
         const { error: updateError } = await supabase
           .from('books')
           .update({
@@ -471,11 +477,6 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
         
         navigate('/admin/books');
       } else {
-        // Create new book
-        if (!supabase) {
-          throw new Error('Supabase client is not initialized');
-        }
-        
         const { error: insertError } = await supabase
           .from('books')
           .insert({
@@ -522,55 +523,115 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
         </AlertSuccess>
       )}
 
-      {/* Book URL input with source selection */}
-      <BookLinkContainer>
-        <SourceTabs>
-          <SourceTab 
-            active={sourceType === 'amazon'} 
-            onClick={() => setSourceType('amazon')}
-          >
-            Amazon
-          </SourceTab>
-          <SourceTab 
-            active={sourceType === 'lehmanns'} 
-            onClick={() => setSourceType('lehmanns')}
-          >
-            Lehmanns.de
-          </SourceTab>
-        </SourceTabs>
-        
-        <InputRow>
-          <FormGroup style={{ flex: 1 }}>
-            <Label htmlFor="bookUrl">
-              {sourceType === 'amazon' 
-                ? t('admin.amazonUrlInput', 'Amazon Book URL') 
-                : t('admin.lehmannsUrlInput', 'Lehmanns Book URL')}
-            </Label>
-            <Input
-              id="bookUrl"
-              type="url"
-              value={bookUrl}
-              onChange={(e) => setBookUrl(e.target.value)}
-              placeholder={sourceType === 'amazon' 
-                ? "https://www.amazon.de/dp/ASIN" 
-                : "https://www.lehmanns.de/buch/ISBN"
-              }
-            />
-            {dataExtractionError && <span style={{ color: '#721c24', fontSize: '0.85rem' }}>{dataExtractionError}</span>}
-            {dataExtractionSuccess && <span style={{ color: '#155724', fontSize: '0.85rem' }}>{dataExtractionSuccess}</span>}
-          </FormGroup>
-          <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '0.25rem' }}>
-            <FetchButton 
-              type="button" 
-              onClick={extractBookData}
-              disabled={isExtractingData || !bookUrl}
+      {!isEdit && (
+        <BookLinkContainer>
+          <DataSourceToggle>
+            <DataSourceButton 
+              type="button"
+              active={dataSource === 'url'} 
+              onClick={() => setDataSource('url')}
             >
-              {isExtractingData ? <FiLoader style={{ animation: 'spin 1s linear infinite' }} /> : <FiSearch />} 
-              {t('admin.extractData', 'Extract Data')}
-            </FetchButton>
-          </div>
-        </InputRow>
-      </BookLinkContainer>
+              <FiSearch /> {t('admin.useUrl', 'Use URL')}
+            </DataSourceButton>
+            <DataSourceButton 
+              type="button"
+              active={dataSource === 'isbn'} 
+              onClick={() => setDataSource('isbn')}
+            >
+              <FiHash /> {t('admin.useIsbn', 'Use ISBN')}
+            </DataSourceButton>
+          </DataSourceToggle>
+
+          {dataSource === 'url' ? (
+            <>
+              <SourceTabs>
+                <SourceTab 
+                  active={activeTab === 'thalia'} 
+                  onClick={() => setActiveTab('thalia')}
+                >
+                  Thalia.de
+                </SourceTab>
+                <SourceTab 
+                  active={activeTab === 'lehmanns'} 
+                  onClick={() => setActiveTab('lehmanns')}
+                >
+                  Lehmanns
+                </SourceTab>
+              </SourceTabs>
+              
+              {activeTab === 'thalia' && (
+                <InputRow>
+                  <Input
+                    type="url"
+                    value={thaliaUrl}
+                    onChange={(e) => setThaliaUrl(e.target.value)}
+                    placeholder="https://www.thalia.de/shop/home/artikeldetails/..."
+                    style={{ flexGrow: 1 }}
+                  />
+                  <FetchButton 
+                    type="button" 
+                    onClick={extractBookData}
+                    disabled={!thaliaUrl || isExtracting}
+                  >
+                    {isExtracting ? <FiLoader className="spin" /> : <FiSearch />}
+                    {t('admin.extract', 'Extract Data')}
+                  </FetchButton>
+                </InputRow>
+              )}
+              
+              {activeTab === 'lehmanns' && (
+                <InputRow>
+                  <Input
+                    type="url"
+                    value={lehmannsUrl}
+                    onChange={(e) => setLehmannsUrl(e.target.value)}
+                    placeholder="https://www.lehmanns.de/shop/..."
+                    style={{ flexGrow: 1 }}
+                  />
+                  <FetchButton 
+                    type="button" 
+                    onClick={extractBookData}
+                    disabled={!lehmannsUrl || isExtracting}
+                  >
+                    {isExtracting ? <FiLoader className="spin" /> : <FiSearch />}
+                    {t('admin.extract')}
+                  </FetchButton>
+                </InputRow>
+              )}
+            </>
+          ) : (
+            <InputRow>
+              <Input
+                type="text"
+                value={isbnInput}
+                onChange={(e) => setIsbnInput(e.target.value)}
+                placeholder="Enter ISBN (e.g., 9783630876726)"
+                style={{ flexGrow: 1 }}
+              />
+              <FetchButton 
+                type="button" 
+                onClick={extractBookData}
+                disabled={!isbnInput || isExtracting}
+              >
+                {isExtracting ? <FiLoader className="spin" /> : <FiBookOpen />}
+                {t('admin.fetchByIsbn', 'Fetch Data')}
+              </FetchButton>
+            </InputRow>
+          )}
+          
+          {extractError && (
+            <Alert>
+              <FiAlertCircle /> {extractError}
+            </Alert>
+          )}
+          
+          {extractSuccess && (
+            <AlertSuccess>
+              <FiAlertCircle /> {extractSuccess}
+            </AlertSuccess>
+          )}
+        </BookLinkContainer>
+      )}
       
       <Form onSubmit={handleSubmit}>
         <FormRow>
@@ -641,7 +702,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
             <Select
               id="type"
               value={type}
-              onChange={(e) => setType(e.target.value as any)}
+              onChange={(e) => setType(e.target.value as 'ebook' | 'audiobook')}
               required
             >
               <option value="audiobook">{t('books.audiobook')}</option>
@@ -662,7 +723,6 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
           </FormGroup>
         </FormRow>
 
-        {/* Additional book metadata row */}
         <FormRow>
           <FormGroup>
             <Label htmlFor="isbn">{t('books.isbn', 'ISBN')}</Label>
@@ -707,6 +767,19 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               value={publishedDate}
               onChange={(e) => setPublishedDate(e.target.value)}
               placeholder="1. Januar 2023"
+            />
+          </FormGroup>
+        </FormRow>
+        
+        <FormRow>
+          <FormGroup>
+            <Label htmlFor="pageCount">{t('books.pageCount', 'Page Count')}</Label>
+            <Input
+              id="pageCount"
+              type="number"
+              value={pageCount}
+              onChange={(e) => setPageCount(e.target.value)}
+              placeholder="123"
             />
           </FormGroup>
         </FormRow>

@@ -24,6 +24,7 @@ interface BookApiData {
   type: 'audiobook' | 'ebook';
   isbn: string;
   asin?: string;
+  ean?: string;
   pageCount?: number;
   publishedDate?: string;
   publisher?: string;
@@ -87,6 +88,42 @@ export const isValidAmazonUrl = (url: string): boolean => {
     );
   } catch (error) {
     return false;
+  }
+};
+
+// Check if a URL is a valid Thalia URL
+export const isValidThaliaUrl = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url);
+    return (
+      urlObj.hostname.includes('thalia.de') &&
+      (urlObj.pathname.includes('/artikeldetails/') || 
+       urlObj.pathname.includes('/shop/home/artikeldetails/'))
+    );
+  } catch (error) {
+    return false;
+  }
+};
+
+// Helper function to extract EAN from Thalia URL
+export const extractEanFromUrl = (url: string): string | null => {
+  try {
+    // Try different URL patterns common for Thalia
+    const patterns = [
+      /\/([A-Z0-9]{10,13})(?:\/|\?|$)/i,  // Match product IDs in the URL
+      /artikeldetails\/([A-Z0-9]{10,13})/i, // Match artikeldetails/ID pattern
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+
+    return null;
+  } catch (error) {
+    return null;
   }
 };
 
@@ -223,6 +260,7 @@ const extractXmlValue = (xml: string, fieldTag: string, subfieldTag: string): st
 export const getBookData = async (input: string): Promise<BookApiData | null> => {
   let isbn: string | null = null;
   let asin: string | null = null;
+  let ean: string | null = null;
   
   // Check if input is an ISBN
   if (/^[0-9]{10,13}$/.test(input)) {
@@ -233,8 +271,12 @@ export const getBookData = async (input: string): Promise<BookApiData | null> =>
     asin = extractAsinFromUrl(input);
     isbn = await extractIsbnFromAmazonUrl(input);
   } 
+  // Check if input is a Thalia URL
+  else if (isValidThaliaUrl(input)) {
+    ean = extractEanFromUrl(input);
+  } 
   else {
-    throw new Error('Invalid input: Please provide either an ISBN or an Amazon URL');
+    throw new Error('Invalid input: Please provide either an ISBN, an Amazon URL, or a Thalia URL');
   }
   
   // If we couldn't get an ISBN, but have an ASIN, create basic data
@@ -252,6 +294,21 @@ export const getBookData = async (input: string): Promise<BookApiData | null> =>
     };
   }
   
+  // If we couldn't get an ISBN, but have an EAN, create basic data
+  if (!isbn && ean) {
+    return {
+      title: `Book with EAN: ${ean}`,
+      author: 'Unknown Author',
+      description: 'No description available',
+      coverUrl: '',
+      language: 'german',
+      genre: '',
+      type: 'ebook',
+      isbn: '',
+      ean: ean
+    };
+  }
+  
   if (!isbn) {
     throw new Error('Could not extract ISBN from input');
   }
@@ -260,18 +317,21 @@ export const getBookData = async (input: string): Promise<BookApiData | null> =>
   const googleBooksData = await fetchFromGoogleBooks(isbn);
   if (googleBooksData) {
     if (asin) googleBooksData.asin = asin;
+    if (ean) googleBooksData.ean = ean;
     return googleBooksData;
   }
   
   const openLibraryData = await fetchFromOpenLibrary(isbn);
   if (openLibraryData) {
     if (asin) openLibraryData.asin = asin;
+    if (ean) openLibraryData.ean = ean;
     return openLibraryData;
   }
   
   const dnbData = await fetchFromDNB(isbn);
   if (dnbData) {
     if (asin) dnbData.asin = asin;
+    if (ean) dnbData.ean = ean;
     return dnbData;
   }
   
@@ -285,7 +345,8 @@ export const getBookData = async (input: string): Promise<BookApiData | null> =>
     genre: '',
     type: 'ebook',
     isbn: isbn,
-    asin: asin || undefined
+    asin: asin || undefined,
+    ean: ean || undefined
   };
 };
 
@@ -300,7 +361,7 @@ export const apiDataToBook = (apiData: BookApiData): Partial<Book> => {
     genre: apiData.genre,
     type: apiData.type,
     isbn: apiData.isbn,
-    external_id: apiData.asin || '',
+    external_id: apiData.asin || apiData.ean || '',
     page_count: apiData.pageCount,
     published_date: apiData.publishedDate,
     publisher: apiData.publisher,
