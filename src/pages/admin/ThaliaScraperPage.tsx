@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiArrowLeft, FiSearch, FiCheck, FiLoader, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import { fetchBookDataFromAmazon, isValidAmazonUrl, amazonDataToBook } from '../../services/amazonScraperService';
+import { fetchBookDataFromThalia, isValidThaliaUrl, thaliaDataToBook } from '../../services/thaliaScraperService';
 import { supabase } from '../../services/supabase';
 import { Book } from '../../types/supabase';
 import {
@@ -166,12 +166,12 @@ const ActionButtons = styled.div`
   margin-top: 1rem;
 `;
 
-const AmazonScraperPage: React.FC = () => {
+const ThaliaScraperPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
   
-  const [amazonUrl, setAmazonUrl] = useState('');
+  const [thaliaUrl, setThaliaUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -186,30 +186,24 @@ const AmazonScraperPage: React.FC = () => {
   
   const handleFetchBook = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!isValidAmazonUrl(amazonUrl)) {
-      setError(t('admin.invalidAmazonUrl', 'Please enter a valid Amazon URL'));
-      return;
-    }
-    
     setIsLoading(true);
     setError(null);
     setSuccess(null);
     setBookData(null);
     
     try {
-      const data = await fetchBookDataFromAmazon(amazonUrl);
-      
-      if (!data) {
-        setError(t('admin.couldNotFetchBook', 'Could not fetch book data from Amazon'));
-        return;
+      // Validate Thalia URL
+      if (!isValidThaliaUrl(thaliaUrl)) {
+        throw new Error(t('admin.invalidThaliaUrl', 'Invalid Thalia URL'));
       }
       
-      setBookData(data);
-      setSuccess(t('admin.bookDataFetched', 'Book data successfully fetched from Amazon'));
-    } catch (error) {
+      // Fetch book data from Thalia
+      const bookData = await fetchBookDataFromThalia(thaliaUrl);
+      setBookData(bookData);
+      setSuccess(t('admin.bookDataFetched', 'Book data successfully fetched from Thalia'));
+    } catch (error: any) {
       console.error('Error fetching book data:', error);
-      setError(t('admin.errorFetchingBook', 'An error occurred while fetching book data'));
+      setError(error.message || t('admin.errorFetchingData', 'An error occurred while fetching book data'));
     } finally {
       setIsLoading(false);
     }
@@ -218,37 +212,30 @@ const AmazonScraperPage: React.FC = () => {
   const handleAddToLibrary = async () => {
     if (!bookData) return;
     
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    
     try {
-      setIsLoading(true);
+      // Convert Thalia data to Book model
+      const newBook = thaliaDataToBook(bookData);
       
-      // Convert the Amazon data to our book format
-      const bookToAdd = amazonDataToBook(bookData);
+      // Add required fields for insertion
+      newBook.created_at = new Date().toISOString();
       
-      // Add required fields for the database
-      const fullBook: Partial<Book> = {
-        ...bookToAdd,
-        // Only include fields that exist in the Book type
-        download_url: '', // This would need to be filled in by the admin
-        created_at: new Date().toISOString(),
-      };
-      
-      // Insert into database
-      const { error: insertError } = await supabase
+      // Insert book into database
+      const { error } = await supabase
         .from('books')
-        .insert([fullBook]);
+        .insert(newBook as Book)
+        .select('id')
+        .single();
       
-      if (insertError) {
-        throw insertError;
-      }
+      if (error) throw error;
       
-      setSuccess(t('admin.bookAddedToLibrary', 'Book was successfully added to the library!'));
-      
-      // Clear form and data after 2 seconds
-      setTimeout(() => {
-        navigate('/admin/books');
-      }, 2000);
-      
-    } catch (error) {
+      setSuccess(t('admin.bookAddedToLibrary', 'Book successfully added to your library'));
+      setThaliaUrl('');
+      setBookData(null);
+    } catch (error: any) {
       console.error('Error adding book to library:', error);
       setError(t('admin.errorAddingBook', 'An error occurred while adding the book to the library'));
     } finally {
@@ -259,7 +246,7 @@ const AmazonScraperPage: React.FC = () => {
   const handleRedirectToForm = () => {
     // Store book data in sessionStorage
     if (bookData) {
-      sessionStorage.setItem('amazon_book_data', JSON.stringify(bookData));
+      sessionStorage.setItem('thalia_book_data', JSON.stringify(bookData));
     }
     
     // Navigate to the add book form
@@ -286,7 +273,7 @@ const AmazonScraperPage: React.FC = () => {
       
       <AdminHeader>
         <AdminTitle>
-          <FiSearch style={{ marginRight: '0.5rem' }} /> {t('admin.amazonScraper', 'Amazon Book Scraper')}
+          <FiSearch style={{ marginRight: '0.5rem' }} /> {t('admin.thaliaBookScraper', 'Thalia Book Scraper')}
         </AdminTitle>
       </AdminHeader>
       
@@ -307,13 +294,13 @@ const AmazonScraperPage: React.FC = () => {
         
         <Form onSubmit={handleFetchBook}>
           <FormGroup>
-            <Label htmlFor="amazonUrl">{t('admin.amazonBookUrl', 'Amazon Book URL')}</Label>
+            <Label htmlFor="thaliaUrl">{t('admin.thaliaBookUrl', 'Thalia Book URL')}</Label>
             <Input
-              id="amazonUrl"
+              id="thaliaUrl"
               type="url"
-              value={amazonUrl}
-              onChange={(e) => setAmazonUrl(e.target.value)}
-              placeholder="https://www.amazon.de/dp/B07..."
+              value={thaliaUrl}
+              onChange={(e) => setThaliaUrl(e.target.value)}
+              placeholder="https://www.thalia.de/shop/home/artikeldetails/..."
               required
             />
           </FormGroup>
@@ -349,11 +336,11 @@ const AmazonScraperPage: React.FC = () => {
               <BookMeta>
                 <div><strong>{t('books.type')}:</strong> {bookData.type === 'audiobook' ? t('books.audiobook') : t('books.ebook')}</div>
                 <div><strong>{t('books.language')}:</strong> {bookData.language}</div>
-                <div><strong>ASIN:</strong> {bookData.asin}</div>
+                <div><strong>EAN:</strong> {bookData.ean}</div>
               </BookMeta>
               
               <div style={{ marginTop: 'auto' }}>
-                <p>{t('admin.amazonDataFetchedNote', 'The book data has been fetched from Amazon. You can now add it directly to the library or continue to the book form for further editing.')}</p>
+                <p>{t('admin.thaliaDataFetchedNote', 'The book data has been fetched from Thalia. You can now add it directly to the library or continue to the book form for further editing.')}</p>
                 
                 <ActionButtons>
                   <Button onClick={handleAddToLibrary} disabled={isLoading}>
@@ -377,4 +364,4 @@ const AmazonScraperPage: React.FC = () => {
   );
 };
 
-export default AmazonScraperPage;
+export default ThaliaScraperPage;

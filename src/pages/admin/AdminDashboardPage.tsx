@@ -473,9 +473,9 @@ const AdminDashboardPage = () => {
               {t('admin.addNewBook', 'Add New Book')}
             </QuickActionButton>
             
-            <QuickActionButton onClick={() => navigate('/admin/scrape-amazon')}>
+            <QuickActionButton onClick={() => navigate('/admin/scrape-thalia')}>
               <FiSearch />
-              {t('admin.fetchAmazonBook', 'Fetch Book from Amazon')}
+              {t('admin.fetchThaliaBook', 'Fetch Book from Thalia')}
             </QuickActionButton>
             
             <QuickActionButton onClick={() => navigate('/admin/scrape-lehmanns')}>
