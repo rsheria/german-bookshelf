@@ -6,7 +6,7 @@
  */
 
 import { Book } from '../types/supabase';
-import { getBookData, isValidThaliaUrl, extractEanFromUrl } from './bookDataService';
+import { isValidThaliaUrl, extractEanFromUrl } from './bookDataService';
 
 // Define the fields we need to extract from Thalia (for backwards compatibility)
 export interface ThaliaBookData {
@@ -54,8 +54,45 @@ export const fetchBookDataFromThalia = async (thaliaUrl: string): Promise<Thalia
     }
 
     try {
-      // Use the new book data service
-      const bookData = await getBookData(thaliaUrl);
+      // Get the API URL from environment variables
+      const apiUrl = import.meta.env.VITE_THALIA_SCRAPER_URL;
+      console.log('Using Thalia scraper API URL:', apiUrl);
+      
+      // Call the API directly instead of using book data service
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: thaliaUrl }),
+      });
+      
+      // Log the raw response for debugging
+      const rawData = await response.text();
+      console.log('Raw API response:', rawData);
+      
+      // Parse the JSON response
+      let data;
+      try {
+        data = JSON.parse(rawData);
+        console.log('Parsed API response:', data);
+      } catch (parseError) {
+        console.error('Error parsing API response:', parseError);
+        throw new ThaliaScraperError('Invalid response from API', 'PARSE_ERROR');
+      }
+      
+      // Handle different response formats (direct data or nested under bookData)
+      let bookData;
+      if (data.success && data.bookData) {
+        // Response format: { success: true, bookData: { ... } }
+        bookData = data.bookData;
+      } else if (data.title !== undefined) {
+        // Response format: direct object { title: "...", author: "...", ... }
+        bookData = data;
+      } else {
+        console.error('Unexpected API response structure:', data);
+        throw new ThaliaScraperError('Unexpected response format from API', 'FORMAT_ERROR');
+      }
       
       if (!bookData) {
         throw new ThaliaScraperError('Failed to fetch book data', 'DATA_ERROR');
@@ -72,8 +109,8 @@ export const fetchBookDataFromThalia = async (thaliaUrl: string): Promise<Thalia
         type: bookData.type || 'ebook',
         isbn: bookData.isbn || '',
         ean: bookData.ean || ean,
-        pageCount: bookData.pageCount,
-        publishedDate: bookData.publishedDate,
+        pageCount: bookData.pageCount ? Number(bookData.pageCount) : undefined,
+        publishedDate: bookData.publishedDate || bookData.publicationDate,
         publisher: bookData.publisher
       };
     } catch (error) {
