@@ -1,15 +1,12 @@
 /**
  * amazonScraperService.ts
  * 
- * Enhanced implementation of Amazon book data extraction using
- * a dedicated Node.js scraper service with Puppeteer.
+ * Enhanced implementation using multiple book data APIs
+ * to reliably fetch German book data from Amazon URLs or ISBNs.
  */
 
-import axios from 'axios';
 import { Book } from '../types/supabase';
-
-// URL of the scraper server
-const SCRAPER_API_URL = 'https://amazon-scraper-server-1.onrender.com/api/scrape';
+import { getBookData, isValidAmazonUrl, extractAsinFromUrl } from './bookDataService';
 
 // Define the fields we need to extract from Amazon (for backwards compatibility)
 export interface AmazonBookData {
@@ -38,48 +35,12 @@ export class AmazonScraperError extends Error {
   }
 }
 
-/**
- * Checks if a URL is a valid Amazon URL
- */
-export const isValidAmazonUrl = (url: string): boolean => {
-  try {
-    const urlObj = new URL(url);
-    return (
-      (urlObj.hostname === 'www.amazon.de' || 
-       urlObj.hostname === 'amazon.de') &&
-      (urlObj.pathname.includes('/dp/') || 
-       urlObj.pathname.includes('/gp/product/'))
-    );
-  } catch (error) {
-    return false;
-  }
-};
+// Re-export the functions from bookDataService
+export { isValidAmazonUrl, extractAsinFromUrl };
 
 /**
- * Extracts ASIN from an Amazon URL
- */
-export const extractAsinFromUrl = (url: string): string | null => {
-  // Try different URL patterns
-  const patterns = [
-    /\/dp\/([A-Z0-9]{10})/i,
-    /\/gp\/product\/([A-Z0-9]{10})/i,
-    /\/asin\/([A-Z0-9]{10})/i,
-    /\/([A-Z0-9]{10})(?:\/|\?|$)/i
-  ];
-
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match && match[1]) {
-      return match[1];
-    }
-  }
-
-  return null;
-};
-
-/**
- * Main function to extract book data from Amazon URL
- * Uses the dedicated scraper service
+ * Main function to extract book data from Amazon URL or ISBN
+ * Uses multiple book data APIs for reliable results
  */
 export const fetchBookDataFromAmazon = async (amazonUrl: string): Promise<AmazonBookData | null> => {
   try {
@@ -92,37 +53,34 @@ export const fetchBookDataFromAmazon = async (amazonUrl: string): Promise<Amazon
       throw new AmazonScraperError('Could not extract ASIN from URL', 'INVALID_ASIN');
     }
 
-    // Call the scraper API
     try {
-      const response = await axios.post(SCRAPER_API_URL, { url: amazonUrl });
+      // Use the new book data service
+      const bookData = await getBookData(amazonUrl);
       
-      if (response.status !== 200 || !response.data) {
-        throw new AmazonScraperError('Failed to fetch book data from scraper service', 'SERVICE_ERROR');
+      if (!bookData) {
+        throw new AmazonScraperError('Failed to fetch book data', 'DATA_ERROR');
       }
       
-      // Destructure only what we need
-      const { bookData } = response.data;
-      
-      // Convert to the old format for backward compatibility
+      // Convert to the expected format for backward compatibility
       return {
         title: bookData.title || 'Unknown Title',
         author: bookData.author || 'Unknown Author',
         description: bookData.description || 'Please enter a description.',
-        coverUrl: bookData.cover_url || '',
+        coverUrl: bookData.coverUrl || '',
         language: bookData.language || 'German',
-        genre: bookData.categories || 'Fiction',
+        genre: bookData.genre || 'Fiction',
         type: bookData.type || 'ebook',
         isbn: bookData.isbn || '',
         asin: bookData.asin || asin,
-        pageCount: bookData.page_count,
-        publishedDate: bookData.publication_date,
+        pageCount: bookData.pageCount,
+        publishedDate: bookData.publishedDate,
         publisher: bookData.publisher
       };
     } catch (error) {
-      console.error('Scraper service error:', error);
+      console.error('Book data API error:', error);
       throw new AmazonScraperError(
-        'Scraper service error: ' + (error instanceof Error ? error.message : 'Unknown error'),
-        'SERVICE_ERROR'
+        'Book data API error: ' + (error instanceof Error ? error.message : 'Unknown error'),
+        'API_ERROR'
       );
     }
   } catch (error) {
