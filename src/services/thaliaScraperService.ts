@@ -58,27 +58,55 @@ export const fetchBookDataFromThalia = async (thaliaUrl: string): Promise<Thalia
       const apiUrl = import.meta.env.VITE_THALIA_SCRAPER_URL;
       console.log('Using Thalia scraper API URL:', apiUrl);
       
+      // Log the request details
+      console.log('Sending request to:', apiUrl);
+      console.log('With payload:', { url: thaliaUrl });
+      
       // Call the API directly instead of using book data service
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Origin': window.location.origin
         },
+        credentials: 'omit', // Don't send cookies for cross-origin requests
+        mode: 'cors', // Explicitly set CORS mode
         body: JSON.stringify({ url: thaliaUrl }),
       });
       
+      // Log the response status and headers
+      console.log('Response status:', response.status, response.statusText);
+      console.log('Response headers:', Object.fromEntries([...response.headers.entries()]));
+      
       // Log the raw response for debugging
       const rawData = await response.text();
-      console.log('Raw API response:', rawData);
+      console.log('Raw API response (first 500 chars):', rawData.substring(0, 500));
+      
+      // Check if response is empty or not JSON
+      if (!rawData || rawData.trim() === '') {
+        console.error('Empty response from server');
+        throw new ThaliaScraperError('Empty response from server', 'EMPTY_RESPONSE');
+      }
+      
+      // Check if response looks like HTML (might be an error page)
+      if (rawData.trim().startsWith('<!DOCTYPE html>') || rawData.trim().startsWith('<html')) {
+        console.error('Received HTML instead of JSON. First 500 chars:', rawData.substring(0, 500));
+        throw new ThaliaScraperError('Server returned HTML instead of JSON', 'HTML_RESPONSE');
+      }
       
       // Parse the JSON response
       let data;
       try {
         data = JSON.parse(rawData);
         console.log('Parsed API response:', data);
-      } catch (parseError) {
+      } catch (parseError: unknown) {
         console.error('Error parsing API response:', parseError);
-        throw new ThaliaScraperError('Invalid response from API', 'PARSE_ERROR');
+        console.error('Raw data causing parse error (first 100 chars):', rawData.substring(0, 100));
+        throw new ThaliaScraperError(
+          'Invalid response from API: ' + (parseError instanceof Error ? parseError.message : String(parseError)), 
+          'PARSE_ERROR'
+        );
       }
       
       // Handle different response formats (direct data or nested under bookData)
