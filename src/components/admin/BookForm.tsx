@@ -1,5 +1,5 @@
-import React, { useState, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, FormEvent, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiSave, FiX, FiUpload, FiAlertCircle, FiSearch, FiLoader, FiBookOpen, FiHash } from 'react-icons/fi';
@@ -279,6 +279,7 @@ const DataSourceButton = styled.button<{ active: boolean }>`
 const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   const [title, setTitle] = useState(book?.title || '');
   const [author, setAuthor] = useState(book?.author || '');
@@ -509,6 +510,36 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
     }
   };
   
+  useEffect(() => {
+    // Only run if this is a new book (not an edit) and we have URL parameters
+    if (!isEdit && searchParams.has('title')) {
+      setTitle(searchParams.get('title') || '');
+      setAuthor(searchParams.get('author') || '');
+      setGenre(searchParams.get('genre') || '');
+      setLanguage(searchParams.get('language') || 'German');
+      setDescription(searchParams.get('description') || '');
+      setType((searchParams.get('type') || 'ebook') as 'ebook' | 'audiobook');
+      setDownloadUrl(searchParams.get('downloadUrl') || '');
+      setCoverUrl(searchParams.get('coverUrl') || '');
+      setIsbn(searchParams.get('isbn') || '');
+      setExternalId(searchParams.get('externalId') || '');
+      setPublisher(searchParams.get('publisher') || '');
+      setPublishedDate(searchParams.get('publishedDate') || '');
+      setPageCount(searchParams.get('pageCount') || '');
+      
+      // Show a success message
+      setSuccess(t('admin.autofillSuccess', 'Form auto-filled from scraper data'));
+      
+      // Scroll to form content
+      setTimeout(() => {
+        window.scrollTo({
+          top: document.body.scrollHeight / 3,
+          behavior: 'smooth'
+        });
+      }, 500);
+    }
+  }, [searchParams, isEdit, t]);
+
   return (
     <FormContainer>
       {error && (
