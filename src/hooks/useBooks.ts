@@ -91,6 +91,7 @@ interface UseBooksProps {
   type?: BookType;
   searchTerm?: string;
   genre?: string;
+  year?: number | null;
   limit?: number;
   page?: number;
 }
@@ -107,6 +108,7 @@ export const useBooks = ({
   type,
   searchTerm = '',
   genre = '',
+  year = null,
   limit = 12,
   page = 0
 }: UseBooksProps = {}): UseBooksResult => {
@@ -132,6 +134,14 @@ export const useBooks = ({
         
         if (genre && genre !== 'all') {
           filteredBooks = filteredBooks.filter(book => book.genre === genre);
+        }
+        
+        if (year) {
+          const publishYear = new Date(year, 0).getFullYear();
+          filteredBooks = filteredBooks.filter(book => {
+            const bookYear = new Date(book.created_at).getFullYear();
+            return bookYear === publishYear;
+          });
         }
         
         if (searchTerm) {
@@ -175,6 +185,13 @@ export const useBooks = ({
         query = query.eq('genre', genre);
       }
       
+      if (year) {
+        // Assuming created_at is in ISO format, filter by year
+        const yearStart = new Date(year, 0, 1).toISOString();
+        const yearEnd = new Date(year, 11, 31, 23, 59, 59).toISOString();
+        query = query.gte('created_at', yearStart).lte('created_at', yearEnd);
+      }
+      
       if (searchTerm) {
         query = query.or(`title.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
       }
@@ -210,6 +227,14 @@ export const useBooks = ({
         filteredBooks = filteredBooks.filter(book => book.genre === genre);
       }
       
+      if (year) {
+        const publishYear = new Date(year, 0).getFullYear();
+        filteredBooks = filteredBooks.filter(book => {
+          const bookYear = new Date(book.created_at).getFullYear();
+          return bookYear === publishYear;
+        });
+      }
+      
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         filteredBooks = filteredBooks.filter(book => 
@@ -233,7 +258,7 @@ export const useBooks = ({
 
   useEffect(() => {
     fetchBooks();
-  }, [type, searchTerm, genre, limit, page]);
+  }, [type, searchTerm, genre, year, limit, page]);
 
   return { books, isLoading, error, totalCount, fetchBooks };
 };

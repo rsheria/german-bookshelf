@@ -4,6 +4,7 @@ import darkTheme from './darkTheme';
 
 const GlobalStyle = createGlobalStyle`
   /* Import premium fonts */
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&display=swap');
   @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
   @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap');
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -307,7 +308,7 @@ const GlobalStyle = createGlobalStyle`
   }
   
   /* Input styling */
-  input, select, textarea {
+  input, textarea {
     font-family: inherit;
     font-size: ${theme.typography.fontSize.md};
     padding: ${theme.spacing.sm} ${theme.spacing.md};
@@ -325,7 +326,7 @@ const GlobalStyle = createGlobalStyle`
     }
     
     &::placeholder {
-      color: ${theme.colors.textLight};
+      color: ${theme.colors.textMuted};
       opacity: 0.7;
     }
     
@@ -340,7 +341,7 @@ const GlobalStyle = createGlobalStyle`
       }
       
       &::placeholder {
-        color: ${darkTheme.colors.textLight};
+        color: ${darkTheme.colors.textMuted};
       }
     }
   }
@@ -365,12 +366,6 @@ const GlobalStyle = createGlobalStyle`
       border-color: ${theme.colors.secondary};
     }
     
-    .rating-badge {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-    }
-    
     body[data-theme='dark'] & {
       box-shadow: ${darkTheme.shadows.md};
       
@@ -391,21 +386,20 @@ const GlobalStyle = createGlobalStyle`
   .book-title {
     font-family: ${theme.typography.fontFamily.heading};
     font-weight: ${theme.typography.fontWeight.semibold};
-    color: ${theme.colors.primary};
-    transition: color 0.3s ease;
+    color: ${theme.colors.text};
     
     body[data-theme='dark'] & {
-      color: ${darkTheme.colors.primary};
+      color: ${darkTheme.colors.text};
     }
   }
   
   .book-author {
     font-style: italic;
-    color: ${theme.colors.textLight};
+    color: ${theme.colors.textSecondary};
     margin-bottom: ${theme.spacing.sm};
     
     body[data-theme='dark'] & {
-      color: ${darkTheme.colors.textLight};
+      color: ${darkTheme.colors.textSecondary};
     }
   }
   

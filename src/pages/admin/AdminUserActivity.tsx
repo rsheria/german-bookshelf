@@ -138,9 +138,9 @@ const EmptyState = styled.div`
 `;
 
 const RefreshButton = styled.button`
-  background: none;
-  border: none;
-  color: ${props => props.theme.colors.primary};
+  background-color: transparent;
+  border: 1px solid ${props => props.theme.colors.secondary};
+  color: ${props => props.theme.colors.secondary};
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -148,9 +148,11 @@ const RefreshButton = styled.button`
   font-size: ${props => props.theme.typography.fontSize.sm};
   padding: 0.25rem 0.5rem;
   border-radius: ${props => props.theme.borderRadius.sm};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
   
   &:hover {
-    background-color: rgba(52, 152, 219, 0.1);
+    background-color: ${props => props.theme.colors.secondary};
+    color: ${props => props.theme.colors.card};
   }
   
   svg {
@@ -159,6 +161,11 @@ const RefreshButton = styled.button`
   
   &:active svg {
     transform: rotate(180deg);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 

@@ -177,23 +177,31 @@ const RefreshButton = styled.button`
   display: flex;
   align-items: center;
   gap: ${theme.spacing.sm};
-  background: none;
-  border: 1px solid ${props => props.theme.colors.border};
-  color: ${props => props.theme.colors.primary};
+  background-color: transparent;
+  border: 1px solid ${props => props.theme.colors.secondary};
+  color: ${props => props.theme.colors.secondary};
   padding: ${theme.spacing.sm} ${theme.spacing.md};
   border-radius: ${theme.borderRadius.md};
-  font-size: ${theme.typography.fontSize.md};
   cursor: pointer;
-  transition: all 0.3s ease;
+  font-size: ${theme.typography.fontSize.sm};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  transition: all 0.2s ease;
   
   &:hover {
-    background-color: ${props => props.theme.colors.primary}10;
-    transform: translateY(-2px);
+    background-color: ${props => props.theme.colors.secondary};
+    color: ${props => props.theme.colors.card};
+    transform: translateY(-1px);
   }
   
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    
+    &:hover {
+      background-color: transparent;
+      color: ${props => props.theme.colors.secondary};
+      transform: none;
+    }
   }
 `;
 

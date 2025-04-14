@@ -62,14 +62,17 @@ const StatsGrid = styled.div`
 const StatCard = styled.div`
   padding: 1.25rem;
   border-radius: ${props => props.theme.borderRadius.md};
-  background-color: ${props => props.theme.colors.backgroundAlt};
+  background-color: ${props => props.theme.colors.card};
+  border: 1px solid ${props => props.theme.colors.borderLight};
   display: flex;
   flex-direction: column;
   transition: all 0.3s ease;
+  box-shadow: ${props => props.theme.shadows.xs};
   
   &:hover {
     transform: translateY(-5px);
     box-shadow: ${props => props.theme.shadows.sm};
+    border-color: ${props => props.theme.colors.secondary};
   }
 `;
 
@@ -79,7 +82,7 @@ const StatIcon = styled.div`
   margin-bottom: 0.75rem;
   
   svg {
-    color: ${props => props.theme.colors.primary};
+    color: ${props => props.theme.colors.secondary};
     margin-right: 0.5rem;
   }
 `;
@@ -88,6 +91,7 @@ const StatValue = styled.div`
   font-size: ${props => props.theme.typography.fontSize.xxl};
   font-weight: ${props => props.theme.typography.fontWeight.bold};
   margin-bottom: 0.25rem;
+  color: ${props => props.theme.colors.primary};
 `;
 
 const StatLabel = styled.div`
@@ -115,7 +119,9 @@ const ChartContainer = styled.div`
 const ChartCard = styled.div`
   padding: 1.25rem;
   border-radius: ${props => props.theme.borderRadius.md};
-  background-color: ${props => props.theme.colors.backgroundAlt};
+  background-color: ${props => props.theme.colors.card};
+  border: 1px solid ${props => props.theme.colors.borderLight};
+  box-shadow: ${props => props.theme.shadows.xs};
 `;
 
 const ChartTitle = styled.h4`
@@ -125,6 +131,7 @@ const ChartTitle = styled.h4`
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  color: ${props => props.theme.colors.secondary};
 `;
 
 const TabContainer = styled.div`
@@ -137,8 +144,8 @@ const Tab = styled.button<{ $active: boolean }>`
   padding: 0.75rem 1.25rem;
   background: none;
   border: none;
-  border-bottom: 3px solid ${props => props.$active ? props.theme.colors.primary : 'transparent'};
-  color: ${props => props.$active ? props.theme.colors.primary : props.theme.colors.text};
+  border-bottom: 3px solid ${props => props.$active ? props.theme.colors.secondary : 'transparent'};
+  color: ${props => props.$active ? props.theme.colors.secondary : props.theme.colors.text};
   font-weight: ${props => props.$active ? props.theme.typography.fontWeight.semibold : props.theme.typography.fontWeight.normal};
   cursor: pointer;
   display: flex;
@@ -147,6 +154,7 @@ const Tab = styled.button<{ $active: boolean }>`
   
   &:hover {
     background-color: ${props => props.theme.colors.backgroundAlt};
+    color: ${props => props.$active ? props.theme.colors.secondary : props.theme.colors.primary};
   }
 `;
 
@@ -161,6 +169,8 @@ const TableHeader = styled.th`
   padding: 0.75rem 1rem;
   border-bottom: 1px solid ${props => props.theme.colors.border};
   font-weight: ${props => props.theme.typography.fontWeight.semibold};
+  color: ${props => props.theme.colors.secondary};
+  background-color: ${props => props.theme.colors.backgroundAlt}30;
 `;
 
 const TableCell = styled.td`
@@ -170,12 +180,13 @@ const TableCell = styled.td`
 
 const TableRow = styled.tr`
   &:hover {
-    background-color: ${props => props.theme.colors.backgroundAlt};
+    background-color: ${props => props.theme.colors.backgroundAlt}50;
   }
 `;
 
 const Username = styled.span`
   font-weight: ${props => props.theme.typography.fontWeight.medium};
+  color: ${props => props.theme.colors.primary};
 `;
 
 interface UserStatsPanelProps {

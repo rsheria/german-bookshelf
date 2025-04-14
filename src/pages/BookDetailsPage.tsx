@@ -11,26 +11,33 @@ const BackButton = styled.button`
   display: flex;
   align-items: center;
   gap: ${props => props.theme.spacing.sm};
-  background: none;
+  background: ${props => props.theme.colors.primary};
+  color: white;
   border: none;
-  color: ${props => props.theme.colors.primary};
-  font-size: ${props => props.theme.typography.fontSize.base};
+  font-size: ${props => props.theme.typography.fontSize.md};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
   cursor: pointer;
-  padding: ${props => props.theme.spacing.sm} 0;
-  margin-bottom: ${props => props.theme.spacing.md};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   transition: all 0.2s ease;
+  border-radius: ${props => props.theme.borderRadius.md};
+  box-shadow: ${props => props.theme.shadows.sm};
 
   &:hover {
     transform: translateX(-3px);
-    color: ${props => props.theme.colors.primaryDark};
+    background: ${props => props.theme.colors.primaryLight};
+  }
+
+  &:active {
+    transform: translateX(0);
+    background: ${props => props.theme.colors.primaryDark};
   }
 `;
 
 const ErrorState = styled.div`
   padding: ${props => props.theme.spacing.xl};
-  color: ${props => props.theme.colors.error};
-  background-color: rgba(166, 89, 83, 0.1);
+  color: white;
+  background-color: ${props => props.theme.colors.error};
   border-radius: ${props => props.theme.borderRadius.md};
   margin: ${props => props.theme.spacing.xl} 0;
   display: flex;
@@ -38,6 +45,7 @@ const ErrorState = styled.div`
   align-items: center;
   justify-content: center;
   text-align: center;
+  box-shadow: ${props => props.theme.shadows.md};
 `;
 
 const BookDetailsPage: React.FC = () => {

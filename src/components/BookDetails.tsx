@@ -14,20 +14,20 @@ interface BookDetailsProps {
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  padding: 2rem;
+  padding: ${({ theme }) => theme.spacing.xl};
   max-width: 1200px;
   margin: 0 auto;
 
   @media (min-width: 768px) {
     flex-direction: row;
-    gap: 2rem;
+    gap: ${({ theme }) => theme.spacing.xl};
   }
 `;
 
 const CoverContainer = styled.div`
   width: 100%;
   max-width: 300px;
-  margin: 0 auto 2rem;
+  margin: 0 auto ${({ theme }) => theme.spacing.xl};
 
   @media (min-width: 768px) {
     margin: 0;
@@ -38,8 +38,8 @@ const CoverContainer = styled.div`
 const Cover = styled.img`
   width: 100%;
   height: auto;
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  box-shadow: ${({ theme }) => theme.shadows.lg};
 `;
 
 const BookInfo = styled.div`
@@ -47,35 +47,37 @@ const BookInfo = styled.div`
 `;
 
 const Title = styled.h1`
-  margin: 0 0 0.5rem 0;
-  font-size: 2rem;
-  font-weight: 700;
-  color: #2c3e50;
+  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
+  font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ theme }) => theme.colors.text};
+  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
 `;
 
 const Author = styled.h2`
-  margin: 0 0 1.5rem 0;
-  font-size: 1.2rem;
-  font-weight: 500;
-  color: #666;
+  margin: 0 0 ${({ theme }) => theme.spacing.lg} 0;
+  font-size: ${({ theme }) => theme.typography.fontSize.lg};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const BookType = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  background-color: #f0f0f0;
-  border-radius: 4px;
-  padding: 0.5rem 1rem;
-  font-size: 0.9rem;
-  margin-bottom: 1.5rem;
+  gap: ${({ theme }) => theme.spacing.sm};
+  background-color: ${({ theme }) => theme.colors.backgroundAlt};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  margin-bottom: ${({ theme }) => theme.spacing.lg};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const MetaInfo = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: ${({ theme }) => theme.spacing.md};
+  margin-bottom: ${({ theme }) => theme.spacing.lg};
 `;
 
 const MetaItem = styled.div`
@@ -84,42 +86,45 @@ const MetaItem = styled.div`
 `;
 
 const MetaLabel = styled.span`
-  font-size: 0.8rem;
-  color: #666;
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const MetaValue = styled.span`
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: ${({ theme }) => theme.typography.fontSize.md};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const Description = styled.div`
-  margin-bottom: 2rem;
-  line-height: 1.6;
-  color: #333;
+  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  line-height: ${({ theme }) => theme.typography.lineHeight.relaxed};
+  color: ${({ theme }) => theme.colors.description};
+  font-size: ${({ theme }) => theme.typography.fontSize.md};
 `;
 
 const DownloadButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  background-color: #3498db;
-  color: white;
+  gap: ${({ theme }) => theme.spacing.sm};
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.card};
   border: none;
-  border-radius: 4px;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 600;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
+  font-size: ${({ theme }) => theme.typography.fontSize.md};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background-color: #2980b9;
+    background-color: ${({ theme }) => theme.colors.primaryLight};
   }
 
   &:disabled {
-    background-color: #95a5a6;
+    background-color: ${({ theme }) => theme.colors.textSecondary};
+    opacity: 0.7;
     cursor: not-allowed;
   }
 `;
@@ -127,31 +132,46 @@ const DownloadButton = styled.button`
 const Alert = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background-color: #f8d7da;
-  color: #721c24;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-top: 1rem;
+  gap: ${({ theme }) => theme.spacing.sm};
+  background-color: ${({ theme }) => theme.colors.error};
+  color: white;
+  padding: ${({ theme }) => theme.spacing.md};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  margin-top: ${({ theme }) => theme.spacing.md};
 `;
 
 const LoginPrompt = styled.div`
-  background-color: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  padding: 1.5rem;
-  margin-top: 1.5rem;
+  background-color: ${({ theme }) => theme.colors.backgroundAlt};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: ${({ theme }) => theme.spacing.md};
   text-align: center;
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const LoginLink = styled.a`
-  color: #3498db;
+  color: ${({ theme }) => theme.colors.primary};
   text-decoration: none;
-  font-weight: 500;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
 
   &:hover {
     text-decoration: underline;
+    color: ${({ theme }) => theme.colors.primaryLight};
   }
+`;
+
+const RatingTitle = styled.h3`
+  margin-bottom: ${({ theme }) => theme.spacing.sm};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: ${({ theme }) => theme.typography.fontSize.lg};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+`;
+
+const QuotaText = styled.div`
+  margin-top: ${({ theme }) => theme.spacing.sm};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  opacity: 0.9;
 `;
 
 const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
@@ -222,7 +242,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
 
         {/* Rating System */}
         <div style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ marginBottom: '0.5rem' }}>{t('ratings.title')}</h3>
+          <RatingTitle>{t('ratings.title')}</RatingTitle>
           <RatingSystem 
             bookId={book.id} 
             currentRating={bookRating}
@@ -250,9 +270,9 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
             </DownloadButton>
             
             {remainingQuota !== null && remainingQuota > 0 && (
-              <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
+              <QuotaText>
                 {t('profile.quotaRemaining')}: {remainingQuota}
-              </div>
+              </QuotaText>
             )}
             
             {(showError || error) && (

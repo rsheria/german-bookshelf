@@ -1,50 +1,75 @@
-// Premium Professional Dark Theme for German Bookshelf
+// Modern, simplified dark theme for German Bookshelf
 import { DefaultTheme } from 'styled-components';
 import theme from './theme';
 
 const darkTheme: DefaultTheme = {
   colors: {
-    // Core Palette - Sophisticated Dark Mode
-    primary: '#85A8C5',            // Lighter blue-teal that's visible on dark
-    primaryLight: '#A7C1D9',       // Very light blue-teal for contrast
-    primaryDark: '#3F769C',        // The light theme's primaryLight as dark theme's dark
-    secondary: '#E6CEAE',          // Lighter gold that stands out on dark
-    secondaryLight: '#F4E5D3',     // Very light warm beige
-    secondaryDark: '#D8B589',      // The light theme's secondary as dark's dark
-    accent: '#C08976',             // Lighter terracotta for dark mode
+    // Core colors - Simplified palette 
+    primary: '#3277B0',            // Blue-teal similar to light theme but with better visibility in dark
+    primaryLight: '#4A93CE',       // Lighter blue-teal
+    primaryDark: '#1A5D96',        // Darker blue-teal
+    secondary: '#E1B05A',          // Warm gold/amber for accents
+    secondaryLight: '#F3C775',     // Lighter gold
+    secondaryDark: '#C69A46',      // Darker gold
+    accent: '#D65C74',             // Muted red accent
     
-    // Neutrals - Rich dark colors with warmth
-    background: '#292E36',         // Dark blue-gray with slight warmth
-    backgroundAlt: '#343B47',      // Slightly lighter blue-gray for sections
-    card: '#343B47',               // Card background matching backgroundAlt
-    text: '#E9E5E0',               // Warm off-white text
-    textLight: '#C4C0BC',          // Light warm gray for secondary text
-    border: '#4A5366',             // Medium blue-gray for borders
+    // Neutral colors - More consistent
+    background: '#121212',         // Very dark background
+    backgroundAlt: '#1E1E1E',      // Slightly lighter background for cards and sections
+    card: '#1A1A1A',               // Card background
+    border: '#333333',             // Border color - more visible
+    text: '#FFFFFF',               // Pure white text for maximum readability
+    textSecondary: '#DDDDDD',      // Light gray for secondary text - increased brightness for better readability
+    textMuted: '#AAAAAA',          // Muted text color
+    textDisabled: '#777777',       // Disabled text color - brighter for better visibility
     
-    // Functional Colors - More visible in dark mode
-    success: '#8CB5A6',            // Lighter sage green
-    warning: '#E6C9A3',            // Lighter amber
-    error: '#CE837D',              // Lighter terracotta red
+    // Form elements
+    input: '#2A2A2A',              // Darker input background
+    inputBorder: '#444444',        // More visible input border
+    inputText: '#FFFFFF',          // White text for inputs
+    inputPlaceholder: '#999999',   // More visible placeholder text
     
-    // Rating Badge Colors - Coordinated with light theme but lighter
-    ratingHigh: '#8CB5A6',         // Lighter sage green
-    ratingMedium: '#E6C9A3',       // Lighter amber
-    ratingLow: '#B2B2BC',          // Lighter blue-gray
+    // Links
+    link: '#4A93CE',               // Same as primaryLight
+    linkHover: '#F3C775',          // Same as secondaryLight
     
-    // Gradients - Sophisticated for dark mode
-    primaryGradient: 'linear-gradient(135deg, #A7C1D9 0%, #85A8C5 100%)',
-    accentGradient: 'linear-gradient(135deg, #F4E5D3 0%, #C08976 100%)',
+    // Functional colors
+    success: '#5CB85C',            // Brighter success color for better visibility
+    error: '#E05252',              // Brighter error color
+    warning: '#F0AD4E',            // Brighter warning color
+    info: '#4A93CE',               // Info color matches primaryLight
+    
+    // Rating colors
+    ratingHigh: '#5CB85C',         // High rating - same as success
+    ratingMedium: '#F0AD4E',       // Medium rating - same as warning
+    ratingLow: '#7878A0',          // Low rating - muted purple
+    
+    // Description text
+    description: '#DDDDDD',        // Same as textSecondary
+    
+    // Shadows and overlays
+    shadow: 'rgba(0, 0, 0, 0.5)',  // Standard shadow
+    overlay: 'rgba(0, 0, 0, 0.7)', // Standard overlay
+    
+    // Gradients - simpler
+    primaryGradient: 'linear-gradient(135deg, #4A93CE 0%, #3277B0 100%)',
+    accentGradient: 'linear-gradient(135deg, #F3C775 0%, #E1B05A 100%)',
+    
+    // Navigation-specific color variables
+    navActive: '#F3C775',          // Gold for active navigation items - stands out
+    navText: '#FFFFFF',            // White for nav text - most readable
+    navHover: '#4A93CE',           // Hover matches primaryLight
+    hoverBg: 'rgba(74, 147, 206, 0.2)' // Subtle blue hover background
   },
   typography: theme.typography,    // Keep typography consistent
   spacing: theme.spacing,          // Keep spacing consistent
   borderRadius: theme.borderRadius, // Keep border radius consistent
   shadows: {
-    sm: '0 1px 2px rgba(0, 0, 0, 0.15)',
-    md: '0 2px 4px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.1)',
-    lg: '0 4px 6px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.15)',
-    xl: '0 10px 15px rgba(0, 0, 0, 0.3), 0 4px 6px rgba(0, 0, 0, 0.2)',
-    inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.2)',
-    outline: '0 0 0 2px rgba(133, 168, 197, 0.4)', // Based on dark mode primary
+    ...theme.shadows,
+    sm: '0 1px 3px rgba(0, 0, 0, 0.2)', // Slightly different shadows for dark theme
+    md: '0 4px 6px rgba(0, 0, 0, 0.3)', // to help with visual hierarchy
+    lg: '0 10px 15px rgba(0, 0, 0, 0.4)',
+    xl: '0 15px 25px rgba(0, 0, 0, 0.5)',
   },
   transitions: theme.transitions,  // Keep transitions consistent
   zIndex: theme.zIndex             // Keep z-index consistent

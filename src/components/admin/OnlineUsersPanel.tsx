@@ -35,9 +35,9 @@ const PanelHeader = styled.div`
 `;
 
 const RefreshButton = styled.button`
-  background: none;
-  border: none;
-  color: ${props => props.theme.colors.primary};
+  background-color: transparent;
+  border: 1px solid ${props => props.theme.colors.secondary};
+  color: ${props => props.theme.colors.secondary};
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -45,9 +45,11 @@ const RefreshButton = styled.button`
   font-size: ${props => props.theme.typography.fontSize.sm};
   padding: 0.25rem 0.5rem;
   border-radius: ${props => props.theme.borderRadius.sm};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
   
   &:hover {
-    background-color: rgba(52, 152, 219, 0.1);
+    background-color: ${props => props.theme.colors.secondary};
+    color: ${props => props.theme.colors.card};
   }
   
   svg {
@@ -56,6 +58,11 @@ const RefreshButton = styled.button`
   
   &:active svg {
     transform: rotate(180deg);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 
@@ -132,10 +139,10 @@ const EmptyState = styled.div`
 
 const ViewButton = styled.button`
   padding: 0.5rem 0.75rem;
-  background-color: ${props => props.theme.colors.backgroundAlt};
+  background-color: ${props => props.theme.colors.primary};
   border: none;
   border-radius: ${props => props.theme.borderRadius.md};
-  color: ${props => props.theme.colors.text};
+  color: white;
   font-size: ${props => props.theme.typography.fontSize.sm};
   cursor: pointer;
   display: flex;
@@ -143,7 +150,7 @@ const ViewButton = styled.button`
   gap: 0.35rem;
   
   &:hover {
-    background-color: ${props => props.theme.colors.backgroundAltHover};
+    background-color: ${props => props.theme.colors.primaryLight};
   }
 `;
 

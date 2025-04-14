@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import { FiHeadphones, FiBook } from 'react-icons/fi';
 import { motion, useMotionValue, useTransform } from 'framer-motion'; 
 import { Book } from '../types/supabase';
-import theme from '../styles/theme'; 
+import { useTheme } from '../context/ThemeContext';
 
 interface BookCardProps {
   book: Book;
@@ -20,7 +20,7 @@ const getRatingBadgeClass = (rating: number | undefined) => {
 };
 
 // Helper function to get background color based on rating
-const getRatingColor = (rating: number | undefined) => {
+const getRatingColor = (rating: number | undefined, theme: any) => {
   if (!rating) return theme.colors.backgroundAlt;
   if (rating >= 8) return theme.colors.ratingHigh;
   if (rating >= 7) return theme.colors.ratingMedium;
@@ -48,12 +48,12 @@ const useMediaQuery = (query: string): boolean => {
 const cardVariants = {
   hover: {
     scale: 1.05, 
-    boxShadow: theme.shadows.xl, 
+    boxShadow: '0 10px 15px rgba(46, 52, 64, 0.08), 0 4px 6px rgba(46, 52, 64, 0.04)', 
     transition: { duration: 0.3, ease: "easeOut" }
   },
   initial: {
     scale: 1,
-    boxShadow: theme.shadows.md, 
+    boxShadow: '0 2px 4px rgba(46, 52, 64, 0.08), 0 1px 2px rgba(46, 52, 64, 0.04)', 
     transition: { duration: 0.3, ease: "easeOut" }
   }
 };
@@ -73,15 +73,16 @@ const CardWrapper = styled(motion.div)`
   }
 `;
 
-const Card = styled(motion(Link))` 
+const Card = styled(motion(Link))`
   display: flex;
   flex-direction: column;
-  border-radius: ${theme.borderRadius.lg}; 
+  border-radius: ${({ theme }) => theme.borderRadius.lg}; 
   overflow: hidden;
-  background-color: ${theme.colors.card};
+  background-color: ${({ theme }) => theme.colors.card};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   height: 100%;
   text-decoration: none;
-  color: ${theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   position: relative;
   transform-style: preserve-3d; 
   will-change: transform, box-shadow; 
@@ -95,9 +96,9 @@ const Card = styled(motion(Link))`
   }
 
   &:focus-visible {
-    outline: ${theme.shadows.outline};
+    outline: ${({ theme }) => theme.shadows.outline};
     outline-offset: 2px;
-    border-radius: ${theme.borderRadius.lg}; 
+    border-radius: ${({ theme }) => theme.borderRadius.lg}; 
   }
 `;
 
@@ -106,7 +107,7 @@ const CoverContainer = styled.div`
   width: 100%;
   padding-top: 150%; 
   overflow: hidden;
-  border-radius: ${theme.borderRadius.lg} ${theme.borderRadius.lg} 0 0; 
+  border-radius: ${({ theme }) => theme.borderRadius.lg} ${({ theme }) => theme.borderRadius.lg} 0 0; 
   transform: translateZ(20px); 
   
   @media (max-width: 768px) {
@@ -126,7 +127,7 @@ const CoverContainer = styled.div`
       rgba(0, 0, 0, 0.4) 100%
     );
     opacity: 0.6;
-    transition: opacity ${theme.transitions.normal};
+    transition: opacity ${({ theme }) => theme.transitions.normal};
   }
 
   ${Card}:hover &::after {
@@ -141,7 +142,7 @@ const Cover = styled.img`
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform ${theme.transitions.slow}; 
+  transition: transform ${({ theme }) => theme.transitions.slow}; 
 
   ${Card}:hover & {
     transform: scale(1.1); 
@@ -154,28 +155,30 @@ const Cover = styled.img`
   }
 `;
 
-const BookType = styled(motion.div)` 
+const BookType = styled(motion.div)`
   position: absolute;
-  top: ${theme.spacing.md};
-  right: ${theme.spacing.md};
-  background-color: ${theme.colors.secondary}; 
-  color: ${theme.colors.primaryDark}; 
-  border-radius: ${theme.borderRadius.full};
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  font-size: ${theme.typography.fontSize.xs};
-  font-weight: ${theme.typography.fontWeight.semibold};
+  top: ${({ theme }) => theme.spacing.md};
+  right: ${({ theme }) => theme.spacing.md};
+  background-color: ${({ theme }) => theme.colors.secondary}; 
+  color: ${({ theme }) => theme.colors.text}; /* Ensure text is readable in both themes */
+  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   display: flex;
   align-items: center;
-  gap: 4px;
-  z-index: 3; 
-  box-shadow: ${theme.shadows.sm};
-  transform: translateZ(40px);
+  gap: ${({ theme }) => theme.spacing.xs};
+  z-index: 2;
+  transform: translateZ(15px);
+  box-shadow: ${({ theme }) => theme.shadows.md};
+  
+  svg {
+    color: ${({ theme }) => theme.colors.text}; /* Icon color */
+  }
   
   @media (max-width: 1024px) {
-    top: ${theme.spacing.sm};
-    right: ${theme.spacing.sm};
-    padding: ${'4px'} ${theme.spacing.xs};
-    font-size: ${'0.65rem'};
+    padding: ${({ theme }) => theme.spacing.xs};
+    font-size: ${({ theme }) => theme.typography.fontSize.xs};
     transform: translateZ(20px);
   }
   
@@ -184,25 +187,23 @@ const BookType = styled(motion.div)`
   }
 `;
 
-const Language = styled(motion.div)` 
+const Language = styled(motion.div)`
   position: absolute;
-  top: ${theme.spacing.md};
-  left: ${theme.spacing.md};
-  background-color: ${theme.colors.primary};
-  color: white;
-  border-radius: ${theme.borderRadius.full};
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  font-size: ${theme.typography.fontSize.xs};
-  font-weight: ${theme.typography.fontWeight.semibold};
-  z-index: 3; 
-  box-shadow: ${theme.shadows.sm};
-  transform: translateZ(40px);
+  top: ${({ theme }) => theme.spacing.md};
+  left: ${({ theme }) => theme.spacing.md};
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: white; /* Always white for best contrast on primary color */
+  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  box-shadow: ${({ theme }) => theme.shadows.md};
+  z-index: 2;
+  transform: translateZ(15px);
   
   @media (max-width: 1024px) {
-    top: ${theme.spacing.sm};
-    left: ${theme.spacing.sm};
-    padding: ${'4px'} ${theme.spacing.xs};
-    font-size: ${'0.65rem'};
+    padding: ${({ theme }) => theme.spacing.xs};
+    font-size: ${({ theme }) => theme.typography.fontSize.xs};
     transform: translateZ(20px);
   }
   
@@ -213,113 +214,123 @@ const Language = styled(motion.div)`
 
 const RatingBadge = styled(motion.div)<{ rating: number | undefined }>`
   position: absolute;
-  bottom: ${theme.spacing.md};
-  right: ${theme.spacing.md};
-  background-color: ${props => getRatingColor(props.rating)};
-  color: white;
-  border-radius: ${theme.borderRadius.md};
-  padding: ${theme.spacing.xs} ${theme.spacing.sm};
-  font-size: ${theme.typography.fontSize.sm};
-  font-weight: ${theme.typography.fontWeight.bold};
-  z-index: 3;
-  box-shadow: ${theme.shadows.sm};
-  transform: translateZ(40px);
+  bottom: ${({ theme }) => theme.spacing.md};
+  right: ${({ theme }) => theme.spacing.md};
+  background-color: ${({ rating, theme }) => getRatingColor(rating, theme)};
+  color: white; /* Always white for best contrast on rating colors */
+  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  box-shadow: ${({ theme }) => theme.shadows.md};
   
-  @media (max-width: 1024px) {
-    bottom: ${theme.spacing.sm};
-    right: ${theme.spacing.sm};
-    padding: ${'4px'} ${theme.spacing.xs};
-    font-size: ${'0.65rem'};
-    transform: translateZ(20px);
+  &.rating-high {
+    background-color: ${({ theme }) => theme.colors.ratingHigh};
   }
   
-  @media (max-width: 768px) {
-    transform: translateZ(15px);
+  &.rating-medium {
+    background-color: ${({ theme }) => theme.colors.ratingMedium};
   }
-`;
-
-const BookInfo = styled(motion.div)` 
-  padding: ${theme.spacing.lg}; 
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  background-color: ${theme.colors.card};
-  border-radius: 0 0 ${theme.borderRadius.lg} ${theme.borderRadius.lg}; 
-  position: relative;
+  
+  &.rating-low {
+    background-color: ${({ theme }) => theme.colors.ratingLow};
+  }
+  
   z-index: 2;
   transform: translateZ(10px);
   
   @media (max-width: 1024px) {
-    padding: ${theme.spacing.md};
+    padding: ${({ theme }) => theme.spacing.md};
   }
   
   @media (max-width: 768px) {
-    padding: ${theme.spacing.sm};
+    padding: ${({ theme }) => theme.spacing.sm};
     transform: translateZ(5px);
   }
 `;
 
+const BookInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  padding: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.spacing.xs};
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) => theme.colors.card};
+  transform: translateZ(5px);
+  height: 100%;
+  position: relative;
+  flex: 1;
+  
+  @media (max-width: 768px) {
+    padding: ${({ theme }) => theme.spacing.sm};
+    gap: ${({ theme }) => theme.spacing.xs};
+  }
+`;
+
 const Title = styled.h3`
-  margin: 0 0 ${theme.spacing.sm} 0; 
-  font-family: ${theme.typography.fontFamily.heading};
-  font-size: ${theme.typography.fontSize.lg}; 
-  font-weight: ${theme.typography.fontWeight.semibold}; 
-  line-height: 1.3;
+  margin: 0 0 ${({ theme }) => theme.spacing.sm} 0; 
+  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
+  font-size: ${({ theme }) => theme.typography.fontSize.lg}; 
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  line-height: ${({ theme }) => theme.typography.lineHeight.tight};
+  color: ${({ theme }) => theme.colors.text};
+  text-overflow: ellipsis;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  color: ${theme.colors.primaryDark};
   
   @media (max-width: 1024px) {
-    font-size: ${theme.typography.fontSize.md};
-    margin: 0 0 ${theme.spacing.xs} 0;
+    font-size: ${({ theme }) => theme.typography.fontSize.md};
+    margin: 0 0 ${({ theme }) => theme.spacing.sm} 0;
   }
   
   @media (max-width: 768px) {
-    font-size: ${'0.7rem'};
-    margin: 0 0 ${theme.spacing.xs} 0;
+    font-size: ${({ theme }) => theme.typography.fontSize.xs};
+    margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
   }
 `;
 
 const Author = styled.p`
-  margin: 0 0 ${theme.spacing.md} 0; 
-  font-size: ${theme.typography.fontSize.sm};
-  color: ${theme.colors.textLight};
-  overflow: hidden;
+  margin: 0;
+  font-size: ${({ theme }) => theme.typography.fontSize.md};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1; 
+  -webkit-box-orient: vertical;
   
   @media (max-width: 1024px) {
-    font-size: ${theme.typography.fontSize.xs};
-    margin: 0 0 ${theme.spacing.sm} 0;
+    font-size: ${({ theme }) => theme.typography.fontSize.sm};
   }
   
   @media (max-width: 768px) {
-    font-size: ${'0.65rem'};
-    margin: 0 0 ${theme.spacing.xs} 0;
+    font-size: ${({ theme }) => theme.typography.fontSize.xs};
   }
 `;
 
 const Genre = styled.span`
   display: inline-block;
   align-self: flex-start; 
-  background-color: ${theme.colors.backgroundAlt};
-  border-radius: ${theme.borderRadius.full};
-  padding: ${theme.spacing.xs} ${theme.spacing.md}; 
-  font-size: ${theme.typography.fontSize.xs};
+  background-color: ${({ theme }) => theme.colors.backgroundAlt};
+  border-radius: ${({ theme }) => theme.borderRadius.full};
+  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.md}; 
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
   margin-top: auto; 
-  color: ${theme.colors.primary};
-  font-weight: ${theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.primary};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   
   @media (max-width: 1024px) {
-    padding: ${'4px'} ${theme.spacing.sm};
-    font-size: ${'0.65rem'};
+    padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
+    font-size: ${({ theme }) => theme.typography.fontSize.xs};
   }
 `;
 
 const BookCard: React.FC<BookCardProps> = ({ book }) => {
   const { t } = useTranslation();
+  const { isDark } = useTheme();
   const placeholderCover = 'https://via.placeholder.com/300x450?text=No+Cover';
   const isMobile = useMediaQuery('(max-width: 768px)');
   

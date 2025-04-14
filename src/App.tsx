@@ -22,7 +22,7 @@ import AudiobooksPage from './pages/AudiobooksPage';
 import EbooksPage from './pages/EbooksPage';
 import BookDetailsPage from './pages/BookDetailsPage';
 import ProfilePage from './pages/ProfilePage';
-import SearchPage from './pages/SearchPage';
+import SearchResultsPage from './pages/SearchResultsPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminBooksPage from './pages/admin/AdminBooksPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
@@ -372,7 +372,7 @@ const AppRoutes: React.FC = () => {
               <Route path="/audiobooks" element={<AudiobooksPage />} />
               <Route path="/ebooks" element={<EbooksPage />} />
               <Route path="/books/:id" element={<BookDetailsPage />} />
-              <Route path="/search" element={<SearchPage />} />
+              <Route path="/search" element={<SearchResultsPage />} />
               <Route path="/login" element={<LoginForm />} />
               <Route path="/signup" element={<SignupForm />} />
               <Route path="/profile" element={<ProfilePage />} />
@@ -408,7 +408,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/audiobooks" element={<AudiobooksPage />} />
             <Route path="/ebooks" element={<EbooksPage />} />
             <Route path="/books/:id" element={<BookDetailsPage />} />
-            <Route path="/search" element={<SearchPage />} />
+            <Route path="/search" element={<SearchResultsPage />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/signup" element={<SignupForm />} />
             <Route 

@@ -74,7 +74,7 @@ const SearchInput = styled.input`
   color: ${props => props.theme.colors.text};
   
   &::placeholder {
-    color: ${props => props.theme.colors.textLight};
+    color: ${props => props.theme.colors.textMuted};
   }
 `;
 
@@ -84,11 +84,12 @@ const FilterDropdown = styled.select`
   border-radius: ${props => props.theme.borderRadius.md};
   background-color: ${props => props.theme.colors.card};
   font-size: ${props => props.theme.typography.fontSize.md};
-  color: ${props => props.theme.colors.text};
+  color: ${props => props.theme.colors.text}; /* Ensure text is visible in both modes */
   outline: none;
   cursor: pointer;
   box-shadow: ${props => props.theme.shadows.sm};
   transition: all 0.3s ease;
+  font-weight: ${props => props.theme.typography.fontWeight.medium}; /* Added font weight */
   
   &:focus {
     border-color: ${props => props.theme.colors.primary};
@@ -96,7 +97,15 @@ const FilterDropdown = styled.select`
   }
   
   &:hover {
-    border-color: ${props => props.theme.colors.primary}80;
+    border-color: ${props => props.theme.colors.primary};
+    background-color: ${props => props.theme.colors.backgroundAlt};
+  }
+
+  option {
+    background-color: ${props => props.theme.colors.backgroundAlt};
+    color: ${props => props.theme.colors.text}; /* Ensure option text is visible */
+    padding: ${props => props.theme.spacing.md};
+    font-weight: ${props => props.theme.typography.fontWeight.normal};
   }
 `;
 
@@ -134,7 +143,7 @@ const PageButton = styled.button<{ active?: boolean }>`
 
 const ResultsInfo = styled.div`
   font-size: ${props => props.theme.typography.fontSize.md};
-  color: ${props => props.theme.colors.textLight};
+  color: ${props => props.theme.colors.textSecondary};
   margin-bottom: ${props => props.theme.spacing.md};
 `;
 
@@ -147,6 +156,7 @@ const SearchPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [bookType, setBookType] = useState('');
   const [genre, setGenre] = useState('');
+  const [yearFilter, setYearFilter] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   
   const { 
@@ -159,6 +169,7 @@ const SearchPage: React.FC = () => {
     type: bookType as any,
     searchTerm,
     genre,
+    year: yearFilter,
     page,
     limit: 12
   });
@@ -239,7 +250,7 @@ const SearchPage: React.FC = () => {
       <Controls>
         <form onSubmit={handleSearch} style={{ flexGrow: 1, maxWidth: '500px' }}>
           <SearchBar>
-            <FiSearch style={{ color: theme.colors.textLight, marginRight: theme.spacing.sm }} />
+            <FiSearch style={{ color: theme.colors.textMuted, marginRight: theme.spacing.sm }} />
             <SearchInput
               type="text"
               placeholder={t('common.search')}
@@ -249,8 +260,17 @@ const SearchPage: React.FC = () => {
           </SearchBar>
         </form>
         
-        <div style={{ display: 'flex', gap: theme.spacing.md, alignItems: 'center' }}>
-          <FiFilter style={{ color: theme.colors.textLight }} />
+        <div style={{ display: 'flex', gap: theme.spacing.md, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: theme.spacing.xs, 
+            color: theme.colors.text,
+            fontWeight: 600 /* Make the filter label bold */
+          }}>
+            <FiFilter />
+            <span style={{ fontWeight: 600 }}>{t('books.filterBy', 'Filter by')}:</span>
+          </div>
           
           <FilterDropdown
             value={bookType}
@@ -258,6 +278,7 @@ const SearchPage: React.FC = () => {
               setBookType(e.target.value);
               setPage(0); // Reset to first page on filter change
             }}
+            aria-label={t('books.filterByType', 'Filter by Type')}
           >
             <option value="">{t('books.allTypes')}</option>
             <option value="audiobook">{t('books.audiobook')}</option>
@@ -270,6 +291,7 @@ const SearchPage: React.FC = () => {
               setGenre(e.target.value);
               setPage(0); // Reset to first page on filter change
             }}
+            aria-label={t('books.filterByGenre', 'Filter by Genre')}
           >
             <option value="">{t('books.allGenres')}</option>
             <option value="Fiction">Fiction</option>
@@ -282,6 +304,23 @@ const SearchPage: React.FC = () => {
             <option value="Biography">Biography</option>
             <option value="History">History</option>
             <option value="Self-Help">Self-Help</option>
+          </FilterDropdown>
+
+          <FilterDropdown
+            value={yearFilter || ''}
+            onChange={(e) => {
+              setYearFilter(e.target.value ? Number(e.target.value) : null);
+              setPage(0); // Reset to first page on filter change
+            }}
+            aria-label={t('books.filterByYear', 'Filter by Year')}
+          >
+            <option value="">{t('books.allYears', 'All Years')}</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+            <option value="2021">2021</option>
+            <option value="2020">2020</option>
           </FilterDropdown>
         </div>
       </Controls>
@@ -300,7 +339,7 @@ const SearchPage: React.FC = () => {
         <div style={{ 
           padding: theme.spacing.xl, 
           textAlign: 'center', 
-          color: theme.colors.textLight,
+          color: theme.colors.textSecondary,
           backgroundColor: theme.colors.backgroundAlt,
           borderRadius: theme.borderRadius.md
         }}>
