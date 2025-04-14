@@ -403,62 +403,47 @@ const CloseButton = styled(motion.button)`
   position: absolute;
   top: ${({ theme }) => theme.spacing.md};
   right: ${({ theme }) => theme.spacing.md};
-  background: none;
+  background: rgba(255, 255, 255, 0.15);
   border: none;
   color: white;
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  cursor: pointer;
-  z-index: 5;
-  padding: ${({ theme }) => theme.spacing.sm};
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: ${({ theme }) => theme.borderRadius.full};
+  font-size: 24px;
+  cursor: pointer;
+  z-index: ${({ theme }) => theme.zIndex.modal + 1};
   
   &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: ${({ theme }) => theme.borderRadius.full};
-  }
-  
-  &:before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: ${({ theme }) => theme.borderRadius.full};
-    width: 100%;
-    height: 100%;
-    background: ${({ theme }) => theme.colors.secondary};
-    opacity: 0;
-    transition: opacity ${({ theme }) => theme.transitions.normal};
-    z-index: 1;
-  }
-  
-  &:hover::before {
-    opacity: 0.2;
+    background-color: rgba(255, 255, 255, 0.25);
   }
 `;
 
 const MenuButton = styled(motion.button)`
+  display: none;
   background: none;
   border: none;
   color: white;
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
+  font-size: 24px;
   cursor: pointer;
-  display: none;
   padding: ${({ theme }) => theme.spacing.xs};
+  border-radius: ${({ theme }) => theme.borderRadius.full};
+  z-index: ${({ theme }) => theme.zIndex.sticky + 1};
+  transition: all 0.3s ease;
   
   @media (max-width: 768px) {
     display: flex;
     align-items: center;
     justify-content: center;
+    background-color: rgba(255, 255, 255, 0.15);
+    width: 40px;
+    height: 40px;
   }
   
   &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: ${({ theme }) => theme.borderRadius.full};
-  }
-  
-  &:focus {
-    outline: none;
+    background-color: rgba(255, 255, 255, 0.25);
   }
 `;
 
@@ -710,7 +695,7 @@ const Navbar: React.FC = () => {
             >
               <CloseButton
                 onClick={() => setIsOpen(false)}
-                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
               >
                 <FiX />
@@ -718,7 +703,11 @@ const Navbar: React.FC = () => {
 
               <SearchBar layout>
                 <FiSearch style={{ marginRight: '8px', color: 'rgba(255, 255, 255, 0.7)'}} />
-                <form onSubmit={handleSearch} style={{ display: 'contents' }}>
+                <form onSubmit={(e) => { 
+                  handleSearch(e); 
+                  setIsOpen(false);
+                }} 
+                style={{ display: 'contents' }}>
                   <SearchInput
                     type="text"
                     placeholder={t('nav.search')}
@@ -730,36 +719,36 @@ const Navbar: React.FC = () => {
 
               <NavSection variants={mobileLinkVariants}>
                 <NavSectionTitle>{t('nav.sections')}</NavSectionTitle>
-                <NavItem icon={<FiHeadphones />} label={t('nav.audiobooks')} to="/audiobooks" />
-                <NavItem icon={<FiBook />} label={t('nav.ebooks')} to="/ebooks" />
-                <NavItem icon={<FiSearch />} label={t('nav.advancedSearch', 'Advanced Search')} to="/search" />
+                <NavItem icon={<FiHeadphones />} label={t('nav.audiobooks')} to="/audiobooks" onClick={() => setIsOpen(false)} />
+                <NavItem icon={<FiBook />} label={t('nav.ebooks')} to="/ebooks" onClick={() => setIsOpen(false)} />
+                <NavItem icon={<FiSearch />} label={t('nav.advancedSearch', 'Advanced Search')} to="/search" onClick={() => setIsOpen(false)} />
               </NavSection>
 
               {user ? (
                 <NavSection variants={mobileLinkVariants}>
                   <NavSectionTitle>{t('nav.account')}</NavSectionTitle>
-                  <NavItem icon={<FiUser />} label={t('nav.profile')} to="/profile" />
-                  <NavItem icon={<FiPlusCircle />} label={t('nav.bookRequests', 'Request Books')} to="/book-requests" />
+                  <NavItem icon={<FiUser />} label={t('nav.profile')} to="/profile" onClick={() => setIsOpen(false)} />
+                  <NavItem icon={<FiPlusCircle />} label={t('nav.bookRequests', 'Request Books')} to="/book-requests" onClick={() => setIsOpen(false)} />
                   {isAdmin && (
-                    <NavItem icon={<FiSettings />} label={t('nav.admin')} to="/admin" />
+                    <NavItem icon={<FiSettings />} label={t('nav.admin')} to="/admin" onClick={() => setIsOpen(false)} />
                   )}
                   <NavItem icon={<FiLogOut />} label={t('nav.logout')} to="#" onClick={async () => { await handleLogout(); setIsOpen(false); }} />
                 </NavSection>
               ) : (
                 <NavSection variants={mobileLinkVariants}>
                   <NavSectionTitle>{t('nav.account')}</NavSectionTitle>
-                  <NavItem icon={<FiUser />} label={t('nav.login')} to="/login" />
-                  <NavItem icon={<FiPlusCircle />} label={t('nav.signup')} to="/signup" />
+                  <NavItem icon={<FiUser />} label={t('nav.login')} to="/login" onClick={() => setIsOpen(false)} />
+                  <NavItem icon={<FiPlusCircle />} label={t('nav.signup')} to="/signup" onClick={() => setIsOpen(false)} />
                 </NavSection>
               )}
 
               <NavSection variants={mobileLinkVariants} style={{ marginTop: 'auto', paddingTop: '24px', display: 'flex', justifyContent: 'space-around' }}>
-                <LanguageToggle onClick={toggleLanguage} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <LanguageToggle onClick={() => { toggleLanguage(); setIsOpen(false); }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                   {i18n.language === 'de' ? 'EN' : 'DE'}
                 </LanguageToggle>
 
                 <ThemeToggle 
-                  onClick={toggleTheme} 
+                  onClick={() => { toggleTheme(); setIsOpen(false); }} 
                   whileHover={{ scale: 1.05 }} 
                   whileTap={{ scale: 0.95 }}
                   aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
