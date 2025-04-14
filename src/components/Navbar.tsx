@@ -190,9 +190,10 @@ const NavLinks = styled(motion.div)<{ className?: string }>`
       background-color: ${({ theme }) => theme.colors.primary};
       padding: ${({ theme }) => theme.spacing.xl} ${({ theme }) => theme.spacing.lg};
       padding-top: ${({ theme }) => theme.spacing['3xl']};
-      z-index: ${({ theme }) => theme.zIndex.modal};
+      z-index: 1100; /* Higher than backdrop */
       box-shadow: ${({ theme }) => theme.shadows.xl};
       overflow-y: auto;
+      pointer-events: auto !important; /* Force pointer events */
     }
   }
 `;
@@ -247,51 +248,6 @@ const StyledNavLink = styled(NavLink)`
     }
   }
 `;
-
-const MotionLink = ({ to, children, $isActive, onClick, ...rest }: { 
-  to: string; 
-  children: React.ReactNode; 
-  $isActive?: boolean; 
-  onClick?: () => void;
-}) => {
-  const { isDark } = useTheme();
-  const themeObj = theme;
-  
-  return (
-    <motion.div
-      whileHover={{ scale: 1.05, backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)" }}
-      whileTap={{ scale: 0.95 }}
-      style={{ 
-        display: 'flex', 
-        alignItems: 'center',
-        gap: '8px',
-        padding: '8px 12px',
-        color: $isActive ? ($isActive ? "#F3C775" : "white") : "rgba(255, 255, 255, 0.9)",
-        textDecoration: 'none',
-        fontWeight: $isActive ? themeObj.typography.fontWeight.semibold : themeObj.typography.fontWeight.normal,
-        transition: `all ${themeObj.transitions.fast}`,
-        borderRadius: themeObj.borderRadius.md,
-        cursor: 'pointer'
-      }}
-      {...rest}
-    >
-      <Link 
-        to={to} 
-        onClick={onClick}
-        style={{ 
-          color: 'inherit', 
-          textDecoration: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          width: '100%',
-        }}
-      >
-        {children}
-      </Link>
-    </motion.div>
-  );
-};
 
 const SearchBar = styled(motion.div)`
   display: flex;
@@ -455,18 +411,33 @@ const NavBackdrop = styled(motion.div)`
   height: 100%;
   background-color: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(5px);
-  z-index: ${({ theme }) => theme.zIndex.overlay};
+  z-index: 1000; /* Explicit z-index value */
 `;
 
 const NavSection = styled(motion.div)`
-  padding-top: ${({ theme }) => theme.spacing.md};
-  margin-top: ${({ theme }) => theme.spacing.md};
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: ${({ theme }) => theme.spacing.xl};
   width: 100%;
-
-  &:first-of-type {
-    border-top: none;
-    margin-top: 0;
+  
+  a, button {
+    pointer-events: auto !important;
+    margin-bottom: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: white;
+    transition: all 0.2s ease;
+    padding: 12px 16px;
+    border-radius: ${({ theme }) => theme.borderRadius.md};
+    
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    svg {
+      margin-right: 8px;
+    }
   }
 `;
 
@@ -565,22 +536,27 @@ const Navbar: React.FC = () => {
     label: string; 
     to: string; 
     onClick?: () => void;
-    $isActive?: boolean;
-  }> = ({ icon, label, to, onClick, $isActive }) => {
+  }> = ({ icon, label, to, onClick }) => {
     return (
-      <motion.div
-        variants={mobileLinkVariants as any}
-        whileHover={{ x: 5 }}
-        whileTap={{ scale: 0.95 }}
+      <Link
+        to={to}
+        onClick={onClick}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '12px 16px',
+          color: 'white',
+          textDecoration: 'none',
+          fontWeight: 500,
+          borderRadius: '4px',
+          marginBottom: '8px',
+          pointerEvents: 'auto',
+          backgroundColor: 'rgba(255, 255, 255, 0.05)'
+        }}
       >
-        <MotionLink 
-          to={to} 
-          onClick={onClick} 
-          $isActive={$isActive}
-        >
-          {icon} {label}
-        </MotionLink>
-      </motion.div>
+        {icon} {label}
+      </Link>
     );
   };
 
@@ -683,7 +659,8 @@ const Navbar: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)} 
+              onClick={() => setIsOpen(false)}
+              style={{ pointerEvents: 'auto' }}
             />
             <NavLinks 
               className="mobile-navlinks"
@@ -692,6 +669,7 @@ const Navbar: React.FC = () => {
               initial="closed"
               animate="open"
               exit="closed"
+              style={{ pointerEvents: 'auto' }}
             >
               <CloseButton
                 onClick={() => setIsOpen(false)}
@@ -707,17 +685,18 @@ const Navbar: React.FC = () => {
                   handleSearch(e); 
                   setIsOpen(false);
                 }} 
-                style={{ display: 'contents' }}>
+                style={{ display: 'contents', pointerEvents: 'auto' }}>
                   <SearchInput
                     type="text"
                     placeholder={t('nav.search')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{ pointerEvents: 'auto' }}
                   />
                 </form>
               </SearchBar>
 
-              <NavSection variants={mobileLinkVariants}>
+              <NavSection variants={mobileLinkVariants} style={{ pointerEvents: 'auto' }}>
                 <NavSectionTitle>{t('nav.sections')}</NavSectionTitle>
                 <NavItem icon={<FiHeadphones />} label={t('nav.audiobooks')} to="/audiobooks" onClick={() => setIsOpen(false)} />
                 <NavItem icon={<FiBook />} label={t('nav.ebooks')} to="/ebooks" onClick={() => setIsOpen(false)} />
@@ -725,7 +704,7 @@ const Navbar: React.FC = () => {
               </NavSection>
 
               {user ? (
-                <NavSection variants={mobileLinkVariants}>
+                <NavSection variants={mobileLinkVariants} style={{ pointerEvents: 'auto' }}>
                   <NavSectionTitle>{t('nav.account')}</NavSectionTitle>
                   <NavItem icon={<FiUser />} label={t('nav.profile')} to="/profile" onClick={() => setIsOpen(false)} />
                   <NavItem icon={<FiPlusCircle />} label={t('nav.bookRequests', 'Request Books')} to="/book-requests" onClick={() => setIsOpen(false)} />
@@ -735,14 +714,14 @@ const Navbar: React.FC = () => {
                   <NavItem icon={<FiLogOut />} label={t('nav.logout')} to="#" onClick={async () => { await handleLogout(); setIsOpen(false); }} />
                 </NavSection>
               ) : (
-                <NavSection variants={mobileLinkVariants}>
+                <NavSection variants={mobileLinkVariants} style={{ pointerEvents: 'auto' }}>
                   <NavSectionTitle>{t('nav.account')}</NavSectionTitle>
                   <NavItem icon={<FiUser />} label={t('nav.login')} to="/login" onClick={() => setIsOpen(false)} />
                   <NavItem icon={<FiPlusCircle />} label={t('nav.signup')} to="/signup" onClick={() => setIsOpen(false)} />
                 </NavSection>
               )}
 
-              <NavSection variants={mobileLinkVariants} style={{ marginTop: 'auto', paddingTop: '24px', display: 'flex', justifyContent: 'space-around' }}>
+              <NavSection variants={mobileLinkVariants} style={{ marginTop: 'auto', paddingTop: '24px', display: 'flex', justifyContent: 'space-around', pointerEvents: 'auto' }}>
                 <LanguageToggle onClick={() => { toggleLanguage(); setIsOpen(false); }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                   {i18n.language === 'de' ? 'EN' : 'DE'}
                 </LanguageToggle>
