@@ -1,4 +1,4 @@
-export type BookType = 'audiobook' | 'ebook';
+export type BookType = 'audiobook' | 'ebook' | 'Hörbuch';
 
 export interface Book {
   id: string;

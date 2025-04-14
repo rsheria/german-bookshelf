@@ -733,11 +733,12 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
             <Select
               id="type"
               value={type}
-              onChange={(e) => setType(e.target.value as 'ebook' | 'audiobook')}
+              onChange={(e) => setType(e.target.value as 'ebook' | 'audiobook' | 'Hörbuch')}
               required
             >
-              <option value="audiobook">{t('books.audiobook')}</option>
               <option value="ebook">{t('books.ebook')}</option>
+              <option value="audiobook">{t('books.audiobook')}</option>
+              <option value="Hörbuch">{t('books.hörbuch', 'Hörbuch')}</option>
             </Select>
           </FormGroup>
           
