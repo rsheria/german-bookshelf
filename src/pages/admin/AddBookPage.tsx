@@ -77,6 +77,16 @@ const AddBookPage: React.FC = () => {
     return undefined;
   };
 
+  // Helper: parse audio length robustly
+  const getAudioLength = () => {
+    const al = qp('audio_length') || qp('audioLength') || qp('duration');
+    if (al) return al;
+    // Fallback: if pageCount is present and not a number, treat as audio length
+    const pc = qp('pageCount') || qp('page_count');
+    if (pc && isNaN(Number(pc))) return pc;
+    return undefined;
+  };
+
   // Build book object from query params (support both categories and genre)
   const bookFromParams: Partial<Book> = {
     title: qp('title'),
@@ -91,7 +101,7 @@ const AddBookPage: React.FC = () => {
     publisher: qp('publisher'),
     published_date: qp('publishedDate') || qp('published_date'),
     page_count: qn('pageCount') || qn('page_count'),
-    audio_length: qp('audio_length') || qp('audioLength') || qp('duration'),
+    audio_length: getAudioLength(),
     audio_format: qp('audio_format'),
     ebook_format: qp('ebook_format'),
     file_size: qp('file_size'),
