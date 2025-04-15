@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { Link } from 'react-router-dom';
-import { FiDownload, FiHeadphones, FiBook, FiAlertCircle, FiBookmark, FiShare2, FiStar, FiUser } from 'react-icons/fi';
+import { FiDownload, FiHeadphones, FiBook, FiAlertCircle, FiBookmark, FiShare2, FiStar, FiUser, FiLoader } from 'react-icons/fi';
 import { Book } from '../types/supabase';
 import { useDownloads } from '../hooks/useDownloads';
 import { useAuth } from '../context/AuthContext';
+import { useRelatedBooks } from '../hooks/useBooks';
 import RatingSystem from './RatingSystem';
 
 interface BookDetailsProps {
@@ -154,21 +155,33 @@ const Description = styled.div`
 const ReadMoreButton = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary};
+  color: #F3C775; /* Gold color for better visibility in dark mode */
   cursor: pointer;
   font-size: 14px;
-  padding: 0;
+  padding: 6px 12px;
   display: flex;
   align-items: center;
   margin-top: ${({ theme }) => theme.spacing.sm};
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  transition: all 0.2s ease;
+  background-color: rgba(243, 199, 117, 0.1); /* Very light gold background */
   
   &:hover {
+    background-color: rgba(243, 199, 117, 0.2); /* Slightly more visible on hover */
     text-decoration: underline;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  &:focus {
+    outline: 2px solid rgba(243, 199, 117, 0.5);
   }
   
   &:after {
     content: ${props => props.children === 'Read more' ? '"+"' : '"-"'};
-    margin-left: 4px;
+    margin-left: 6px;
+    font-weight: bold;
   }
 `;
 
@@ -319,6 +332,121 @@ const QuotaText = styled.div`
   opacity: 0.9;
 `;
 
+// Related section styling
+const RelatedSection = styled.div`
+  margin-top: ${({ theme }) => theme.spacing.xl};
+  padding-top: ${({ theme }) => theme.spacing.lg};
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const SectionTitle = styled.h2`
+  font-size: ${({ theme }) => theme.typography.fontSize.xl};
+  color: ${({ theme }) => theme.colors.text};
+  margin-bottom: ${({ theme }) => theme.spacing.lg};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+`;
+
+const BookGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: ${({ theme }) => theme.spacing.lg};
+  
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+`;
+
+const RelatedBookCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-4px);
+  }
+`;
+
+const RelatedBookCover = styled.img`
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  box-shadow: ${({ theme }) => theme.shadows.md};
+  margin-bottom: ${({ theme }) => theme.spacing.sm};
+`;
+
+const RelatedBookTitle = styled(Link)`
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.text};
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+  
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const RelatedBookAuthor = styled.div`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  margin-top: ${({ theme }) => theme.spacing.xs};
+`;
+
+const RelatedBookType = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  margin-top: ${({ theme }) => theme.spacing.xs};
+`;
+
+const LoadMoreButton = styled.button`
+  display: block;
+  margin: ${({ theme }) => theme.spacing.xl} auto 0;
+  background: none;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  color: ${({ theme }) => theme.colors.text};
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.backgroundAlt};
+    transform: translateY(-2px);
+    color: ${({ theme }) => theme.colors.primary};
+  }
+  
+  &:after {
+    content: "↓";
+    margin-left: 6px;
+  }
+`;
+
+// Add a keyframes animation for the loader
+const spin = keyframes`
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+`;
+
+// Loading spinner component 
+const Spinner = styled(FiLoader)`
+  animation: ${spin} 1s linear infinite;
+  font-size: 24px;
+  color: ${({ theme }) => theme.colors.primary};
+`;
+
 const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -326,6 +454,14 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
   const [showError, setShowError] = useState(false);
   const [bookRating, setBookRating] = useState<number | undefined>(book.rating);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [visibleRelatedBooks, setVisibleRelatedBooks] = useState(12);
+  
+  // Fetch related books
+  const { relatedBooks, isLoading: relatedBooksLoading } = useRelatedBooks(book, 24);
+  
+  const handleLoadMore = () => {
+    setVisibleRelatedBooks(prev => Math.min(prev + 12, relatedBooks.length));
+  };
   
   const handleDownload = async () => {
     if (!user) return;
@@ -546,6 +682,60 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
           )}
         </BookInfo>
       </Container>
+      
+      {/* Related Books Section */}
+      {relatedBooks.length > 0 ? (
+        <RelatedSection>
+          <SectionTitle>{t('books.relatedTitle', 'You may be interested in')}</SectionTitle>
+          
+          {relatedBooksLoading ? (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <Spinner />
+              <div style={{ marginTop: '10px' }}>{t('common.loading', 'Loading...')}</div>
+            </div>
+          ) : (
+            <>
+              <BookGrid>
+                {relatedBooks.slice(0, visibleRelatedBooks).map(relatedBook => (
+                  <RelatedBookCard key={relatedBook.id}>
+                    <Link to={`/book/${relatedBook.id}`}>
+                      <RelatedBookCover 
+                        src={relatedBook.cover_url || placeholderCover} 
+                        alt={relatedBook.title}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = placeholderCover;
+                        }}
+                      />
+                    </Link>
+                    <RelatedBookTitle to={`/book/${relatedBook.id}`}>
+                      {relatedBook.title}
+                    </RelatedBookTitle>
+                    <RelatedBookAuthor>{relatedBook.author}</RelatedBookAuthor>
+                    <RelatedBookType>
+                      {relatedBook.type === 'audiobook' || relatedBook.type === 'Hörbuch' ? (
+                        <>
+                          <FiHeadphones size={10} /> {t('books.audiobook')}
+                        </>
+                      ) : (
+                        <>
+                          <FiBook size={10} /> {t('books.ebook')}
+                        </>
+                      )}
+                    </RelatedBookType>
+                  </RelatedBookCard>
+                ))}
+              </BookGrid>
+              
+              {visibleRelatedBooks < relatedBooks.length && (
+                <LoadMoreButton onClick={handleLoadMore}>
+                  {t('common.loadMore', 'Load more')}
+                </LoadMoreButton>
+              )}
+            </>
+          )}
+        </RelatedSection>
+      ) : null}
     </>
   );
 };

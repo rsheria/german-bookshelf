@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiUsers, FiBarChart2, FiBook, FiDownload, FiActivity, FiRefreshCw, FiAlertCircle, FiPlus, FiSearch } from 'react-icons/fi';
+import { FiUsers, FiBarChart2, FiBook, FiDownload, FiActivity, FiRefreshCw, FiAlertCircle, FiPlus, FiMessageSquare } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import AdminUserActivity from './AdminUserActivity';
 import OnlineUsersPanel from '../../components/admin/OnlineUsersPanel';
@@ -473,14 +473,9 @@ const AdminDashboardPage = () => {
               {t('admin.addNewBook', 'Add New Book')}
             </QuickActionButton>
             
-            <QuickActionButton onClick={() => navigate('/admin/scrape-thalia')}>
-              <FiSearch />
-              {t('admin.fetchThaliaBook', 'Fetch Book from Thalia')}
-            </QuickActionButton>
-            
-            <QuickActionButton onClick={() => navigate('/admin/scrape-lehmanns')}>
-              <FiSearch />
-              {t('admin.fetchLehmannsBook', 'Fetch Book from Lehmanns')}
+            <QuickActionButton onClick={() => navigate('/admin/book-requests')}>
+              <FiMessageSquare />
+              {t('admin.manageBookRequests', 'Manage Book Requests')}
             </QuickActionButton>
             
             <QuickActionButton onClick={() => navigate('/admin/users')}>

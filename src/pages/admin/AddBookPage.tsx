@@ -18,17 +18,24 @@ const BackButton = styled.button`
   gap: 0.5rem;
   background: none;
   border: none;
-  color: ${props => props.theme.colors.primary};
-  font-size: ${props => props.theme.typography.fontSize.base};
-  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   cursor: pointer;
-  padding: 0.5rem 0;
+  padding: 0.75rem;
   margin-bottom: 1rem;
   transition: all 0.2s;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
   
   &:hover {
     transform: translateX(-3px);
-    color: ${props => props.theme.colors.primaryDark};
+    background-color: ${({ theme }) => theme.colors.backgroundAlt};
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
+  svg {
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 1.2rem;
   }
 `;
 

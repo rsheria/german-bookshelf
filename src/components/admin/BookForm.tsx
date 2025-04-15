@@ -2,12 +2,9 @@ import React, { useState, FormEvent, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiSave, FiX, FiUpload, FiAlertCircle, FiSearch, FiLoader, FiBookOpen, FiHash } from 'react-icons/fi';
+import { FiSave, FiX, FiUpload, FiAlertCircle } from 'react-icons/fi';
 import { supabase } from '../../services/supabase';
 import { Book } from '../../types/supabase';
-import { fetchBookDataFromThalia, isValidThaliaUrl } from '../../services/thaliaScraperService';
-import { fetchBookDataFromLehmanns, isValidLehmannsUrl } from '../../services/lehmannsScraperService';
-import { getBookData } from '../../services/bookDataService';
 
 interface BookFormProps {
   book?: Book;
@@ -18,9 +15,9 @@ const FormContainer = styled.div`
   max-width: 800px;
   margin: 0 auto;
   padding: 2rem;
-  background-color: white;
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const Form = styled.form`
@@ -48,24 +45,26 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 0.9rem;
   font-weight: 500;
-  color: #555;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const Input = styled.input`
-  border: 1px solid #ddd;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 4px;
   padding: 0.75rem;
   font-size: 1rem;
   outline: none;
   transition: border-color 0.2s;
+  background-color: ${({ theme }) => theme.colors.input};
+  color: ${({ theme }) => theme.colors.text};
 
   &:focus {
-    border-color: #3498db;
+    border-color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
 const Textarea = styled.textarea`
-  border: 1px solid #ddd;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 4px;
   padding: 0.75rem;
   font-size: 1rem;
@@ -73,23 +72,26 @@ const Textarea = styled.textarea`
   transition: border-color 0.2s;
   min-height: 150px;
   resize: vertical;
+  background-color: ${({ theme }) => theme.colors.input};
+  color: ${({ theme }) => theme.colors.text};
 
   &:focus {
-    border-color: #3498db;
+    border-color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
 const Select = styled.select`
-  border: 1px solid #ddd;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 4px;
   padding: 0.75rem;
   font-size: 1rem;
   outline: none;
   transition: border-color 0.2s;
-  background-color: white;
+  background-color: ${({ theme }) => theme.colors.input};
+  color: ${({ theme }) => theme.colors.text};
 
   &:focus {
-    border-color: #3498db;
+    border-color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
@@ -109,31 +111,34 @@ const Button = styled.button`
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
 `;
 
 const SaveButton = styled(Button)`
-  background-color: #3498db;
+  background-color: ${({ theme }) => theme.colors.primary};
   color: white;
   border: none;
 
   &:hover {
-    background-color: #2980b9;
+    background-color: ${({ theme }) => theme.colors.primaryLight};
+    transform: translateY(-2px);
   }
 
   &:disabled {
-    background-color: #95a5a6;
+    background-color: ${({ theme }) => theme.colors.disabled};
     cursor: not-allowed;
+    transform: none;
   }
 `;
 
 const CancelButton = styled(Button)`
-  background-color: white;
-  color: #333;
-  border: 1px solid #ddd;
+  background-color: ${({ theme }) => theme.colors.card};
+  color: ${({ theme }) => theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.border};
 
   &:hover {
-    background-color: #f5f5f5;
+    background-color: ${({ theme }) => theme.colors.backgroundAlt};
+    transform: translateY(-2px);
   }
 `;
 
@@ -165,19 +170,20 @@ const UploadButton = styled.label`
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: #f5f5f5;
-  color: #333;
-  border: 1px solid #ddd;
+  background-color: ${({ theme }) => theme.colors.backgroundAlt};
+  color: ${({ theme }) => theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 4px;
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
   width: fit-content;
 
   &:hover {
-    background-color: #e0e0e0;
+    background-color: ${({ theme }) => theme.colors.backgroundHover};
+    transform: translateY(-2px);
   }
 `;
 
@@ -185,95 +191,18 @@ const Alert = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: #f8d7da;
-  color: #721c24;
+  background-color: ${({ theme }) => theme.colors.error}40; /* 40 for transparency */
+  color: ${({ theme }) => theme.colors.error};
   padding: 1rem;
   border-radius: 4px;
   margin-bottom: 1.5rem;
+  border: 1px solid ${({ theme }) => theme.colors.error};
 `;
 
 const AlertSuccess = styled(Alert)`
-  background-color: #d4edda;
-  color: #155724;
-`;
-
-const BookLinkContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  border: 1px dashed #3498db;
-  padding: 1rem;
-  border-radius: 4px;
-  background-color: #f8f9fa;
-`;
-
-const SourceTabs = styled.div`
-  display: flex;
-  margin-bottom: 1rem;
-`;
-
-const SourceTab = styled.button<{ active: boolean }>`
-  padding: 0.5rem 1rem;
-  background-color: ${props => props.active ? '#3498db' : '#f1f1f1'};
-  color: ${props => props.active ? 'white' : '#333'};
-  border: 1px solid #ddd;
-  border-bottom: none;
-  border-radius: 4px 4px 0 0;
-  cursor: pointer;
-  transition: all 0.2s;
-  
-  &:hover {
-    background-color: ${props => props.active ? '#2980b9' : '#e9e9e9'};
-  }
-  
-  &:first-child {
-    margin-right: 0.5rem;
-  }
-`;
-
-const InputRow = styled.div`
-  display: flex;
-  gap: 0.5rem;
-`;
-
-const FetchButton = styled(Button)`
-  background-color: #3498db;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-
-  &:hover {
-    background-color: #2980b9;
-  }
-
-  &:disabled {
-    background-color: #95a5a6;
-    cursor: not-allowed;
-  }
-`;
-
-const DataSourceToggle = styled.div`
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-`;
-
-const DataSourceButton = styled.button<{ active: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  border-radius: 4px;
-  background-color: ${props => props.active ? '#3498db' : '#f5f5f5'};
-  color: ${props => props.active ? 'white' : '#333'};
-  border: 1px solid ${props => props.active ? '#3498db' : '#ddd'};
-  font-size: 1rem;
-  cursor: pointer;
-  
-  &:hover {
-    background-color: ${props => props.active ? '#2980b9' : '#e0e0e0'};
-  }
+  background-color: ${({ theme }) => theme.colors.success}40; /* 40 for transparency */
+  color: ${({ theme }) => theme.colors.success};
+  border: 1px solid ${({ theme }) => theme.colors.success};
 `;
 
 const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
@@ -300,104 +229,12 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
-  const [dataSource, setDataSource] = useState<'url' | 'isbn'>('url');
-  const [thaliaUrl, setThaliaUrl] = useState('');
-  const [lehmannsUrl, setLehmannsUrl] = useState('');
-  const [isbnInput, setIsbnInput] = useState('');
-  const [activeTab, setActiveTab] = useState<'thalia' | 'lehmanns'>('thalia');
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [extractError, setExtractError] = useState('');
-  const [extractSuccess, setExtractSuccess] = useState('');
 
-  const extractBookData = async () => {
-    setIsExtracting(true);
-    setExtractError('');
-    setExtractSuccess('');
-    
-    try {
-      if (dataSource === 'url') {
-        if (activeTab === 'thalia') {
-          if (!isValidThaliaUrl(thaliaUrl)) {
-            throw new Error(t('admin.invalidThaliaUrl', 'Invalid Thalia URL'));
-          }
-          
-          const thaliaData = await fetchBookDataFromThalia(thaliaUrl);
-          if (!thaliaData) {
-            throw new Error(t('admin.failedToExtract', 'Failed to extract book data'));
-          }
-          
-          setTitle(thaliaData.title);
-          setAuthor(thaliaData.author);
-          setDescription(thaliaData.description);
-          setCoverUrl(thaliaData.coverUrl);
-          setLanguage(thaliaData.language || 'german');
-          setGenre(thaliaData.genre || '');
-          setType(thaliaData.type || 'ebook');
-          setIsbn(thaliaData.isbn || '');
-          setExternalId(thaliaData.ean || '');
-          setPublisher(thaliaData.publisher || '');
-          setPublishedDate(thaliaData.publishedDate || '');
-          if (thaliaData.pageCount) {
-            setPageCount(thaliaData.pageCount.toString());
-          }
-          setExtractSuccess(t('admin.dataExtracted', 'Book data successfully extracted'));
-        } else if (activeTab === 'lehmanns') {
-          if (!isValidLehmannsUrl(lehmannsUrl)) {
-            throw new Error(t('admin.invalidLehmannsUrl', 'Invalid Lehmanns URL'));
-          }
-          
-          const lehmannsData = await fetchBookDataFromLehmanns(lehmannsUrl);
-          if (!lehmannsData) {
-            throw new Error(t('admin.failedToExtract', 'Failed to extract book data'));
-          }
-          
-          setTitle(lehmannsData.title);
-          setAuthor(lehmannsData.author);
-          setDescription(lehmannsData.description);
-          setCoverUrl(lehmannsData.coverUrl);
-          setLanguage(lehmannsData.language || 'german');
-          setGenre(lehmannsData.genre || '');
-          setType(lehmannsData.type || 'ebook');
-          setIsbn(lehmannsData.isbn || '');
-          if (lehmannsData.pageCount) {
-            setPageCount(lehmannsData.pageCount.toString());
-          }
-          setExtractSuccess(t('admin.dataExtracted', 'Book data successfully extracted'));
-        }
-      } else {
-        if (!isbnInput.trim()) {
-          throw new Error(t('admin.invalidIsbn', 'Please enter a valid ISBN'));
-        }
-        
-        const bookData = await getBookData(isbnInput.trim());
-        if (!bookData) {
-          throw new Error(t('admin.failedToFetchByIsbn', 'Failed to fetch book data for this ISBN'));
-        }
-        
-        setTitle(bookData.title);
-        setAuthor(bookData.author);
-        setDescription(bookData.description);
-        setCoverUrl(bookData.coverUrl);
-        setLanguage(bookData.language || 'german');
-        setGenre(bookData.genre || '');
-        setType(bookData.type as 'ebook' | 'audiobook');
-        setIsbn(bookData.isbn || isbnInput);
-        setExternalId(bookData.asin || '');
-        setPublisher(bookData.publisher || '');
-        setPublishedDate(bookData.publishedDate || '');
-        if (bookData.pageCount) {
-          setPageCount(bookData.pageCount.toString());
-        }
-        setExtractSuccess(t('admin.isbnDataExtracted', 'Book data successfully extracted from ISBN'));
-      }
-    } catch (error) {
-      console.error('Error extracting book data:', error);
-      setExtractError((error as Error).message);
-    } finally {
-      setIsExtracting(false);
+  useEffect(() => {
+    if (searchParams.get('success') === 'true') {
+      setSuccess(t('admin.bookSaved', 'Book saved successfully!'));
     }
-  };
+  }, [searchParams, t]);
 
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -411,7 +248,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
       reader.readAsDataURL(file);
     }
   };
-  
+
   const uploadCover = async () => {
     if (!coverFile) {
       throw new Error('No cover file to upload');
@@ -435,7 +272,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
     
     return data.publicUrl;
   };
-  
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -509,159 +346,21 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
       setIsLoading(false);
     }
   };
-  
-  useEffect(() => {
-    // Only run if this is a new book (not an edit) and we have URL parameters
-    if (!isEdit && searchParams.has('title')) {
-      setTitle(searchParams.get('title') || '');
-      setAuthor(searchParams.get('author') || '');
-      setGenre(searchParams.get('genre') || '');
-      setLanguage(searchParams.get('language') || 'German');
-      setDescription(searchParams.get('description') || '');
-      setType((searchParams.get('type') || 'ebook') as 'ebook' | 'audiobook');
-      setDownloadUrl(searchParams.get('downloadUrl') || '');
-      setCoverUrl(searchParams.get('coverUrl') || '');
-      setIsbn(searchParams.get('isbn') || '');
-      setExternalId(searchParams.get('externalId') || '');
-      setPublisher(searchParams.get('publisher') || '');
-      setPublishedDate(searchParams.get('publishedDate') || '');
-      setPageCount(searchParams.get('pageCount') || '');
-      
-      // Show a success message
-      setSuccess(t('admin.autofillSuccess', 'Form auto-filled from scraper data'));
-      
-      // Scroll to form content
-      setTimeout(() => {
-        window.scrollTo({
-          top: document.body.scrollHeight / 3,
-          behavior: 'smooth'
-        });
-      }, 500);
-    }
-  }, [searchParams, isEdit, t]);
 
   return (
     <FormContainer>
       {error && (
         <Alert>
-          <FiAlertCircle /> {error}
+          <FiAlertCircle />
+          {error}
         </Alert>
       )}
       
       {success && (
         <AlertSuccess>
-          <FiAlertCircle /> {success}
+          <FiAlertCircle />
+          {success}
         </AlertSuccess>
-      )}
-
-      {!isEdit && (
-        <BookLinkContainer>
-          <DataSourceToggle>
-            <DataSourceButton 
-              type="button"
-              active={dataSource === 'url'} 
-              onClick={() => setDataSource('url')}
-            >
-              <FiSearch /> {t('admin.useUrl', 'Use URL')}
-            </DataSourceButton>
-            <DataSourceButton 
-              type="button"
-              active={dataSource === 'isbn'} 
-              onClick={() => setDataSource('isbn')}
-            >
-              <FiHash /> {t('admin.useIsbn', 'Use ISBN')}
-            </DataSourceButton>
-          </DataSourceToggle>
-
-          {dataSource === 'url' ? (
-            <>
-              <SourceTabs>
-                <SourceTab 
-                  active={activeTab === 'thalia'} 
-                  onClick={() => setActiveTab('thalia')}
-                >
-                  Thalia.de
-                </SourceTab>
-                <SourceTab 
-                  active={activeTab === 'lehmanns'} 
-                  onClick={() => setActiveTab('lehmanns')}
-                >
-                  Lehmanns
-                </SourceTab>
-              </SourceTabs>
-              
-              {activeTab === 'thalia' && (
-                <InputRow>
-                  <Input
-                    type="url"
-                    value={thaliaUrl}
-                    onChange={(e) => setThaliaUrl(e.target.value)}
-                    placeholder="https://www.thalia.de/shop/home/artikeldetails/..."
-                    style={{ flexGrow: 1 }}
-                  />
-                  <FetchButton 
-                    type="button" 
-                    onClick={extractBookData}
-                    disabled={!thaliaUrl || isExtracting}
-                  >
-                    {isExtracting ? <FiLoader className="spin" /> : <FiSearch />}
-                    {t('admin.extract', 'Extract Data')}
-                  </FetchButton>
-                </InputRow>
-              )}
-              
-              {activeTab === 'lehmanns' && (
-                <InputRow>
-                  <Input
-                    type="url"
-                    value={lehmannsUrl}
-                    onChange={(e) => setLehmannsUrl(e.target.value)}
-                    placeholder="https://www.lehmanns.de/shop/..."
-                    style={{ flexGrow: 1 }}
-                  />
-                  <FetchButton 
-                    type="button" 
-                    onClick={extractBookData}
-                    disabled={!lehmannsUrl || isExtracting}
-                  >
-                    {isExtracting ? <FiLoader className="spin" /> : <FiSearch />}
-                    {t('admin.extract')}
-                  </FetchButton>
-                </InputRow>
-              )}
-            </>
-          ) : (
-            <InputRow>
-              <Input
-                type="text"
-                value={isbnInput}
-                onChange={(e) => setIsbnInput(e.target.value)}
-                placeholder="Enter ISBN (e.g., 9783630876726)"
-                style={{ flexGrow: 1 }}
-              />
-              <FetchButton 
-                type="button" 
-                onClick={extractBookData}
-                disabled={!isbnInput || isExtracting}
-              >
-                {isExtracting ? <FiLoader className="spin" /> : <FiBookOpen />}
-                {t('admin.fetchByIsbn', 'Fetch Data')}
-              </FetchButton>
-            </InputRow>
-          )}
-          
-          {extractError && (
-            <Alert>
-              <FiAlertCircle /> {extractError}
-            </Alert>
-          )}
-          
-          {extractSuccess && (
-            <AlertSuccess>
-              <FiAlertCircle /> {extractSuccess}
-            </AlertSuccess>
-          )}
-        </BookLinkContainer>
       )}
       
       <Form onSubmit={handleSubmit}>
