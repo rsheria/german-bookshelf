@@ -87,15 +87,28 @@ const AddBookPage: React.FC = () => {
     return undefined;
   };
 
+  // Helper: normalize type based on language
+  const normalizeType = (rawType: string | undefined, lang: string | undefined): Book['type'] | undefined => {
+    if (!rawType) return undefined;
+    const t = rawType.toLowerCase();
+    if (t === 'ebook' || t === 'e-book') return 'ebook';
+    if (lang === 'German' && (t === 'audiobook' || t === 'hörbuch' || t === 'hoerbuch')) return 'Hörbuch';
+    if (lang === 'English' && (t === 'audiobook' || t === 'hörbuch' || t === 'hoerbuch')) return 'audiobook';
+    // fallback: if language unknown, preserve original but cast to Book['type']
+    return rawType as Book['type'];
+  };
+
   // Build book object from query params (support both categories and genre)
+  const rawType = qp('type');
+  const rawLang = qp('language');
   const bookFromParams: Partial<Book> = {
     title: qp('title'),
     author: qp('author'),
     narrator: qp('narrator'),
     description: qp('description'),
     cover_url: qp('coverUrl') || qp('cover_url'),
-    language: qp('language'),
-    type: qp('type') as Book['type'],
+    language: rawLang,
+    type: normalizeType(rawType, rawLang),
     isbn: qp('isbn'),
     external_id: qp('externalId') || qp('external_id'),
     publisher: qp('publisher'),

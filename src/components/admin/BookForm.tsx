@@ -221,7 +221,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const [author, setAuthor] = useState(book?.author || '');
   const [language, setLanguage] = useState(book?.language || 'German');
   const [description, setDescription] = useState(book?.description || '');
-  const [type, setType] = useState(book?.type || 'audiobook');
+  const [type, setType] = useState(book?.type || 'ebook');
   const [downloadUrl, setDownloadUrl] = useState(book?.download_url || '');
   const [isbn, setIsbn] = useState(book?.isbn || '');
   const [externalId, setExternalId] = useState(book?.external_id || '');
@@ -413,9 +413,9 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               onChange={(e) => setType(e.target.value as 'ebook' | 'audiobook' | 'Hörbuch')}
               required
             >
-              <option value="ebook">{t('books.ebook')}</option>
-              <option value="audiobook">{t('books.audiobook')}</option>
-              <option value="Hörbuch">{t('books.hörbuch', 'Hörbuch')}</option>
+              <option value="ebook">E-Book</option>
+              {language === 'German' && <option value="Hörbuch">Hörbuch</option>}
+              {language === 'English' && <option value="audiobook">Audiobook</option>}
             </Select>
           </FormGroup>
         </FormRow>
