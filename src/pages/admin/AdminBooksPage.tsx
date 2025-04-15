@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiEdit, FiTrash2, FiPlus, FiSearch, FiDownload, FiActivity, FiEye, FiArchive, FiBook } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiPlus, FiSearch, FiDownload, FiActivity, FiEye, FiArchive, FiBook, FiCheckSquare, FiSquare } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import {
@@ -325,7 +325,8 @@ const AdminBooksPage: React.FC = () => {
   });
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
-  
+  const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
+
   const pageSize = 10;
 
   useEffect(() => {
@@ -469,7 +470,38 @@ const AdminBooksPage: React.FC = () => {
       console.error('Error deleting book:', error);
     }
   };
-  
+
+  const handleSelectBook = (id: string, checked: boolean) => {
+    setSelectedBookIds((prev) =>
+      checked ? [...prev, id] : prev.filter((bid) => bid !== id)
+    );
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedBookIds(books.map((b) => b.id));
+    } else {
+      setSelectedBookIds([]);
+    }
+  };
+
+  const handleBulkDeleteClick = () => {
+    setDeleteModalOpen(true);
+    setBookToDelete(null); // null means bulk
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedBookIds.length === 0) return;
+    setIsLoading(true);
+    const { error } = await supabase.from('books').delete().in('id', selectedBookIds);
+    setIsLoading(false);
+    setDeleteModalOpen(false);
+    setSelectedBookIds([]);
+    if (!error) {
+      fetchBooks();
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
@@ -586,6 +618,14 @@ const AdminBooksPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
+              <TableHeader style={{ width: 36 }}>
+                <input
+                  type="checkbox"
+                  checked={selectedBookIds.length === books.length && books.length > 0}
+                  onChange={e => handleSelectAll(e.target.checked)}
+                  aria-label="Select all books"
+                />
+              </TableHeader>
               <TableHeader>{t('title', 'Title')}</TableHeader>
               <TableHeader>{t('author', 'Author')}</TableHeader>
               <TableHeader>{t('type', 'Type')}</TableHeader>
@@ -598,6 +638,14 @@ const AdminBooksPage: React.FC = () => {
           <tbody>
             {books.map((book) => (
               <TableRow key={book.id}>
+                <TableCell>
+                  <input
+                    type="checkbox"
+                    checked={selectedBookIds.includes(book.id)}
+                    onChange={e => handleSelectBook(book.id, e.target.checked)}
+                    aria-label={`Select book ${book.title}`}
+                  />
+                </TableCell>
                 <TableCell>{book.title}</TableCell>
                 <TableCell>{book.author}</TableCell>
                 <TableCell>
@@ -644,7 +692,7 @@ const AdminBooksPage: React.FC = () => {
             
             {books.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} style={{ textAlign: 'center' }}>
+                <TableCell colSpan={8} style={{ textAlign: 'center' }}>
                   {searchTerm || typeFilter !== 'all' || levelFilter !== 'all'
                     ? t('noSearchResults', 'No matching books found')
                     : t('noBooks', 'No books in the library yet')}
@@ -654,6 +702,12 @@ const AdminBooksPage: React.FC = () => {
           </tbody>
         </Table>
       </TableContainer>
+      
+      {selectedBookIds.length > 0 && (
+        <DeleteButton style={{ marginBottom: '1rem' }} onClick={handleBulkDeleteClick}>
+          <FiTrash2 /> Delete Selected ({selectedBookIds.length})
+        </DeleteButton>
+      )}
       
       {totalPages > 1 && (
         <Pagination>
@@ -709,20 +763,20 @@ const AdminBooksPage: React.FC = () => {
         </Pagination>
       )}
       
-      {deleteModalOpen && bookToDelete && (
+      {deleteModalOpen && (
         <ConfirmationModal>
           <ModalContent>
-            <h3>{t('deleteBookConfirmTitle', 'Delete Book')}</h3>
+            <h3>{bookToDelete ? t('deleteBookConfirmTitle', 'Delete Book') : 'Delete Selected Books'}</h3>
             <p>
-              {t('deleteBookConfirmMessage', {
-                title: bookToDelete.title
-              })}
+              {bookToDelete
+                ? t('deleteBookConfirmMessage', { title: bookToDelete.title })
+                : `Are you sure you want to delete ${selectedBookIds.length} selected books? This action cannot be undone.`}
             </p>
             <ModalButtons>
               <CancelButton onClick={() => setDeleteModalOpen(false)}>
                 {t('cancel', 'Cancel')}
               </CancelButton>
-              <DeleteButton onClick={handleDeleteConfirm}>
+              <DeleteButton onClick={bookToDelete ? handleDeleteConfirm : handleBulkDeleteConfirm}>
                 {t('delete', 'Delete')}
               </DeleteButton>
             </ModalButtons>
