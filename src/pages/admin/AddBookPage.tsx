@@ -91,7 +91,7 @@ const AddBookPage: React.FC = () => {
     publisher: qp('publisher'),
     published_date: qp('publishedDate') || qp('published_date'),
     page_count: qn('pageCount') || qn('page_count'),
-    audio_length: qp('audio_length'),
+    audio_length: qp('audio_length') || qp('audioLength') || qp('duration'),
     audio_format: qp('audio_format'),
     ebook_format: qp('ebook_format'),
     file_size: qp('file_size'),

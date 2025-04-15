@@ -234,8 +234,6 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   
   const [narrator, setNarrator] = useState(book?.narrator || '');
   const [audioLength, setAudioLength] = useState(book?.audio_length || '');
-  const [audioFormat, setAudioFormat] = useState(book?.audio_format || '');
-  const [ebookFormat, setEbookFormat] = useState(book?.ebook_format || '');
   const [fileSize, setFileSize] = useState(book?.file_size || '');
   
   const [isLoading, setIsLoading] = useState(false);
@@ -317,8 +315,6 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
         page_count: pageCount ? Number(pageCount) : undefined,
         narrator: narrator || undefined,
         audio_length: audioLength,
-        audio_format: audioFormat || undefined,
-        ebook_format: ebookFormat || undefined,
         file_size: fileSize,
         categories: categories.split(',').map((cat) => cat.trim()).filter(Boolean),
       };
