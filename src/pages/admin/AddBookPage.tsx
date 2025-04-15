@@ -66,33 +66,40 @@ const AddBookPage: React.FC = () => {
     return val !== null && val !== '' ? Number(val) : undefined;
   };
 
-  // Helper: parse categories as array
-  const qarr = (key: string) => {
-    const val = searchParams.get(key);
-    return val ? val.split(',').map((c) => c.trim()).filter(Boolean) : undefined;
+  // Helper: parse categories as array from either 'categories' or 'genre'
+  const qarr = (key1: string, key2?: string) => {
+    let val = searchParams.get(key1);
+    if (!val && key2) val = searchParams.get(key2);
+    if (val) {
+      // Support splitting on '>' or ','
+      return val.split(/>|,/).map((c) => c.trim()).filter(Boolean);
+    }
+    return undefined;
   };
 
-  // Build book object from query params (only if at least one relevant param is present)
+  // Build book object from query params (support both categories and genre)
   const bookFromParams: Partial<Book> = {
     title: qp('title'),
     author: qp('author'),
-    genre: qp('genre'),
-    language: qp('language'),
-    description: qp('description'),
-    cover_url: qp('cover_url'),
-    type: qp('type') as Book['type'],
-    download_url: qp('download_url'),
-    isbn: qp('isbn'),
-    external_id: qp('external_id'),
-    publisher: qp('publisher'),
-    published_date: qp('published_date'),
-    page_count: qn('page_count'),
     narrator: qp('narrator'),
+    description: qp('description'),
+    cover_url: qp('coverUrl') || qp('cover_url'),
+    language: qp('language'),
+    type: qp('type') as Book['type'],
+    isbn: qp('isbn'),
+    external_id: qp('externalId') || qp('external_id'),
+    publisher: qp('publisher'),
+    published_date: qp('publishedDate') || qp('published_date'),
+    page_count: qn('pageCount') || qn('page_count'),
     audio_length: qp('audio_length'),
     audio_format: qp('audio_format'),
     ebook_format: qp('ebook_format'),
     file_size: qp('file_size'),
-    categories: qarr('categories'),
+    download_url: qp('downloadUrl') || qp('download_url'),
+    // Robust categories: prefer categories, else genre
+    categories: qarr('categories', 'genre'),
+    // For legacy: also pass genre as string if present
+    genre: qp('genre'),
   };
   const hasBookParams = Object.values(bookFromParams).some((v) => v !== undefined && v !== '');
 

@@ -447,6 +447,26 @@ const Spinner = styled(FiLoader)`
   color: ${({ theme }) => theme.colors.primary};
 `;
 
+// Add styled tag for categories
+const CategoryTag = styled(Link)`
+  display: inline-block;
+  background: ${({ theme }) => theme.colors.primary}22;
+  color: ${({ theme }) => theme.colors.primary};
+  border-radius: 16px;
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0 8px 8px 0;
+  text-decoration: none;
+  transition: background 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  cursor: pointer;
+  &:hover {
+    background: ${({ theme }) => theme.colors.primary}55;
+    color: white;
+  }
+`;
+
 const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -624,6 +644,18 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
               </MetadataSection>
             )}
           </MetadataGrid>
+          
+          {/* Categories */}
+          {book.categories && book.categories.length > 0 && (
+            <div style={{ margin: '16px 0' }}>
+              <MetadataLabel>Kategorien:</MetadataLabel>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {book.categories.map((cat) => (
+                  <CategoryTag key={cat} to={`/books?category=${encodeURIComponent(cat)}`}>{cat}</CategoryTag>
+                ))}
+              </div>
+            </div>
+          )}
           
           {/* Custom rating component */}
           <div style={{ marginBottom: '1.5rem' }}>

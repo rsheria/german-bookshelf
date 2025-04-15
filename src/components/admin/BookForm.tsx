@@ -210,9 +210,15 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
+  const initialCategories = book?.categories
+    ? book.categories.join(', ')
+    : book?.genre
+      ? book.genre.split(/>|,/).map((s) => s.trim()).filter(Boolean).join(', ')
+      : '';
+  const [categories, setCategories] = useState(initialCategories);
+  
   const [title, setTitle] = useState(book?.title || '');
   const [author, setAuthor] = useState(book?.author || '');
-  const [genre, setGenre] = useState(book?.genre || '');
   const [language, setLanguage] = useState(book?.language || 'German');
   const [description, setDescription] = useState(book?.description || '');
   const [type, setType] = useState(book?.type || 'audiobook');
@@ -231,7 +237,6 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const [audioFormat, setAudioFormat] = useState(book?.audio_format || '');
   const [ebookFormat, setEbookFormat] = useState(book?.ebook_format || '');
   const [fileSize, setFileSize] = useState(book?.file_size || '');
-  const [categories, setCategories] = useState(book?.categories ? book.categories.join(', ') : '');
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -287,7 +292,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
     setSuccess(null);
     
     try {
-      if (!title || !author || !genre || !language || !description || !type || !downloadUrl) {
+      if (!title || !author || !language || !description || !type || !downloadUrl) {
         throw new Error(t('admin.formValidationError'));
       }
       
@@ -296,30 +301,32 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
         finalCoverUrl = await uploadCover();
       }
       
+      const bookPayload: Omit<Book, 'id' | 'created_at' | 'updated_at'> = {
+        title,
+        author,
+        genre: categories.split(',').map((cat) => cat.trim()).filter(Boolean).join(' > '),
+        language,
+        description,
+        cover_url: finalCoverUrl,
+        type,
+        download_url: downloadUrl,
+        isbn,
+        external_id: externalId,
+        publisher,
+        published_date: publishedDate,
+        page_count: pageCount ? Number(pageCount) : undefined,
+        narrator: narrator || undefined,
+        audio_length: audioLength || undefined,
+        audio_format: audioFormat || undefined,
+        ebook_format: ebookFormat || undefined,
+        file_size: fileSize || undefined,
+        categories: categories.split(',').map((cat) => cat.trim()).filter(Boolean),
+      };
+      
       if (isEdit && book) {
         const { error: updateError } = await supabase
           .from('books')
-          .update({
-            title,
-            author,
-            genre,
-            language,
-            description,
-            type,
-            download_url: downloadUrl,
-            cover_url: finalCoverUrl,
-            isbn,
-            external_id: externalId,
-            published_date: publishedDate,
-            publisher,
-            page_count: pageCount ? parseInt(pageCount) : null,
-            narrator: narrator || undefined,
-            audio_length: audioLength || undefined,
-            audio_format: audioFormat || undefined,
-            ebook_format: ebookFormat || undefined,
-            file_size: fileSize || undefined,
-            categories: categories.split(',').map((cat) => cat.trim()).filter(Boolean),
-          })
+          .update(bookPayload)
           .eq('id', book.id);
         
         if (updateError) {
@@ -330,27 +337,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
       } else {
         const { error: insertError } = await supabase
           .from('books')
-          .insert({
-            title,
-            author,
-            genre,
-            language,
-            description,
-            type,
-            download_url: downloadUrl,
-            cover_url: finalCoverUrl,
-            isbn,
-            external_id: externalId,
-            published_date: publishedDate,
-            publisher,
-            page_count: pageCount ? parseInt(pageCount) : null,
-            narrator: narrator || undefined,
-            audio_length: audioLength || undefined,
-            audio_format: audioFormat || undefined,
-            ebook_format: ebookFormat || undefined,
-            file_size: fileSize || undefined,
-            categories: categories.split(',').map((cat) => cat.trim()).filter(Boolean),
-          });
+          .insert(bookPayload);
         
         if (insertError) {
           throw insertError;
@@ -409,28 +396,6 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
         
         <FormRow>
           <FormGroup>
-            <Label htmlFor="genre">{t('books.genre')} *</Label>
-            <Select
-              id="genre"
-              value={genre}
-              onChange={(e) => setGenre(e.target.value)}
-              required
-            >
-              <option value="">{t('admin.selectGenre')}</option>
-              <option value="Fiction">Fiction</option>
-              <option value="Non-Fiction">Non-Fiction</option>
-              <option value="Science Fiction">Science Fiction</option>
-              <option value="Fantasy">Fantasy</option>
-              <option value="Mystery">Mystery</option>
-              <option value="Thriller">Thriller</option>
-              <option value="Romance">Romance</option>
-              <option value="Biography">Biography</option>
-              <option value="History">History</option>
-              <option value="Self-Help">Self-Help</option>
-            </Select>
-          </FormGroup>
-          
-          <FormGroup>
             <Label htmlFor="language">{t('books.language')} *</Label>
             <Select
               id="language"
@@ -443,9 +408,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               <option value="English">English</option>
             </Select>
           </FormGroup>
-        </FormRow>
-        
-        <FormRow>
+          
           <FormGroup>
             <Label htmlFor="type">{t('books.type')} *</Label>
             <Select
@@ -459,7 +422,9 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               <option value="Hörbuch">{t('books.hörbuch', 'Hörbuch')}</option>
             </Select>
           </FormGroup>
-          
+        </FormRow>
+        
+        <FormRow>
           <FormGroup>
             <Label htmlFor="downloadUrl">{t('admin.externalUrl')} *</Label>
             <Input
@@ -471,8 +436,19 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               required
             />
           </FormGroup>
+          
+          <FormGroup>
+            <Label htmlFor="categories">Kategorien (Kommagetrennt)</Label>
+            <Input
+              id="categories"
+              type="text"
+              value={categories}
+              onChange={(e) => setCategories(e.target.value)}
+              placeholder="Krimi, Thriller, Klassiker"
+            />
+          </FormGroup>
         </FormRow>
-
+        
         <FormRow>
           <FormGroup>
             <Label htmlFor="isbn">{t('books.isbn', 'ISBN')}</Label>
@@ -534,18 +510,8 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
           </FormGroup>
         </FormRow>
         
-        <FormRow>
-          <FormGroup>
-            <Label htmlFor="categories">Kategorien (Kommagetrennt)</Label>
-            <Input
-              id="categories"
-              type="text"
-              value={categories}
-              onChange={(e) => setCategories(e.target.value)}
-              placeholder="Krimi, Thriller, Klassiker"
-            />
-          </FormGroup>
-          {['audiobook', 'Hörbuch'].includes(type) && (
+        {['audiobook', 'Hörbuch'].includes(type) && (
+          <FormRow>
             <FormGroup>
               <Label htmlFor="narrator">Sprecher*in (Narrator)</Label>
               <Input
@@ -556,8 +522,8 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
                 placeholder="Max Mustermann"
               />
             </FormGroup>
-          )}
-        </FormRow>
+          </FormRow>
+        )}
         {['audiobook', 'Hörbuch'].includes(type) && (
           <FormRow>
             <FormGroup>
