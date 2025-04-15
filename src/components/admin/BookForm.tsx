@@ -228,6 +228,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const [publishedDate, setPublishedDate] = useState(book?.published_date || '');
   const [publisher, setPublisher] = useState(book?.publisher || '');
   const [pageCount, setPageCount] = useState(book?.page_count?.toString() || '');
+  const [fictionType, setFictionType] = useState(book?.fictionType || '');
   
   const [coverUrl, setCoverUrl] = useState(book?.cover_url || '');
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -313,6 +314,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
         publisher,
         published_date: publishedDate,
         page_count: pageCount ? Number(pageCount) : undefined,
+        fictionType: fictionType as 'Fiction' | 'Non-Fiction' | undefined,
         narrator: narrator || undefined,
         audio_length: audioLength,
         file_size: fileSize,
@@ -422,6 +424,19 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
         
         <FormRow>
           <FormGroup>
+            <Label htmlFor="fictionType">{t('books.fictionType')}</Label>
+            <Select
+              id="fictionType"
+              value={fictionType}
+              onChange={(e) => setFictionType(e.target.value)}
+            >
+              <option value="">--</option>
+              <option value="Fiction">{t('books.fiction')}</option>
+              <option value="Non-Fiction">{t('books.nonfiction')}</option>
+            </Select>
+          </FormGroup>
+          
+          <FormGroup>
             <Label htmlFor="downloadUrl">{t('admin.externalUrl')} *</Label>
             <Input
               id="downloadUrl"
@@ -432,7 +447,9 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               required
             />
           </FormGroup>
-          
+        </FormRow>
+        
+        <FormRow>
           <FormGroup>
             <Label htmlFor="categories">Kategorien (Kommagetrennt)</Label>
             <Input
@@ -443,9 +460,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               placeholder="Krimi, Thriller, Klassiker"
             />
           </FormGroup>
-        </FormRow>
-        
-        <FormRow>
+          
           <FormGroup>
             <Label htmlFor="isbn">{t('books.isbn', 'ISBN')}</Label>
             <Input
@@ -456,7 +471,9 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               placeholder="9783123456789"
             />
           </FormGroup>
-          
+        </FormRow>
+
+        <FormRow>
           <FormGroup>
             <Label htmlFor="externalId">{t('books.externalId', 'ASIN/External ID')}</Label>
             <Input
@@ -467,9 +484,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               placeholder="B07ABC123D"
             />
           </FormGroup>
-        </FormRow>
-
-        <FormRow>
+          
           <FormGroup>
             <Label htmlFor="publisher">{t('books.publisher', 'Publisher')}</Label>
             <Input
@@ -480,7 +495,9 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               placeholder="Verlag XYZ"
             />
           </FormGroup>
-          
+        </FormRow>
+        
+        <FormRow>
           <FormGroup>
             <Label htmlFor="publishedDate">{t('books.publishedDate', 'Published Date')}</Label>
             <Input
@@ -491,9 +508,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               placeholder="1. Januar 2023"
             />
           </FormGroup>
-        </FormRow>
-        
-        <FormRow>
+          
           <FormGroup>
             <Label htmlFor="pageCount">{t('books.pageCount', 'Page Count')}</Label>
             <Input

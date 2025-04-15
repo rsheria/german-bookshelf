@@ -8,6 +8,7 @@ import { useDownloads } from '../hooks/useDownloads';
 import { useAuth } from '../context/AuthContext';
 import { useRelatedBooks } from '../hooks/useBooks';
 import RatingSystem from './RatingSystem';
+import i18next from 'i18next';
 
 interface BookDetailsProps {
   book: Book;
@@ -594,52 +595,138 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
           
           {/* Metadata grid */}
           <MetadataGrid>
-            <MetadataSection>
-              <MetadataLabel>{t('books.genre')}</MetadataLabel>
-              <MetadataValue>{book.genre}</MetadataValue>
-            </MetadataSection>
+            {/* FICTION/NON-FICTION FIELD */}
+            {book.fictionType && (
+              <MetadataSection>
+                <MetadataLabel>{t('books.fictionType')}</MetadataLabel>
+                <MetadataValue>
+                  {(() => {
+                    const key = `fictionType.${book.fictionType.toLowerCase()}`;
+                    const localized = i18next.t(key);
+                    return localized !== key ? localized : book.fictionType;
+                  })()}
+                </MetadataValue>
+              </MetadataSection>
+            )}
             
+            {/* GENRE: Show as a clean, deduplicated, comma-separated list, localized */}
+            {book.genre && (
+              <MetadataSection>
+                <MetadataLabel>{t('books.genre')}</MetadataLabel>
+                <MetadataValue>
+                  {(() => {
+                    // Clean genre string: remove 'Kindle eBooks', split by '>', '&', ',', deduplicate, trim, join
+                    const blacklist = ['kindle ebooks'];
+                    let parts = book.genre
+                      .replace(/Kindle eBooks/gi, '')
+                      .split(/>|&|,/)
+                      .map(p => p.trim())
+                      .filter(Boolean)
+                      .map(p => p.replace(/\(\d+\)$/g, '').trim().toLowerCase())
+                      .filter((p, i, arr) => p && arr.indexOf(p) === i && !blacklist.includes(p));
+                    // Localize each part if translation exists
+                    parts = parts.map(p => {
+                      const key = `categories.${p}`;
+                      const localized = i18next.t(key);
+                      // Only use localized if actually translated (not the same as key)
+                      return localized !== key ? localized : p.replace(/\b\w/g, c => c.toUpperCase());
+                    });
+                    return parts.join(', ');
+                  })()}
+                </MetadataValue>
+              </MetadataSection>
+            )}
+
+            {/* TYPE */}
             <MetadataSection>
               <MetadataLabel>{t('books.type')}</MetadataLabel>
               <MetadataValue>{book.type === 'audiobook' || book.type === 'Hörbuch' ? t('books.audiobook') : t('books.ebook')}</MetadataValue>
             </MetadataSection>
-            
+
+            {/* AUDIOBOOK FIELDS */}
+            {(book.type === 'audiobook' || book.type === 'Hörbuch') && (
+              <>
+                {book.narrator && (
+                  <MetadataSection>
+                    <MetadataLabel>{t('books.narrator')}</MetadataLabel>
+                    <MetadataValue>{book.narrator}</MetadataValue>
+                  </MetadataSection>
+                )}
+                {book.audio_length && (
+                  <MetadataSection>
+                    <MetadataLabel>{t('books.audioLength')}</MetadataLabel>
+                    <MetadataValue>{book.audio_length}</MetadataValue>
+                  </MetadataSection>
+                )}
+                {book.audio_format && (
+                  <MetadataSection>
+                    <MetadataLabel>{t('books.audioFormat')}</MetadataLabel>
+                    <MetadataValue>{book.audio_format}</MetadataValue>
+                  </MetadataSection>
+                )}
+              </>
+            )}
+
+            {/* EBOOK FIELDS */}
+            {book.type === 'ebook' && (
+              <>
+                {book.ebook_format && (
+                  <MetadataSection>
+                    <MetadataLabel>{t('books.ebookFormat')}</MetadataLabel>
+                    <MetadataValue>{book.ebook_format}</MetadataValue>
+                  </MetadataSection>
+                )}
+                {book.page_count && (
+                  <MetadataSection>
+                    <MetadataLabel>{t('books.pages')}</MetadataLabel>
+                    <MetadataValue>{book.page_count}</MetadataValue>
+                  </MetadataSection>
+                )}
+              </>
+            )}
+
+            {/* FILE SIZE (for both types) */}
+            {book.file_size && (
+              <MetadataSection>
+                <MetadataLabel>{t('books.fileSize')}</MetadataLabel>
+                <MetadataValue>{book.file_size}</MetadataValue>
+              </MetadataSection>
+            )}
+
+            {/* PUBLISHER */}
             {book.publisher && (
               <MetadataSection>
                 <MetadataLabel>{t('books.publisher')}</MetadataLabel>
                 <MetadataValue>{book.publisher}</MetadataValue>
               </MetadataSection>
             )}
-            
+
+            {/* YEAR */}
             {book.published_date && (
               <MetadataSection>
                 <MetadataLabel>{t('books.year')}</MetadataLabel>
                 <MetadataValue>{new Date(book.published_date).getFullYear()}</MetadataValue>
               </MetadataSection>
             )}
-            
-            {book.page_count && (
-              <MetadataSection>
-                <MetadataLabel>{t('books.pages')}</MetadataLabel>
-                <MetadataValue>{book.page_count}</MetadataValue>
-              </MetadataSection>
-            )}
-            
+
+            {/* LANGUAGE */}
             <MetadataSection>
               <MetadataLabel>{t('books.language')}</MetadataLabel>
               <MetadataValue>{book.language}</MetadataValue>
             </MetadataSection>
-            
+
+            {/* ISBN */}
             {book.isbn && (
               <MetadataSection>
                 <MetadataLabel>ISBN</MetadataLabel>
                 <MetadataValue>{book.isbn}</MetadataValue>
               </MetadataSection>
             )}
-            
+
+            {/* EXTERNAL ID */}
             {book.external_id && (
               <MetadataSection>
-                <MetadataLabel>ID</MetadataLabel>
+                <MetadataLabel>{t('books.id')}</MetadataLabel>
                 <MetadataValue>{book.external_id}</MetadataValue>
               </MetadataSection>
             )}
@@ -648,11 +735,29 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
           {/* Categories */}
           {book.categories && book.categories.length > 0 && (
             <div style={{ margin: '16px 0' }}>
-              <MetadataLabel>Kategorien:</MetadataLabel>
+              <MetadataLabel>{t('books.categories')}</MetadataLabel>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {book.categories.map((cat) => (
-                  <CategoryTag key={cat} to={`/books?category=${encodeURIComponent(cat)}`}>{cat}</CategoryTag>
-                ))}
+                {(() => {
+                  // Flatten, clean, deduplicate, remove 'Kindle eBooks', split by '>', '&', ','
+                  const blacklist = ['kindle ebooks'];
+                  const all = book.categories.flatMap(cat =>
+                    cat
+                      .replace(/Kindle eBooks/gi, '')
+                      .split(/>|&|,/)
+                      .map(p => p.trim())
+                      .filter(Boolean)
+                      .map(p => p.replace(/\(\d+\)$/g, '').trim().toLowerCase())
+                  );
+                  const unique = Array.from(new Set(all.filter(p => p && !blacklist.includes(p))));
+                  return unique.map(cat => {
+                    const key = `categories.${cat}`;
+                    const label = i18next.t(key);
+                    const display = label !== key ? label : cat.replace(/\b\w/g, c => c.toUpperCase());
+                    return (
+                      <CategoryTag key={cat} to={`/books?category=${encodeURIComponent(cat)}`}>{display}</CategoryTag>
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}

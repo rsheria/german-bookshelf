@@ -53,7 +53,27 @@
       "title": "Title",
       "author": "Author",
       "newest": "Newest"
-    }
+    },
+    "narrator": "Narrator",
+    "audioLength": "Duration",
+    "audioFormat": "Audio Format",
+    "ebookFormat": "Ebook Format",
+    "fileSize": "File Size",
+    "pages": "Pages",
+    "publisher": "Publisher",
+    "year": "Year",
+    "id": "ID",
+    "fictionType": "Fiction/Non-Fiction",
+    "fiction": "Fiction",
+    "nonfiction": "Non-Fiction"
+  },
+  "categories": {
+    "mystery": "Mystery",
+    "thriller": "Thriller",
+    "suspense": "Suspense",
+    "crime": "Crime",
+    "cozy mystery": "Cozy Mystery",
+    "amateur sleuths": "Amateur Sleuths"
   },
   "profile": {
     "title": "Your Profile",
@@ -92,7 +112,10 @@
     "addSuccess": "Book added successfully!",
     "updateSuccess": "Book updated successfully!",
     "deleteSuccess": "Book deleted successfully!",
-    "userUpdateSuccess": "User updated successfully!"
+    "userUpdateSuccess": "User updated successfully!",
+    "fictionType": "Fiction/Non-Fiction",
+    "fiction": "Fiction",
+    "nonfiction": "Non-Fiction"
   },
   "common": {
     "save": "Save",

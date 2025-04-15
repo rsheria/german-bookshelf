@@ -29,6 +29,8 @@ export interface Book {
   ebook_format?: string; // Ebook file format (e.g., 'EPUB', 'PDF')
   file_size?: string; // File size (e.g., '250MB')
   categories?: string[]; // Categories/genres as an array
+  fictionType?: 'Fiction' | 'Non-Fiction';
+
 }
 
 export interface Profile {

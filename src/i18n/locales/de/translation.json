@@ -53,7 +53,27 @@
       "title": "Titel",
       "author": "Autor",
       "newest": "Neueste"
-    }
+    },
+    "narrator": "Sprecher",
+    "audioLength": "Dauer",
+    "audioFormat": "Audioformat",
+    "ebookFormat": "E-Book-Format",
+    "fileSize": "Dateigröße",
+    "pages": "Seiten",
+    "publisher": "Verlag",
+    "year": "Erscheinungsjahr",
+    "id": "ID",
+    "fictionType": "Belletristik/Sachbuch",
+    "fiction": "Belletristik",
+    "nonfiction": "Sachbuch"
+  },
+  "categories": {
+    "mystery": "Krimi",
+    "thriller": "Thriller",
+    "suspense": "Spannung",
+    "crime": "Verbrechen",
+    "cozy mystery": "Gemütlicher Krimi",
+    "amateur sleuths": "Amateurdetektive"
   },
   "profile": {
     "title": "Ihr Profil",
@@ -92,7 +112,10 @@
     "addSuccess": "Buch erfolgreich hinzugefügt!",
     "updateSuccess": "Buch erfolgreich aktualisiert!",
     "deleteSuccess": "Buch erfolgreich gelöscht!",
-    "userUpdateSuccess": "Benutzer erfolgreich aktualisiert!"
+    "userUpdateSuccess": "Benutzer erfolgreich aktualisiert!",
+    "fictionType": "Belletristik/Sachbuch",
+    "fiction": "Belletristik",
+    "nonfiction": "Sachbuch"
   },
   "common": {
     "save": "Speichern",
