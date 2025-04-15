@@ -90,8 +90,13 @@ const AddBookPage: React.FC = () => {
   // Helper: normalize type based on language
   const normalizeType = (rawType: string | undefined, lang: string | undefined): Book['type'] | undefined => {
     if (!rawType) return undefined;
-    const t = rawType.toLowerCase();
-    if (t === 'ebook' || t === 'e-book') return 'ebook';
+    const t = rawType.toLowerCase().replace(/\s|-/g, '');
+    // Normalize all ebook/print variants
+    if ([
+      'ebook', 'ebook', 'ebook', 'ebook', 'e-book', 'ebook', 'print', 'paperback', 'hardcover', 'gebunden', 'broschiert', 'taschenbuch', 'kartoniert', 'printedbook', 'buch', 'book'
+    ].includes(t)) {
+      return 'ebook';
+    }
     if (lang === 'German' && (t === 'audiobook' || t === 'hörbuch' || t === 'hoerbuch')) return 'Hörbuch';
     if (lang === 'English' && (t === 'audiobook' || t === 'hörbuch' || t === 'hoerbuch')) return 'audiobook';
     // fallback: if language unknown, preserve original but cast to Book['type']
