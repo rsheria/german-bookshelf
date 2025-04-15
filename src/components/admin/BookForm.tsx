@@ -509,6 +509,32 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
             />
           </FormGroup>
         </FormRow>
+        
+        {['audiobook', 'Hörbuch'].includes(type) && (
+          <FormRow>
+            <FormGroup>
+              <Label htmlFor="narrator">Sprecher*in (Narrator)</Label>
+              <Input
+                id="narrator"
+                type="text"
+                value={narrator}
+                onChange={(e) => setNarrator(e.target.value)}
+                placeholder="Max Mustermann"
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="audioLength">Hörbuch-Länge (Audio Duration)</Label>
+              <Input
+                id="audioLength"
+                type="text"
+                value={audioLength}
+                onChange={(e) => setAudioLength(e.target.value)}
+                placeholder="z.B. 11 hrs and 47 mins, 10h 23m, 7:30, ..."
+              />
+            </FormGroup>
+          </FormRow>
+        )}
+        
         <FormRow>
           <FormGroup>
             <Label htmlFor="fileSize">Dateigröße (File Size)</Label>
@@ -518,16 +544,6 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               value={fileSize}
               onChange={(e) => setFileSize(e.target.value)}
               placeholder="z.B. 250MB"
-            />
-          </FormGroup>
-          <FormGroup>
-            <Label htmlFor="audioLength">Hörbuch-Länge (Audio Duration)</Label>
-            <Input
-              id="audioLength"
-              type="text"
-              value={audioLength}
-              onChange={(e) => setAudioLength(e.target.value)}
-              placeholder="z.B. 10h 23m"
             />
           </FormGroup>
         </FormRow>
