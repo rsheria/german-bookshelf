@@ -226,6 +226,13 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const [coverUrl, setCoverUrl] = useState(book?.cover_url || '');
   const [coverFile, setCoverFile] = useState<File | null>(null);
   
+  const [narrator, setNarrator] = useState(book?.narrator || '');
+  const [audioLength, setAudioLength] = useState(book?.audio_length || '');
+  const [audioFormat, setAudioFormat] = useState(book?.audio_format || '');
+  const [ebookFormat, setEbookFormat] = useState(book?.ebook_format || '');
+  const [fileSize, setFileSize] = useState(book?.file_size || '');
+  const [categories, setCategories] = useState(book?.categories ? book.categories.join(', ') : '');
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -305,7 +312,13 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
             external_id: externalId,
             published_date: publishedDate,
             publisher,
-            page_count: pageCount ? parseInt(pageCount) : null
+            page_count: pageCount ? parseInt(pageCount) : null,
+            narrator: narrator || undefined,
+            audio_length: audioLength || undefined,
+            audio_format: audioFormat || undefined,
+            ebook_format: ebookFormat || undefined,
+            file_size: fileSize || undefined,
+            categories: categories.split(',').map((cat) => cat.trim()).filter(Boolean),
           })
           .eq('id', book.id);
         
@@ -330,7 +343,13 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
             external_id: externalId,
             published_date: publishedDate,
             publisher,
-            page_count: pageCount ? parseInt(pageCount) : null
+            page_count: pageCount ? parseInt(pageCount) : null,
+            narrator: narrator || undefined,
+            audio_length: audioLength || undefined,
+            audio_format: audioFormat || undefined,
+            ebook_format: ebookFormat || undefined,
+            file_size: fileSize || undefined,
+            categories: categories.split(',').map((cat) => cat.trim()).filter(Boolean),
           });
         
         if (insertError) {
@@ -514,6 +533,79 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
             />
           </FormGroup>
         </FormRow>
+        
+        <FormRow>
+          <FormGroup>
+            <Label htmlFor="categories">Kategorien (Kommagetrennt)</Label>
+            <Input
+              id="categories"
+              type="text"
+              value={categories}
+              onChange={(e) => setCategories(e.target.value)}
+              placeholder="Krimi, Thriller, Klassiker"
+            />
+          </FormGroup>
+          {['audiobook', 'Hörbuch'].includes(type) && (
+            <FormGroup>
+              <Label htmlFor="narrator">Sprecher*in (Narrator)</Label>
+              <Input
+                id="narrator"
+                type="text"
+                value={narrator}
+                onChange={(e) => setNarrator(e.target.value)}
+                placeholder="Max Mustermann"
+              />
+            </FormGroup>
+          )}
+        </FormRow>
+        {['audiobook', 'Hörbuch'].includes(type) && (
+          <FormRow>
+            <FormGroup>
+              <Label htmlFor="audioLength">Hörbuch-Länge (z.B. 10h 23m)</Label>
+              <Input
+                id="audioLength"
+                type="text"
+                value={audioLength}
+                onChange={(e) => setAudioLength(e.target.value)}
+                placeholder="10h 23m"
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="audioFormat">Audio-Format</Label>
+              <Input
+                id="audioFormat"
+                type="text"
+                value={audioFormat}
+                onChange={(e) => setAudioFormat(e.target.value)}
+                placeholder="MP3"
+              />
+            </FormGroup>
+          </FormRow>
+        )}
+        {type === 'ebook' && (
+          <FormRow>
+            <FormGroup>
+              <Label htmlFor="ebookFormat">Ebook-Format</Label>
+              <Input
+                id="ebookFormat"
+                type="text"
+                value={ebookFormat}
+                onChange={(e) => setEbookFormat(e.target.value)}
+                placeholder="EPUB, PDF"
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="fileSize">Dateigröße</Label>
+              <Input
+                id="fileSize"
+                type="text"
+                value={fileSize}
+                onChange={(e) => setFileSize(e.target.value)}
+                placeholder="250MB"
+              />
+            </FormGroup>
+          </FormRow>
+        )}
         
         <FormRow>
           <FormGroup>

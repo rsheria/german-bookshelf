@@ -21,6 +21,14 @@ export interface Book {
   published_date?: string; // Publication date
   publisher?: string; // Publisher name
   page_count?: number; // Number of pages (for ebooks)
+
+  // New fields for audiobooks/ebooks
+  narrator?: string; // Audiobook narrator
+  audio_length?: string; // Audiobook length (e.g., '10h 23m')
+  audio_format?: string; // Audiobook file format (e.g., 'MP3')
+  ebook_format?: string; // Ebook file format (e.g., 'EPUB', 'PDF')
+  file_size?: string; // File size (e.g., '250MB')
+  categories?: string[]; // Categories/genres as an array
 }
 
 export interface Profile {
