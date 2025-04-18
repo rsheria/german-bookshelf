@@ -147,14 +147,70 @@ export const FilterPanel: React.FC = () => {
     })();
   }, [t]);
 
-  const fileTypeOptions = [
+  const [fileTypeOptions, setFileTypeOptions] = useState<{ value: string; label: string }[]>([
     { value: '', label: `${t('filter.allFormats', 'All Formats')}` },
     { value: 'pdf', label: 'PDF' },
     { value: 'epub', label: 'EPUB' },
     { value: 'mobi', label: 'MOBI' },
-    { value: 'mp3', label: 'MP3' },
-    // Add more file types as needed
-  ];
+    { value: 'azw3', label: 'AZW3' },
+    { value: 'mp3', label: 'MP3' }
+  ]);
+  
+  // Fetch available file formats from database
+  useEffect(() => {
+    (async () => {
+      try {
+        // First get unique ebook formats
+        const { data: ebookData } = await supabase
+          .from('books')
+          .select('ebook_format')
+          .not('ebook_format', 'is', null);
+          
+        // Then get unique audio formats
+        const { data: audioData } = await supabase
+          .from('books')
+          .select('audio_format')
+          .not('audio_format', 'is', null);
+          
+        // Process and combine all formats
+        const formatSet = new Set<string>();
+        
+        // Process ebook formats
+        ebookData?.forEach(book => {
+          if (book.ebook_format) {
+            book.ebook_format.split(',').forEach((format: string) => {
+              formatSet.add(format.trim().toLowerCase());
+            });
+          }
+        });
+        
+        // Process audio formats
+        audioData?.forEach(book => {
+          if (book.audio_format) {
+            book.audio_format.split(',').forEach((format: string) => {
+              formatSet.add(format.trim().toLowerCase());
+            });
+          }
+        });
+        
+        // Convert to array and sort
+        const formats = Array.from(formatSet).sort();
+        
+        // Only update if we found formats
+        if (formats.length > 0) {
+          setFileTypeOptions([
+            { value: '', label: `${t('filter.allFormats', 'All Formats')}` },
+            ...formats.map(fmt => ({
+              value: fmt,
+              label: fmt.toUpperCase()
+            }))
+          ]);
+        }
+      } catch (error) {
+        console.error('Error fetching file formats:', error);
+      }
+    })();
+  }, [t]);
   
   const fictionTypeOptions = [
     { value: 'all', label: `${t('filter.allFictionTypes', 'All Fiction Types')}` },

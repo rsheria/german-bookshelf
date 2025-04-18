@@ -103,6 +103,13 @@ const SearchResultsContent: React.FC = () => {
         query = query.eq('language', filters.language);
       }
       
+      // Apply file type filter
+      if (filters.fileType) {
+        // Need to check both ebook_format and audio_format fields
+        query = query.or(`ebook_format.ilike.%${filters.fileType}%,audio_format.ilike.%${filters.fileType}%`);
+        console.log(`Applied file type filter: ${filters.fileType}`);
+      }
+      
       if (filters.bookType !== 'all') {
         query = query.eq('type', filters.bookType);
         console.log(`Applied book type filter: ${filters.bookType}`);

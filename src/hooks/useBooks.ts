@@ -44,6 +44,7 @@ interface UseBooksProps {
   limit?: number;
   page?: number;
   categories?: string[];
+  fileType?: string | null;
 }
 
 interface UseBooksResult {
@@ -61,7 +62,8 @@ export const useBooks = ({
   year = null,
   limit = 12,
   page = 0,
-  categories = []
+  categories = [],
+  fileType = null
 }: UseBooksProps = {}): UseBooksResult => {
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -166,6 +168,13 @@ export const useBooks = ({
           console.log('Filtering by year:', year);
           query = query.filter('published_date', 'gte', `${year}-01-01`)
                        .filter('published_date', 'lte', `${year}-12-31`);
+        }
+        
+        // Add file type filtering
+        if (fileType) {
+          console.log('Filtering by file format:', fileType);
+          // Need to check both ebook_format and audio_format fields
+          query = query.or(`ebook_format.ilike.%${fileType}%,audio_format.ilike.%${fileType}%`);
         }
         
         if (searchTerm) {
