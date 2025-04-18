@@ -36,10 +36,20 @@ const FormRow = styled.div`
   }
 `;
 
+const CenteredFormRow = styled(FormRow)`
+  justify-content: center;
+`;
+
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+`;
+
+const FullRowFormGroup = styled(FormGroup)`
+  grid-column: span 2;
+  text-align: center;
+  align-items: center;
 `;
 
 const Label = styled.label`
@@ -205,6 +215,57 @@ const AlertSuccess = styled(Alert)`
   border: 1px solid ${({ theme }) => theme.colors.success};
 `;
 
+const CheckboxGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, auto));
+  gap: 0.75rem;
+  justify-content: center;
+  align-items: center;
+  margin: 0.5rem 0;
+`;
+
+const CheckboxLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+`;
+
+// Styled dropdown for file types
+const Dropdown = styled.details`
+  position: relative;
+  display: inline-block;
+  margin: 0.5rem auto;
+  min-width: 200px;
+`;
+
+const DropdownSummary = styled.summary`
+  list-style: none;
+  cursor: pointer;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 0.75rem 1rem;
+  text-align: center;
+  background-color: ${({ theme }) => theme.colors.input};
+  color: ${({ theme }) => theme.colors.text};
+  &::-webkit-details-marker { display: none; }
+`;
+
+const DropdownContent = styled.div`
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: ${({ theme }) => theme.colors.input};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 0.5rem;
+  box-shadow: ${({ theme }) => theme.shadows.sm};
+  z-index: 100;
+`;
+
 const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -236,6 +297,13 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const [narrator, setNarrator] = useState(book?.narrator || '');
   const [audioLength, setAudioLength] = useState(book?.audio_length || '');
   const [fileSize, setFileSize] = useState(book?.file_size || '');
+  const [fileTypes, setFileTypes] = useState<string[]>(() => (
+    book?.type === 'ebook'
+      ? (book.ebook_format ? book.ebook_format.split(',').map(f => f.trim()) : [])
+      : book?.type === 'audiobook'
+        ? (book.audio_format ? book.audio_format.split(',').map(f => f.trim()) : [])
+        : []
+  ));
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -318,6 +386,8 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
         narrator: narrator || undefined,
         audio_length: audioLength,
         file_size: fileSize,
+        ebook_format: type === 'ebook' ? fileTypes.join(',') : undefined,
+        audio_format: type === 'audiobook' ? fileTypes.join(',') : undefined,
         categories: categories.split(',').map((cat) => cat.trim()).filter(Boolean),
       };
       
@@ -412,12 +482,11 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
             <Select
               id="type"
               value={type}
-              onChange={(e) => setType(e.target.value as 'ebook' | 'audiobook' | 'Hörbuch')}
+              onChange={(e) => setType(e.target.value as Book['type'])}
               required
             >
               <option value="ebook">E-Book</option>
-              {language === 'German' && <option value="Hörbuch">Hörbuch</option>}
-              {language === 'English' && <option value="audiobook">Audiobook</option>}
+              <option value="audiobook">Hörbuch (Audiobook)</option>
             </Select>
           </FormGroup>
         </FormRow>
@@ -521,26 +590,27 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
           </FormGroup>
         </FormRow>
         
-        {['audiobook', 'Hörbuch'].includes(type) && (
+        {/* Always show audiobook fields */}
+        {true && (
           <FormRow>
             <FormGroup>
-              <Label htmlFor="narrator">Sprecher*in (Narrator)</Label>
+              <Label htmlFor="narrator" style={{ fontWeight: 'bold' }}>Sprecher*in (Narrator)</Label>
               <Input
                 id="narrator"
                 type="text"
                 value={narrator}
                 onChange={(e) => setNarrator(e.target.value)}
-                placeholder="Max Mustermann"
+                placeholder="Max Mustermann, Elisa Schmidt"
               />
             </FormGroup>
             <FormGroup>
-              <Label htmlFor="audioLength">Hörbuch-Länge (Audio Duration)</Label>
+              <Label htmlFor="audioLength" style={{ fontWeight: 'bold' }}>Hörbuch-Länge (Audio Length)</Label>
               <Input
                 id="audioLength"
                 type="text"
                 value={audioLength}
                 onChange={(e) => setAudioLength(e.target.value)}
-                placeholder="z.B. 11 hrs and 47 mins, 10h 23m, 7:30, ..."
+                placeholder="11 hrs and 47 mins, 10h 23m, 7:30:00"
               />
             </FormGroup>
           </FormRow>
@@ -558,6 +628,40 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
             />
           </FormGroup>
         </FormRow>
+        
+        <CenteredFormRow>
+          <FullRowFormGroup>
+            <Label>{t('admin.fileTypes', 'File Type(s)')}</Label>
+            <Dropdown>
+              <DropdownSummary>
+                {fileTypes.length > 0
+                  ? fileTypes.map(f => f.toUpperCase()).join(', ')
+                  : t('admin.selectFormats', 'Select Formats')
+                }
+              </DropdownSummary>
+              <DropdownContent>
+                <CheckboxGrid>
+                  {['pdf','epub','mobi','azw3','mp3'].map((ft) => (
+                    <CheckboxLabel key={ft}>
+                      <input
+                        type="checkbox"
+                        value={ft}
+                        checked={fileTypes.includes(ft)}
+                        onChange={(e) => {
+                          const { checked } = e.target;
+                          setFileTypes(prev =>
+                            checked ? [...prev, ft] : prev.filter(x => x !== ft)
+                          );
+                        }}
+                      />
+                      {ft.toUpperCase()}
+                    </CheckboxLabel>
+                  ))}
+                </CheckboxGrid>
+              </DropdownContent>
+            </Dropdown>
+          </FullRowFormGroup>
+        </CenteredFormRow>
         
         <FormRow>
           <FormGroup>
