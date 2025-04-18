@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
+import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 
 import theme from '../styles/theme';
 import darkTheme from '../styles/darkTheme';
@@ -43,11 +44,16 @@ export const ThemeProvider = ({ children }: Props) => {
 
   const currentTheme = isDark ? darkTheme : theme;
 
+  // MUI theme for Material UI components
+  const muiTheme = createTheme();
+
   return (
     <ThemeContext.Provider value={{ toggleTheme, isDark }}>
-      <StyledThemeProvider theme={currentTheme}>
-        {children}
-      </StyledThemeProvider>
+      <MuiThemeProvider theme={muiTheme}>
+        <StyledThemeProvider theme={currentTheme}>
+          {children}
+        </StyledThemeProvider>
+      </MuiThemeProvider>
     </ThemeContext.Provider>
   );
 };

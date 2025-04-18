@@ -36,16 +36,22 @@ const MainContent = styled.div`
 `;
 
 const SearchResultsContent: React.FC = () => {
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   // const { t } = useTranslation(); // Will use this later with more UI text
   const { filters } = useBookFilter();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const location = useLocation();
   const [searchParams] = useSearchParams();
   
+  useEffect(() => {
+    // Sync URL 'category' param into selectedCategories
+    const catParam = searchParams.get('category');
+    setSelectedCategories(catParam ? catParam.split(',') : []);
+  }, [location.search]);
+
   useEffect(() => {
     // Initialize filters from URL parameters if present
     const queryParam = searchParams.get('query');
@@ -58,7 +64,7 @@ const SearchResultsContent: React.FC = () => {
     setPage(1);
     setHasMore(true);
     fetchBooks();
-  }, [filters, location.search]);
+  }, [filters, selectedCategories, location.search]);
   
   const fetchBooks = async () => {
     if (loading) return;
@@ -85,12 +91,12 @@ const SearchResultsContent: React.FC = () => {
       }
       
       if (filters.yearFrom) {
-        // Assuming you have a published_year field
-        query = query.gte('published_date', filters.yearFrom.toString());
+        // filter by integer year column
+        query = query.gte('published_year', filters.yearFrom);
       }
       
       if (filters.yearTo) {
-        query = query.lte('published_date', filters.yearTo.toString());
+        query = query.lte('published_year', filters.yearTo);
       }
       
       if (filters.language) {
@@ -99,6 +105,25 @@ const SearchResultsContent: React.FC = () => {
       
       if (filters.bookType !== 'all') {
         query = query.eq('type', filters.bookType);
+        console.log(`Applied book type filter: ${filters.bookType}`);
+      }
+      
+      // Apply fiction type filter - ONLY if a specific fiction type is selected
+      if (filters.fictionType && filters.fictionType !== 'all') {
+        query = query.eq('fictionType', filters.fictionType);
+        console.log(`Applied fiction type filter: ${filters.fictionType}`);
+      } else {
+        console.log('No fiction type filter applied - showing all fiction types');
+      }
+      
+      // Apply category filters (OR) for selectedCategories
+      if (selectedCategories.length > 0) {
+        const categoryFilters: string[] = [];
+        for (const category of selectedCategories) {
+          const cat = category.trim();
+          if (cat) categoryFilters.push(`categories.cs.{${cat}}`);
+        }
+        query = query.or(categoryFilters.join(','));
       }
       
       // Apply sorting
@@ -117,7 +142,8 @@ const SearchResultsContent: React.FC = () => {
           query = query.order('title', { ascending: false });
           break;
         case 'year':
-          query = query.order('published_date', { ascending: false });
+          // sort by numeric year
+          query = query.order('published_year', { ascending: false });
           break;
         // Size ordering would require a file_size field
         default:
@@ -129,11 +155,19 @@ const SearchResultsContent: React.FC = () => {
       query = query
         .range((page - 1) * pageSize, page * pageSize - 1);
       
+      console.log('Executing advanced search with filters:', {
+        query: filters.query,
+        bookType: filters.bookType,
+        fictionType: filters.fictionType,
+        categories: selectedCategories
+      });
+      
       const { data, error } = await query;
       
       if (error) {
         console.error('Error fetching books:', error);
       } else if (data) {
+        console.log(`Advanced search found ${data.length} results`);
         // Append books for pagination
         if (page > 1) {
           setBooks(prev => [...prev, ...data]);
@@ -158,12 +192,15 @@ const SearchResultsContent: React.FC = () => {
   return (
     <PageContainer>
       <SearchHeader>
-        <SearchBar onToggleFilters={() => setShowFilters(!showFilters)} />
-        {showFilters && <FilterPanel />}
+        <SearchBar />
+        <FilterPanel />
       </SearchHeader>
       
       <ContentContainer>
-        <CategorySidebar />
+        <CategorySidebar
+          selectedCategories={selectedCategories}
+          setSelectedCategories={setSelectedCategories}
+        />
         
         <MainContent>
           <BookList 

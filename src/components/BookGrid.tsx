@@ -130,7 +130,9 @@ const Spinner = styled(FiLoader)`
   }
 `;
 
-const BookGrid: React.FC<BookGridProps> = ({ books, isLoading, error, title, subtitle }) => {
+const BookGrid: React.FC<BookGridProps> = ({ books = [], isLoading = false, error = null, title, subtitle }) => {
+  // Debug info about current books
+  console.log('BOOK GRID RENDERING WITH', books.length, 'BOOKS');
   const { t } = useTranslation();
 
   const renderContent = () => {

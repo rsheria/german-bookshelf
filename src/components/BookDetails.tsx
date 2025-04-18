@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled, { keyframes } from 'styled-components';
 import { Link } from 'react-router-dom';
@@ -28,7 +28,7 @@ const BreadcrumbSeparator = styled.span`
 `;
 
 const CategoryLink = styled(Link)`
-  color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
   
   &:hover {
@@ -89,7 +89,7 @@ const Author = styled.h2`
   margin: 0 0 ${({ theme }) => theme.spacing.md} 0;
   font-size: ${({ theme }) => theme.typography.fontSize.lg};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text};
   cursor: pointer;
   
   &:hover {
@@ -106,7 +106,7 @@ const RatingContainer = styled.div`
 
 const Stars = styled.div`
   display: flex;
-  color: #f8ba00;
+  color: ${({ theme }) => theme.colors.text};
   margin-right: ${({ theme }) => theme.spacing.sm};
 `;
 
@@ -156,7 +156,7 @@ const Description = styled.div`
 const ReadMoreButton = styled.button`
   background: none;
   border: none;
-  color: #F3C775; /* Gold color for better visibility in dark mode */
+  color: ${({ theme }) => theme.colors.text};
   cursor: pointer;
   font-size: 14px;
   padding: 6px 12px;
@@ -166,17 +166,17 @@ const ReadMoreButton = styled.button`
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   transition: all 0.2s ease;
-  background-color: rgba(243, 199, 117, 0.1); /* Very light gold background */
+  background-color: rgba(0, 0, 0, 0.05); /* Very light gray background */
   
   &:hover {
-    background-color: rgba(243, 199, 117, 0.2); /* Slightly more visible on hover */
+    background-color: rgba(0, 0, 0, 0.1); /* Slightly more visible on hover */
     text-decoration: underline;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
   
   &:focus {
-    outline: 2px solid rgba(243, 199, 117, 0.5);
+    outline: 2px solid rgba(0, 0, 0, 0.5);
   }
   
   &:after {
@@ -194,30 +194,58 @@ const Divider = styled.hr`
   width: 100%;
 `;
 
-// Metadata grid
-const MetadataGrid = styled.div`
+// ZLibrary-inspired, minimalist, neutral two-column metadata grid
+const MetadataGrid = styled.div.attrs({ className: 'force-dark-metadata' })`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: ${({ theme }) => theme.spacing.md};
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-  
-  @media (min-width: 992px) {
-    grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 1fr 1fr;
+  gap: 0px 36px;
+  background: ${({ theme }) => theme.mode === 'dark' ? '#23272f' : 'transparent'};
+  border-radius: 16px;
+  border: ${({ theme }) => theme.mode === 'dark' ? '1.5px solid #2d3748' : 'none'};
+  margin: 2.2rem auto 2.2rem auto;
+  max-width: 820px;
+  padding: ${({ theme }) => theme.mode === 'dark' ? '26px 22px' : '0'};
+  box-shadow: ${({ theme }) => theme.mode === 'dark' ? '0 2px 12px rgba(20,20,30,0.18)' : 'none'};
+  @media (max-width: 700px) {
+    grid-template-columns: 1fr;
+    gap: 0;
   }
 `;
 
-const MetadataSection = styled.div``;
+const MetadataRow = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 13px;
+`;
 
 const MetadataLabel = styled.div`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-bottom: 4px;
+  min-width: 110px;
+  color: ${({ theme }) => theme.mode === 'dark' ? '#f1f1f1 !important' : '#374151'};
+  font-size: 15px;
+  font-weight: ${({ theme }) => theme.mode === 'dark' ? '700 !important' : '600'};
+  text-align: left;
+  margin-right: 10px;
+  letter-spacing: 0.01em;
+  opacity: 1 !important;
+`;
+
+const MetadataArrow = styled.span`
+  display: inline-block;
+  margin: 0 10px 0 2px;
+  color: ${({ theme }) => theme.mode === 'dark' ? '#fff !important' : '#9ca3af'};
+  font-size: 1.12em;
+  font-weight: 700;
+  vertical-align: middle;
+  user-select: none;
 `;
 
 const MetadataValue = styled.div`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.text};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.mode === 'dark' ? '#fff !important' : '#222'};
+  font-size: 15.5px;
+  font-weight: ${({ theme }) => theme.mode === 'dark' ? '700 !important' : '500'};
+  word-break: break-word;
+  letter-spacing: 0.01em;
+  opacity: 1 !important;
 `;
 
 // Action buttons with modern styling
@@ -238,9 +266,9 @@ const DownloadButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: ${({ theme }) => theme.spacing.sm};
-  background-color: ${({ theme }) => theme.colors.primary};
-  color: white;
-  border: none;
+  background-color: ${({ theme }) => theme.colors.backgroundAlt};
+  color: ${({ theme }) => theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
   font-size: ${({ theme }) => theme.typography.fontSize.md};
@@ -250,7 +278,7 @@ const DownloadButton = styled.button`
   min-width: 150px;
 
   &:hover {
-    background-color: ${({ theme }) => theme.colors.primaryLight};
+    background-color: ${({ theme }) => theme.colors.background};
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
@@ -284,7 +312,7 @@ const SecondaryButton = styled.button`
   
   &:hover {
     background-color: ${({ theme }) => theme.colors.backgroundAlt};
-    border-color: ${({ theme }) => theme.colors.primary};
+    border-color: ${({ theme }) => theme.colors.border};
     transform: translateY(-2px);
   }
   
@@ -316,13 +344,13 @@ const LoginPrompt = styled.div`
 `;
 
 const LoginLink = styled(Link)`
-  color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
 
   &:hover {
     text-decoration: underline;
-    color: ${({ theme }) => theme.colors.primaryLight};
+    color: ${({ theme }) => theme.colors.text};
   }
 `;
 
@@ -388,7 +416,7 @@ const RelatedBookTitle = styled(Link)`
   line-height: 1.3;
   
   &:hover {
-    color: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.text};
   }
 `;
 
@@ -422,7 +450,7 @@ const LoadMoreButton = styled.button`
   &:hover {
     background-color: ${({ theme }) => theme.colors.backgroundAlt};
     transform: translateY(-2px);
-    color: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.text};
   }
   
   &:after {
@@ -445,14 +473,14 @@ const spin = keyframes`
 const Spinner = styled(FiLoader)`
   animation: ${spin} 1s linear infinite;
   font-size: 24px;
-  color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 // Add styled tag for categories
 const CategoryTag = styled(Link)`
   display: inline-block;
-  background: ${({ theme }) => theme.colors.primary}22;
-  color: ${({ theme }) => theme.colors.primary};
+  background: ${({ theme }) => theme.colors.backgroundAlt};
+  color: ${({ theme }) => theme.colors.text};
   border-radius: 16px;
   padding: 4px 14px;
   font-size: 13px;
@@ -463,10 +491,31 @@ const CategoryTag = styled(Link)`
   box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   cursor: pointer;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary}55;
-    color: white;
+    background: ${({ theme }) => theme.colors.background};
+    color: ${({ theme }) => theme.colors.text};
   }
 `;
+
+function DarkModeMetadataStyleFix() {
+  useEffect(() => {
+    const id = 'force-dark-metadata-style';
+    if (!document.getElementById(id)) {
+      const style = document.createElement('style');
+      style.id = id;
+      style.innerHTML = `
+        body[data-theme='dark'] .force-dark-metadata div, 
+        body[data-theme='dark'] .force-dark-metadata span {
+          color: #fff !important;
+          background: none !important;
+          border: none !important;
+          opacity: 1 !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+  return null;
+}
 
 const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
   const { t } = useTranslation();
@@ -478,7 +527,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
   const [visibleRelatedBooks, setVisibleRelatedBooks] = useState(12);
   
   // Fetch related books
-  const { relatedBooks, isLoading: relatedBooksLoading } = useRelatedBooks(book, 24);
+  const { relatedBooks, isLoading: relatedBooksLoading } = useRelatedBooks(book);
   
   const handleLoadMore = () => {
     setVisibleRelatedBooks(prev => Math.min(prev + 12, relatedBooks.length));
@@ -502,6 +551,34 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
 
   const placeholderCover = 'https://via.placeholder.com/300x450?text=No+Cover';
   
+  // Utility to extract publisher, year, edition from publisher string
+  function parsePublisher(publisher: string, publishedDate?: string) {
+    if (!publisher) return { name: '', edition: '', year: '' };
+    // Example: 'dtv Verlagsgesellschaft mbH & Co. KG; 2nd edition • 2016'
+    let name = publisher;
+    let edition = '';
+    let year = '';
+    // Extract edition after ';'
+    const parts = publisher.split(';');
+    if (parts.length > 1) {
+      name = parts[0].trim();
+      // Try to extract edition and/or year from the rest
+      const rest = parts[1];
+      // Look for edition (e.g., '2nd edition')
+      const editionMatch = rest.match(/([0-9]+(st|nd|rd|th)? edition)/i);
+      if (editionMatch) edition = editionMatch[1];
+      // Look for year (e.g., '2016')
+      const yearMatch = rest.match(/(19|20)\d{2}/);
+      if (yearMatch) year = yearMatch[0];
+    }
+    // If year not found, try to get from publishedDate
+    if (!year && publishedDate) {
+      const d = new Date(publishedDate);
+      if (!isNaN(d.getTime())) year = d.getFullYear().toString();
+    }
+    return { name: name.replace(/;.*$/, '').trim(), edition, year };
+  }
+
   // Format description with read more functionality
   const fullDescription = book.description || '';
   const displayDescription = isDescriptionExpanded || fullDescription.length <= 300
@@ -563,7 +640,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
           </RatingContainer>
           
           <BookType>
-            {book.type === 'audiobook' || book.type === 'Hörbuch' ? (
+            {book.type === 'audiobook' ? (
               <>
                 <FiHeadphones /> {t('books.audiobook')}
               </>
@@ -575,10 +652,17 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
           </BookType>
           
           {book.publisher && (
-            <PublisherInfo>
-              {book.publisher}
-              {book.published_date && ` • ${new Date(book.published_date).getFullYear()}`}
-            </PublisherInfo>
+            (() => {
+              const { name, edition, year } = parsePublisher(book.publisher, book.published_date);
+              const infoArr = [name];
+              if (year) infoArr.push(year);
+              if (edition) infoArr.push(edition);
+              return (
+                <PublisherInfo>
+                  {infoArr.filter(Boolean).join(' • ')}
+                </PublisherInfo>
+              );
+            })()
           )}
           
           <Description>
@@ -593,143 +677,111 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
           
           <Divider />
           
-          {/* Metadata grid */}
+          {/* ZLibrary-inspired, minimalist, neutral two-column metadata grid */}
           <MetadataGrid>
-            {/* FICTION/NON-FICTION FIELD */}
-            {book.fictionType && (
-              <MetadataSection>
-                <MetadataLabel>{t('books.fictionType')}</MetadataLabel>
-                <MetadataValue>
-                  {(() => {
-                    const key = `fictionType.${book.fictionType.toLowerCase()}`;
-                    const localized = i18next.t(key);
-                    return localized !== key ? localized : book.fictionType;
-                  })()}
-                </MetadataValue>
-              </MetadataSection>
-            )}
-            
-            {/* GENRE: Show as a clean, deduplicated, comma-separated list, localized */}
-            {book.genre && (
-              <MetadataSection>
-                <MetadataLabel>{t('books.genre')}</MetadataLabel>
-                <MetadataValue>
-                  {(() => {
-                    // Clean genre string: remove 'Kindle eBooks', split by '>', '&', ',', deduplicate, trim, join
-                    const blacklist = ['kindle ebooks'];
-                    let parts = book.genre
-                      .replace(/Kindle eBooks/gi, '')
-                      .split(/>|&|,/)
-                      .map(p => p.trim())
-                      .filter(Boolean)
-                      .map(p => p.replace(/\(\d+\)$/g, '').trim().toLowerCase())
-                      .filter((p, i, arr) => p && arr.indexOf(p) === i && !blacklist.includes(p));
-                    // Localize each part if translation exists
-                    parts = parts.map(p => {
-                      const key = `categories.${p}`;
+            <div>
+              {/* Fiction/Non-Fiction */}
+              {book.fictionType && (
+                <MetadataRow>
+                  <MetadataLabel>{t('books.fictionType')}</MetadataLabel>
+                  <MetadataArrow>→</MetadataArrow>
+                  <MetadataValue>
+                    {(() => {
+                      const key = `fictionType.${book.fictionType.toLowerCase()}`;
                       const localized = i18next.t(key);
-                      // Only use localized if actually translated (not the same as key)
-                      return localized !== key ? localized : p.replace(/\b\w/g, c => c.toUpperCase());
-                    });
-                    return parts.join(', ');
-                  })()}
-                </MetadataValue>
-              </MetadataSection>
-            )}
-
-            {/* TYPE */}
-            <MetadataSection>
-              <MetadataLabel>{t('books.type')}</MetadataLabel>
-              <MetadataValue>{book.type === 'audiobook' || book.type === 'Hörbuch' ? t('books.audiobook') : t('books.ebook')}</MetadataValue>
-            </MetadataSection>
-
-            {/* AUDIOBOOK FIELDS */}
-            {(book.type === 'audiobook' || book.type === 'Hörbuch') && (
-              <>
-                {book.narrator && (
-                  <MetadataSection>
-                    <MetadataLabel>{t('books.narrator')}</MetadataLabel>
-                    <MetadataValue>{book.narrator}</MetadataValue>
-                  </MetadataSection>
-                )}
-                {book.audio_length && (
-                  <MetadataSection>
-                    <MetadataLabel>{t('books.audioLength')}</MetadataLabel>
-                    <MetadataValue>{book.audio_length}</MetadataValue>
-                  </MetadataSection>
-                )}
-                {book.audio_format && (
-                  <MetadataSection>
-                    <MetadataLabel>{t('books.audioFormat')}</MetadataLabel>
-                    <MetadataValue>{book.audio_format}</MetadataValue>
-                  </MetadataSection>
-                )}
-              </>
-            )}
-
-            {/* EBOOK FIELDS */}
-            {book.type === 'ebook' && (
-              <>
-                {book.ebook_format && (
-                  <MetadataSection>
-                    <MetadataLabel>{t('books.ebookFormat')}</MetadataLabel>
-                    <MetadataValue>{book.ebook_format}</MetadataValue>
-                  </MetadataSection>
-                )}
-                {book.page_count && (
-                  <MetadataSection>
-                    <MetadataLabel>{t('books.pages')}</MetadataLabel>
-                    <MetadataValue>{book.page_count}</MetadataValue>
-                  </MetadataSection>
-                )}
-              </>
-            )}
-
-            {/* FILE SIZE (for both types) */}
-            {book.file_size && (
-              <MetadataSection>
-                <MetadataLabel>{t('books.fileSize')}</MetadataLabel>
-                <MetadataValue>{book.file_size}</MetadataValue>
-              </MetadataSection>
-            )}
-
-            {/* PUBLISHER */}
-            {book.publisher && (
-              <MetadataSection>
-                <MetadataLabel>{t('books.publisher')}</MetadataLabel>
-                <MetadataValue>{book.publisher}</MetadataValue>
-              </MetadataSection>
-            )}
-
-            {/* YEAR */}
-            {book.published_date && (
-              <MetadataSection>
-                <MetadataLabel>{t('books.year')}</MetadataLabel>
-                <MetadataValue>{new Date(book.published_date).getFullYear()}</MetadataValue>
-              </MetadataSection>
-            )}
-
-            {/* LANGUAGE */}
-            <MetadataSection>
-              <MetadataLabel>{t('books.language')}</MetadataLabel>
-              <MetadataValue>{book.language}</MetadataValue>
-            </MetadataSection>
-
-            {/* ISBN */}
-            {book.isbn && (
-              <MetadataSection>
-                <MetadataLabel>ISBN</MetadataLabel>
-                <MetadataValue>{book.isbn}</MetadataValue>
-              </MetadataSection>
-            )}
-
-            {/* EXTERNAL ID */}
-            {book.external_id && (
-              <MetadataSection>
-                <MetadataLabel>{t('books.id')}</MetadataLabel>
-                <MetadataValue>{book.external_id}</MetadataValue>
-              </MetadataSection>
-            )}
+                      return localized !== key ? localized : book.fictionType;
+                    })()}
+                  </MetadataValue>
+                </MetadataRow>
+              )}
+              {/* Genre */}
+              {book.genre && (
+                <MetadataRow>
+                  <MetadataLabel>{t('books.genre')}</MetadataLabel>
+                  <MetadataArrow>→</MetadataArrow>
+                  <MetadataValue>
+                    {(() => {
+                      const blacklist = ['kindle ebooks', 'kindle'];
+                      let parts = book.genre
+                        .replace(/Kindle eBooks/gi, '')
+                        .split(/>|&|,/)
+                        .map(p => p.trim())
+                        .filter(Boolean)
+                        .map(p => p.replace(/\(\d+\)$/g, '').trim().toLowerCase())
+                        .filter((p, i, arr) => p && arr.indexOf(p) === i && !blacklist.includes(p));
+                      parts = parts.map(p => {
+                        const key = `categories.${p}`;
+                        const localized = i18next.t(key);
+                        return localized !== key ? localized : p.replace(/\b\w/g, c => c.toUpperCase());
+                      });
+                      return parts.join(', ');
+                    })()}
+                  </MetadataValue>
+                </MetadataRow>
+              )}
+              {/* Publisher */}
+              {book.publisher && (
+                <MetadataRow>
+                  <MetadataLabel>{t('books.publisher')}</MetadataLabel>
+                  <MetadataArrow>→</MetadataArrow>
+                  <MetadataValue>{parsePublisher(book.publisher).name}</MetadataValue>
+                </MetadataRow>
+              )}
+              {/* Pages */}
+              {book.page_count && (
+                <MetadataRow>
+                  <MetadataLabel>{t('books.pages')}</MetadataLabel>
+                  <MetadataArrow>→</MetadataArrow>
+                  <MetadataValue>{book.page_count}</MetadataValue>
+                </MetadataRow>
+              )}
+              {/* File Size */}
+              {book.file_size && (
+                <MetadataRow>
+                  <MetadataLabel>{t('books.fileSize')}</MetadataLabel>
+                  <MetadataArrow>→</MetadataArrow>
+                  <MetadataValue>{book.file_size}</MetadataValue>
+                </MetadataRow>
+              )}
+            </div>
+            <div>
+              {/* Type */}
+              <MetadataRow>
+                <MetadataLabel>{t('books.type')}</MetadataLabel>
+                <MetadataArrow>→</MetadataArrow>
+                <MetadataValue>{book.type === 'audiobook' ? t('books.audiobook') : t('books.ebook')}</MetadataValue>
+              </MetadataRow>
+              {/* Year */}
+              {book.published_date && (
+                <MetadataRow>
+                  <MetadataLabel>{t('books.year')}</MetadataLabel>
+                  <MetadataArrow>→</MetadataArrow>
+                  <MetadataValue>{new Date(book.published_date).getFullYear()}</MetadataValue>
+                </MetadataRow>
+              )}
+              {/* Language */}
+              <MetadataRow>
+                <MetadataLabel>{t('books.language')}</MetadataLabel>
+                <MetadataArrow>→</MetadataArrow>
+                <MetadataValue>{book.language}</MetadataValue>
+              </MetadataRow>
+              {/* ISBN */}
+              {book.isbn && (
+                <MetadataRow>
+                  <MetadataLabel>ISBN</MetadataLabel>
+                  <MetadataArrow>→</MetadataArrow>
+                  <MetadataValue>{book.isbn}</MetadataValue>
+                </MetadataRow>
+              )}
+              {/* External ID */}
+              {book.external_id && (
+                <MetadataRow>
+                  <MetadataLabel>{t('books.id')}</MetadataLabel>
+                  <MetadataArrow>→</MetadataArrow>
+                  <MetadataValue>{book.external_id}</MetadataValue>
+                </MetadataRow>
+              )}
+            </div>
           </MetadataGrid>
           
           {/* Categories */}
@@ -739,7 +791,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 {(() => {
                   // Flatten, clean, deduplicate, remove 'Kindle eBooks', split by '>', '&', ','
-                  const blacklist = ['kindle ebooks'];
+                  const blacklist = ['kindle ebooks', 'kindle'];
                   const all = book.categories.flatMap(cat =>
                     cat
                       .replace(/Kindle eBooks/gi, '')
@@ -751,10 +803,10 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
                   const unique = Array.from(new Set(all.filter(p => p && !blacklist.includes(p))));
                   return unique.map(cat => {
                     const key = `categories.${cat}`;
-                    const label = i18next.t(key);
-                    const display = label !== key ? label : cat.replace(/\b\w/g, c => c.toUpperCase());
+                    const localized = i18next.t(key);
+                    const display = localized !== key ? localized : cat.replace(/\b\w/g, c => c.toUpperCase());
                     return (
-                      <CategoryTag key={cat} to={`/books?category=${encodeURIComponent(cat)}`}>{display}</CategoryTag>
+                      <CategoryTag key={cat} to={`/category/${encodeURIComponent(cat)}`}>{display}</CategoryTag>
                     );
                   });
                 })()}
@@ -850,7 +902,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
                     </RelatedBookTitle>
                     <RelatedBookAuthor>{relatedBook.author}</RelatedBookAuthor>
                     <RelatedBookType>
-                      {relatedBook.type === 'audiobook' || relatedBook.type === 'Hörbuch' ? (
+                      {relatedBook.type === 'audiobook' || relatedBook.type === 'hörbuch' ? (
                         <>
                           <FiHeadphones size={10} /> {t('books.audiobook')}
                         </>
@@ -873,6 +925,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
           )}
         </RelatedSection>
       ) : null}
+      <DarkModeMetadataStyleFix />
     </>
   );
 };

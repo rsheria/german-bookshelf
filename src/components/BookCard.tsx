@@ -6,6 +6,7 @@ import { FiHeadphones, FiBook } from 'react-icons/fi';
 import { motion, useMotionValue, useTransform } from 'framer-motion'; 
 import { Book } from '../types/supabase';
 import { useTheme } from '../context/ThemeContext';
+import { extractCategoryParts } from './CategorySidebar';
 
 interface BookCardProps {
   book: Book;
@@ -311,29 +312,63 @@ const Author = styled.p`
   }
 `;
 
+const GenreContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.spacing.xs};
+  margin-top: auto;
+`;
+
 const Genre = styled.span`
   display: inline-block;
-  align-self: flex-start; 
   background-color: ${({ theme }) => theme.colors.backgroundAlt};
   border-radius: ${({ theme }) => theme.borderRadius.full};
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.md}; 
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  margin-top: auto; 
+  padding: 2px 8px;
+  font-size: 0.7rem;
   color: ${({ theme }) => theme.colors.primary};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
   
   @media (max-width: 1024px) {
-    padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-    font-size: ${({ theme }) => theme.typography.fontSize.xs};
+    padding: 2px 6px;
+    font-size: 0.65rem;
+    max-width: 80px;
+  }
+  
+  @media (max-width: 768px) {
+    max-width: 70px;
   }
 `;
 
 const BookCard: React.FC<BookCardProps> = ({ book }) => {
   const { t } = useTranslation();
-  const { isDark } = useTheme();
+  // We removed the unused isDark variable
   const placeholderCover = 'https://via.placeholder.com/300x450?text=No+Cover';
   const isMobile = useMediaQuery('(max-width: 768px)');
   
+  // Compute book categories for display
+  const categoryParts = useMemo(() => {
+    let parts: string[] = [];
+    if (book.categories && Array.isArray(book.categories)) {
+      parts.push(...book.categories.flatMap((c: string) => extractCategoryParts(c)));
+    }
+    if (book.genre) {
+      parts.push(...extractCategoryParts(book.genre));
+    }
+    // normalize & dedupe
+    return Array.from(new Set(parts.map(p => p.trim().toLowerCase())));
+  }, [book.categories, book.genre]);
+  
+  // Helper to translate or capitalize category labels
+  const renderCategoryLabel = (cat: string) => {
+    const key = `categories.${cat}`;
+    const translated = t(key);
+    return translated !== key ? translated : cat.replace(/\b\w/g, c => c.toUpperCase());
+  };
+
   // Add a mock rating for testing based on book ID
   // This is just for visual testing and should be removed in production
   const mockRating = useMemo(() => {
@@ -424,7 +459,15 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
         <BookInfo>
           <Title>{book.title}</Title>
           <Author>{book.author}</Author>
-          <Genre>{book.genre}</Genre>
+          {/* Render category tags in a horizontal row */}
+          <GenreContainer>
+            {categoryParts.slice(0, 3).map(cat => (
+              <Genre key={cat} title={renderCategoryLabel(cat)}>{renderCategoryLabel(cat)}</Genre>
+            ))}
+            {categoryParts.length > 3 && (
+              <Genre title={`${categoryParts.length - 3} more categories`}>+{categoryParts.length - 3}</Genre>
+            )}
+          </GenreContainer>
         </BookInfo>
       </Card>
     </CardWrapper>

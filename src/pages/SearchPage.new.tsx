@@ -3,9 +3,9 @@ import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiSearch, FiFilter } from 'react-icons/fi';
-import { BsBook } from 'react-icons/bs';
 import { BookType } from '../types/supabase';
 import { supabase } from '../services/supabase';
+import BookGrid from '../components/BookGrid';
 import { CategorySidebar } from '../components/CategorySidebar';
 import { useBookFilters } from '../hooks/useBookFilters';
 import { LoadingState } from '../styles/adminStyles';
@@ -100,30 +100,6 @@ const FilterDropdown = styled.select`
   min-width: 150px;
 `;
 
-// Filter button components
-const FilterButton = styled.button<{ active?: boolean }>`
-  display: flex;
-  align-items: center;
-  padding: 6px 12px;
-  margin-right: 8px;
-  margin-bottom: 8px;
-  border: 1px solid ${props => props.active ? theme.colors.primary : theme.colors.border};
-  border-radius: ${theme.borderRadius.sm};
-  background-color: ${props => props.active ? theme.colors.primaryLight : 'white'};
-  color: ${props => props.active ? theme.colors.primary : theme.colors.text};
-  cursor: pointer;
-  transition: all 0.2s;
-  
-  &:hover {
-    border-color: ${theme.colors.primary};
-    color: ${theme.colors.primary};
-  }
-  
-  svg {
-    margin-right: 8px;
-  }
-`;
-
 const DebugBox = styled.div`
   padding: 15px;
   background-color: #e6f7ff;
@@ -146,7 +122,11 @@ function SearchPage() {
         { value: 'audiobook', label: 'Audiobook' }
       ];
       
-  // We're now using buttons for fiction filtering instead of a dropdown
+  // Fiction type options
+  const fictionOptions = [
+    { value: 'Fiction', label: i18n.language === 'de' ? 'Belletristik' : 'Fiction' },
+    { value: 'Non-Fiction', label: i18n.language === 'de' ? 'Sachbuch' : 'Non-Fiction' }
+  ];
 
   // State
   const [books, setBooks] = useState<any[]>([]);
@@ -177,8 +157,7 @@ function SearchPage() {
       
       try {
         console.log('Fetching all books from database');
-        // Remove 'count' from destructuring since we don't use it
-        const { data, error } = await supabase
+        const { data, error, count } = await supabase
           .from('books')
           .select('*', { count: 'exact' });
         
@@ -196,13 +175,6 @@ function SearchPage() {
     };
     
     fetchAllBooks();
-    
-    // Log important info to help debug
-    console.log('=== SEARCH PAGE MOUNTED ===');
-    console.log('Initial filters:');
-    console.log('- Book Type:', bookType);
-    console.log('- Fiction Type:', fictionFilter);
-    console.log('- Search Term:', searchTerm);
   }, []); // Only run once on component mount
   
   // Handle search form submission
@@ -243,27 +215,6 @@ function SearchPage() {
     setShowFilterDebug(!showFilterDebug);
   };
   
-  const handleFictionFilterClick = (fictionType: 'Fiction' | 'Non-Fiction') => {
-    console.log('Fiction filter clicked:', fictionType);
-    
-    // If clicking the same filter again, toggle it off
-    if (fictionFilter === fictionType) {
-      setFictionFilter(null);
-      console.log('Turned off fiction filter');
-    } else {
-      setFictionFilter(fictionType);
-      console.log(`Set fiction filter to: ${fictionType}`);
-    }
-    
-    // Log all current filters for debugging
-    setTimeout(() => {
-      console.log('=== UPDATED FILTERS ===');
-      console.log('- Book Type:', bookType);
-      console.log('- Fiction Type:', fictionFilter);
-      console.log('- Search Term:', searchTerm);
-    }, 100);
-  };
-
   return (
     <Container>
       <CategorySidebar
@@ -301,24 +252,15 @@ function SearchPage() {
           
           <FilterSection>
             <FilterLabel>{t('search.filterByFiction', 'Fiction Type')}</FilterLabel>
-            <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-              <FilterButton 
-                active={fictionFilter === 'Fiction'} 
-                onClick={() => handleFictionFilterClick('Fiction')}
-                title="Filter for Fiction books only"
-              >
-                <BsBook />
-                Fiction {fictionFilter === 'Fiction' && ' ✓'}
-              </FilterButton>
-              <FilterButton 
-                active={fictionFilter === 'Non-Fiction'} 
-                onClick={() => handleFictionFilterClick('Non-Fiction')}
-                title="Filter for Non-Fiction books only"
-              >
-                <BsBook />
-                Non-Fiction {fictionFilter === 'Non-Fiction' && ' ✓'}
-              </FilterButton>
-            </div>
+            <FilterDropdown
+              value={fictionFilter || ''}
+              onChange={(e) => setFictionFilter(e.target.value ? e.target.value as 'Fiction' | 'Non-Fiction' : null)}
+            >
+              <option value="">{t('search.allFictionTypes', 'All Fiction Types')}</option>
+              {fictionOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </FilterDropdown>
           </FilterSection>
           
           <FilterSection>
@@ -389,65 +331,11 @@ function SearchPage() {
             {error.message}
           </div>
         ) : (
-          <>
-            {/* Debug info */}
-            <div style={{ 
-              padding: '10px', 
-              marginBottom: '15px',
-              border: '1px solid #ccc', 
-              borderRadius: '4px',
-              backgroundColor: '#f9f9f9'
-            }}>
-              <h4 style={{ margin: '0 0 10px 0' }}>Search Parameters:</h4>
-              <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                <li>Book Type: <strong>{bookType === 'all' ? 'All' : bookType}</strong></li>
-                <li>Fiction Type: <strong>{fictionFilter || 'All'}</strong></li>
-                <li>Search Term: <strong>{searchTerm || 'None'}</strong></li>
-              </ul>
-            </div>
-            
-            {/* Actual filter results component */}
-            <DirectFilterResults
-              bookType={bookType === 'all' ? null : bookType}
-              fictionType={fictionFilter}
-              searchTerm={searchTerm}
-            />
-          </>
-        )}
-        
-        {(bookType !== 'all' || fictionFilter || searchTerm) && (
-          <div style={{ 
-            padding: '15px',
-            marginBottom: '20px', 
-            backgroundColor: '#e6f7ff', 
-            border: '1px solid #91d5ff',
-            borderRadius: '4px',
-            fontSize: '14px'
-          }}>
-            <div>
-              <strong>Active Filters:</strong> {[
-                bookType !== 'all' && (bookType === 'ebook' ? 'E-Books' : 'Audiobooks'),
-                fictionFilter && fictionFilter
-              ].filter(Boolean).join(' + ')}
-              {searchTerm && <span> - Search: "{searchTerm}"</span>}
-            </div>
-            
-            {fictionFilter && (
-              <div style={{ marginTop: '10px', fontSize: '13px' }}>
-                <strong>Note about filtering:</strong> The fiction filter looks for books with 
-                <code style={{ backgroundColor: '#f0f0f0', padding: '2px 4px' }}>
-                  fictionType="{fictionFilter}"</code> in the database.
-                {fictionFilter === 'Fiction' && ' If no results appear, try setting some books to Fiction in the '}
-                {fictionFilter === 'Fiction' && <a href="/database-debug" style={{ color: '#1890ff' }}>Database Debug</a>}
-                {fictionFilter === 'Fiction' && ' page.'}
-              </div>
-            )}
-            
-            <div style={{ marginTop: '10px', fontSize: '13px' }}>
-              <a href="/sql-fix" style={{ color: '#1890ff' }}>Fix database issues</a> | 
-              <a href="/database-debug" style={{ color: '#1890ff', marginLeft: '10px' }}>Inspect database</a>
-            </div>
-          </div>
+          <DirectFilterResults
+            bookType={bookType === 'all' ? null : bookType}
+            fictionType={fictionFilter}
+            searchTerm={searchTerm}
+          />
         )}
       </MainContent>
     </Container>

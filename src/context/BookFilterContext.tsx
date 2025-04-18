@@ -8,6 +8,7 @@ interface FilterState {
   language: string | null;
   fileType: string | null;
   bookType: 'all' | BookType;
+  fictionType: 'all' | 'Fiction' | 'Non-Fiction' | null;
   exactMatch: boolean;
   sortBy: 'popularity' | 'title_asc' | 'title_desc' | 'year' | 'size_asc' | 'size_desc' | 'latest';
 }
@@ -26,6 +27,7 @@ const defaultFilters: FilterState = {
   language: null,
   fileType: null,
   bookType: 'all',
+  fictionType: 'all',
   exactMatch: false,
   sortBy: 'popularity',
 };

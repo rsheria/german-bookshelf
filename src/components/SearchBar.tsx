@@ -112,7 +112,7 @@ const OptionsLink = styled.button`
 `;
 
 interface SearchBarProps {
-  onToggleFilters: () => void;
+  onToggleFilters?: () => void;
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({ onToggleFilters }) => {
@@ -160,9 +160,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onToggleFilters }) => {
         <SearchButton type="submit">{t('search.button', 'Search')}</SearchButton>
       </SearchForm>
       
-      <OptionsLink onClick={onToggleFilters} type="button">
-        {t('search.options', 'Search options')}
-      </OptionsLink>
+      {onToggleFilters && (
+        <OptionsLink onClick={onToggleFilters} type="button">
+          {t('search.options', 'Search options')}
+        </OptionsLink>
+      )}
     </SearchContainer>
   );
 };

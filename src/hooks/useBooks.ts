@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { Book, BookType } from '../types/supabase';
 
+// Check if Supabase is configured
+const supabaseAvailable = supabase && supabase.from;
+
 // Mock data to use when Supabase is not configured
 const mockBooks: Book[] = [
   {
@@ -29,71 +32,18 @@ const mockBooks: Book[] = [
     file_url: '#',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
-  },
-  {
-    id: '3',
-    title: 'Faust',
-    author: 'Johann Wolfgang von Goethe',
-    description: 'Ein Gelehrter, der mit dem Teufel einen Pakt schließt.',
-    cover_url: 'https://images.unsplash.com/photo-1621351183012-e2f9972dd9bf?q=80&w=2835&auto=format&fit=crop',
-    type: 'audiobook',
-    genre: 'Classic',
-    language: 'German',
-    file_url: '#',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: '4',
-    title: 'Buddenbrooks',
-    author: 'Thomas Mann',
-    description: 'Die Geschichte vom Verfall einer Familie.',
-    cover_url: 'https://images.unsplash.com/photo-1476275466078-4007374efbbe?q=80&w=2829&auto=format&fit=crop',
-    type: 'audiobook',
-    genre: 'Classic',
-    language: 'German',
-    file_url: '#',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: '5',
-    title: 'Die Blechtrommel',
-    author: 'Günter Grass',
-    description: 'Die Geschichte von Oskar Matzerath, der mit drei Jahren beschließt, nicht mehr zu wachsen.',
-    cover_url: 'https://images.unsplash.com/photo-1490633874781-1c63cc424610?q=80&w=2940&auto=format&fit=crop',
-    type: 'ebook',
-    genre: 'Fiction',
-    language: 'German',
-    file_url: '#',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: '6',
-    title: 'Der Zauberberg',
-    author: 'Thomas Mann',
-    description: 'Ein junger Mann besucht seinen Cousin in einem Sanatorium und bleibt dort sieben Jahre.',
-    cover_url: 'https://images.unsplash.com/photo-1518281361980-b26bfd556770?q=80&w=2940&auto=format&fit=crop',
-    type: 'audiobook',
-    genre: 'Classic',
-    language: 'German',
-    file_url: '#',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
   }
 ];
 
-// Check if Supabase is configured
-const supabaseAvailable = supabase !== null;
-
+// Types
 interface UseBooksProps {
   type?: BookType;
   searchTerm?: string;
-  genre?: string;
+  genres?: string[];
   year?: number | null;
   limit?: number;
   page?: number;
+  categories?: string[];
 }
 
 interface UseBooksResult {
@@ -107,338 +57,329 @@ interface UseBooksResult {
 export const useBooks = ({
   type,
   searchTerm = '',
-  genre = '',
+  genres = [],
   year = null,
   limit = 12,
-  page = 0
+  page = 0,
+  categories = []
 }: UseBooksProps = {}): UseBooksResult => {
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [totalCount, setTotalCount] = useState(0);
-
+  
+  // Function to fetch books based on current filters
   const fetchBooks = async () => {
+    console.log('🔥 FETCH BOOKS CALLED with categories:', categories);
     setIsLoading(true);
     setError(null);
-
-    // If Supabase is not available, use mock data
-    if (!supabaseAvailable) {
-      console.log('Supabase not available, using mock data');
-      setTimeout(() => {
-        let filteredBooks = [...mockBooks];
+    
+    try {
+      // Use mock data when Supabase is not available
+      if (!supabaseAvailable) {
+        console.log('Using mock data with categories:', categories);
+        setTimeout(() => {
+          let filteredBooks = [...mockBooks];
+          
+          // Apply basic filters
+          if (type) {
+            filteredBooks = filteredBooks.filter(b => b.type === type);
+          }
+          
+          // Apply category filters (AND logic)
+          if (categories && categories.length > 0) {
+            console.log('Filtering by categories:', categories);
+            
+            filteredBooks = filteredBooks.filter(book => {
+              // Book must match ALL selected categories
+              return categories.every(category => {
+                const cat = category.toLowerCase().trim();
+                
+                // Check in categories array
+                if (book.categories && Array.isArray(book.categories)) {
+                  const hasMatchInArray = book.categories.some(bookCat => 
+                    typeof bookCat === 'string' && 
+                    bookCat.toLowerCase().includes(cat)
+                  );
+                  if (hasMatchInArray) return true;
+                }
+                
+                // Check in genre string
+                if (book.genre && typeof book.genre === 'string') {
+                  if (book.genre.toLowerCase().includes(cat)) {
+                    return true;
+                  }
+                }
+                
+                return false;
+              });
+            });
+          }
+          
+          // Apply other filters
+          if (genres && genres.length > 0) {
+            filteredBooks = filteredBooks.filter(b => {
+              if (!b.genre) return false;
+              return genres.some(g => b.genre.toLowerCase().includes(g.toLowerCase()));
+            });
+          }
+          
+          if (year) {
+            filteredBooks = filteredBooks.filter(b => {
+              const bookYear = b.published_date ? new Date(b.published_date).getFullYear() : undefined;
+              return bookYear === year;
+            });
+          }
+          
+          if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            filteredBooks = filteredBooks.filter(book => 
+              book.title.toLowerCase().includes(term) || 
+              book.author.toLowerCase().includes(term) || 
+              (book.description && book.description.toLowerCase().includes(term))
+            );
+          }
+          
+          // Apply pagination
+          const from = page * limit;
+          const to = from + limit;
+          const paginatedBooks = filteredBooks.slice(from, to);
+          
+          setBooks(paginatedBooks);
+          setTotalCount(filteredBooks.length);
+          setIsLoading(false);
+        }, 500); // Simulate API delay
+      } else {
+        // REAL SUPABASE QUERY
+        console.log('🔍 USING SUPABASE with categories:', categories);
         
-        // Apply filters
+        // Start basic query
+        let query = supabase.from('books').select('*', { count: 'exact' });
+        
+        // Apply basic filters
         if (type) {
-          filteredBooks = filteredBooks.filter(book => book.type === type);
-        }
-        
-        if (genre && genre !== 'all') {
-          filteredBooks = filteredBooks.filter(book => book.genre === genre);
+          console.log('Filtering by type:', type);
+          query = query.eq('type', type);
         }
         
         if (year) {
-          const publishYear = new Date(year, 0).getFullYear();
-          filteredBooks = filteredBooks.filter(book => {
-            const bookYear = new Date(book.created_at).getFullYear();
-            return bookYear === publishYear;
-          });
+          console.log('Filtering by year:', year);
+          query = query.filter('published_date', 'gte', `${year}-01-01`)
+                       .filter('published_date', 'lte', `${year}-12-31`);
         }
         
         if (searchTerm) {
-          const term = searchTerm.toLowerCase();
-          filteredBooks = filteredBooks.filter(book => 
-            book.title.toLowerCase().includes(term) || 
-            book.author.toLowerCase().includes(term) || 
-            (book.description && book.description.toLowerCase().includes(term))
-          );
+          console.log('Filtering by search term:', searchTerm);
+          query = query.or(`title.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+        }
+        
+        // ⭐️ CRITICAL FIX: CATEGORY FILTERING ⭐️
+        if (categories && categories.length > 0) {
+          console.log('🎯 APPLYING CATEGORY FILTERS:', categories);
+          
+          // For each category, create filter conditions
+          let categoryFilters: string[] = [];
+          
+          for (const category of categories) {
+            const cat = category.toLowerCase().trim();
+            console.log(`Processing category: "${cat}"`);
+            
+            // Add both ways to match categories: in genre string or categories array
+            categoryFilters.push(`genre.ilike.%${cat}%`);
+            categoryFilters.push(`categories.cs.{"${cat}"}`);
+          }
+          
+          // Use OR logic between all filter conditions
+          if (categoryFilters.length > 0) {
+            const filterStr = categoryFilters.join(',');
+            console.log('🔍 Combined filter:', filterStr);
+            query = query.or(filterStr);
+          }
         }
         
         // Apply pagination
         const from = page * limit;
-        const to = from + limit;
-        const paginatedBooks = filteredBooks.slice(from, to);
+        const to = from + limit - 1;
+        console.log(`Pagination: ${from}-${to}`);
         
-        setBooks(paginatedBooks);
-        setTotalCount(filteredBooks.length);
+        // Execute query
+        const { data, error, count } = await query
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        
+        if (error) {
+          console.error('SUPABASE ERROR:', error);
+          throw error;
+        }
+        
+        // 🚨 CRITICAL: USE DATA DIRECTLY, NO JAVASCRIPT FILTERING
+        const fetchedBooks = data || [];
+        
+        console.log(`✅ SUCCESS: Got ${fetchedBooks.length} books matching filters`);
+        if (fetchedBooks.length > 0) {
+          console.log('📚 First book:', fetchedBooks[0].title);
+          console.log('   - Categories:', fetchedBooks[0].categories);
+          console.log('   - Genre:', fetchedBooks[0].genre);
+        }
+        
+        setBooks(fetchedBooks);
+        setTotalCount(count || fetchedBooks.length);
         setIsLoading(false);
-      }, 500); // Simulate network delay
-      
-      return;
-    }
-    
-    try {
-      // Only proceed if Supabase is configured
-      if (!supabase) {
-        throw new Error('Supabase client is not initialized');
       }
-      
-      let query = supabase
-        .from('books')
-        .select('*', { count: 'exact' });
-      
-      // Apply filters
-      if (type) {
-        query = query.eq('type', type);
-      }
-      
-      if (genre && genre !== 'all') {
-        query = query.eq('genre', genre);
-      }
-      
-      if (year) {
-        // Assuming created_at is in ISO format, filter by year
-        const yearStart = new Date(year, 0, 1).toISOString();
-        const yearEnd = new Date(year, 11, 31, 23, 59, 59).toISOString();
-        query = query.gte('created_at', yearStart).lte('created_at', yearEnd);
-      }
-      
-      if (searchTerm) {
-        query = query.or(`title.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
-      }
-      
-      // Apply pagination
-      const from = page * limit;
-      const to = from + limit - 1;
-      
-      const { data, error, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
-      
-      if (error) {
-        throw error;
-      }
-      
-      setBooks(data || []);
-      setTotalCount(count || 0);
     } catch (err) {
       console.error('Error fetching books:', err);
-      setError(err as Error);
-      
-      // Fallback to mock data on error
-      console.log('Falling back to mock data due to error');
-      let filteredBooks = [...mockBooks];
-      
-      // Apply filters (same as above)
-      if (type) {
-        filteredBooks = filteredBooks.filter(book => book.type === type);
-      }
-      
-      if (genre && genre !== 'all') {
-        filteredBooks = filteredBooks.filter(book => book.genre === genre);
-      }
-      
-      if (year) {
-        const publishYear = new Date(year, 0).getFullYear();
-        filteredBooks = filteredBooks.filter(book => {
-          const bookYear = new Date(book.created_at).getFullYear();
-          return bookYear === publishYear;
-        });
-      }
-      
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        filteredBooks = filteredBooks.filter(book => 
-          book.title.toLowerCase().includes(term) || 
-          book.author.toLowerCase().includes(term) || 
-          (book.description && book.description.toLowerCase().includes(term))
-        );
-      }
-      
-      // Apply pagination
-      const from = page * limit;
-      const to = from + limit;
-      const paginatedBooks = filteredBooks.slice(from, to);
-      
-      setBooks(paginatedBooks);
-      setTotalCount(filteredBooks.length);
-    } finally {
+      setError(err instanceof Error ? err : new Error('Failed to fetch books'));
       setIsLoading(false);
     }
   };
-
+  
+  // Run fetchBooks whenever any filter changes
   useEffect(() => {
+    console.log('Filters changed, fetching books with categories:', categories);
     fetchBooks();
-  }, [type, searchTerm, genre, year, limit, page]);
-
+  }, [type, searchTerm, genres, year, page, categories, limit]);
+  
   return { books, isLoading, error, totalCount, fetchBooks };
 };
 
-export const useBook = (id: string) => {
+// Single book hook - for book details page
+interface UseBookResult {
+  book: Book | null;
+  isLoading: boolean;
+  error: Error | null;
+}
+
+export const useBook = (id: string): UseBookResult => {
   const [book, setBook] = useState<Book | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-
-  const fetchBook = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    // If Supabase is not available, use mock data
-    if (!supabaseAvailable) {
-      setTimeout(() => {
-        const mockBook = mockBooks.find(book => book.id === id);
-        setBook(mockBook || null);
-        setIsLoading(false);
-      }, 500); // Simulate network delay
-      
-      return;
-    }
-    
-    try {
-      // Check if supabase is available
-      if (!supabase) {
-        throw new Error('Supabase client is not initialized');
-      }
-      
-      const { data, error } = await supabase
-        .from('books')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (error) {
-        throw error;
-      }
-      
-      setBook(data);
-    } catch (err) {
-      setError(err as Error);
-      console.error('Error fetching book:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  
   useEffect(() => {
-    if (id) {
-      fetchBook();
-    }
+    const fetchBook = async () => {
+      if (!id) {
+        setBook(null);
+        setIsLoading(false);
+        return;
+      }
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        if (!supabaseAvailable) {
+          // If Supabase is not available, return first mock book
+          setBook(mockBooks[0]);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Fetch the book by ID
+        const { data, error } = await supabase
+          .from('books')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (error) {
+          throw error;
+        }
+        
+        setBook(data || null);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Error fetching book:', err);
+        setError(err instanceof Error ? err : new Error('Failed to fetch book'));
+        setIsLoading(false);
+      }
+    };
+    
+    fetchBook();
   }, [id]);
-
-  return { book, isLoading, error, fetchBook };
+  
+  return { book, isLoading, error };
 };
 
-// Find related books based on current book's attributes
-export const useRelatedBooks = (
-  currentBook: Book | null,
-  limit: number = 12
-): {
+// Related books hook
+interface UseRelatedBooksProps {
+  bookId?: string;
+  limit?: number;
+}
+
+interface UseRelatedBooksResult {
   relatedBooks: Book[];
   isLoading: boolean;
   error: Error | null;
-} => {
+}
+
+export const useRelatedBooks = ({
+  bookId,
+  limit = 6
+}: UseRelatedBooksProps = {}): UseRelatedBooksResult => {
   const [relatedBooks, setRelatedBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-
+  
   useEffect(() => {
     const fetchRelatedBooks = async () => {
-      if (!currentBook) {
+      if (!bookId) {
         setRelatedBooks([]);
         setIsLoading(false);
         return;
       }
-
+      
       setIsLoading(true);
       setError(null);
-
+      
       try {
         if (!supabaseAvailable) {
-          // Use mock data and simulate related books - force a small delay to simulate API call
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          let related = [...mockBooks].filter(book => book.id !== currentBook.id);
-          console.log("Current book:", currentBook);
-          console.log("Available mock books for related:", related);
-          
-          // Force all mock books to be shown as related for testing
-          setRelatedBooks(related);
+          // If Supabase is not available, return mock data
+          setRelatedBooks(mockBooks.slice(0, limit));
           setIsLoading(false);
-          console.log("Set mock related books:", related.length);
-        } else {
-          // Use Supabase for real data
-          const query = supabase
-            .from('books')
-            .select('*')
-            .neq('id', currentBook.id)
-            .limit(50); // Get more than needed for processing
-          
-          // Get books from the same author
-          const { data: authorBooks, error: authorError } = await query
-            .eq('author', currentBook.author)
-            .limit(6);
-            
-          if (authorError) throw authorError;
-          
-          // Get books of the same genre and type
-          const { data: genreTypeBooks, error: genreError } = await query
-            .eq('genre', currentBook.genre)
-            .eq('type', currentBook.type)
-            .neq('author', currentBook.author)
-            .limit(12);
-            
-          if (genreError) throw genreError;
-          
-          // Get books in the same language
-          const { data: languageBooks, error: langError } = await query
-            .eq('language', currentBook.language)
-            .neq('author', currentBook.author)
-            .limit(12);
-            
-          if (langError) throw langError;
-          
-          // Combine and prioritize results
-          let allRelated: Book[] = [];
-          
-          // Add author books first (highest priority)
-          if (authorBooks) {
-            allRelated.push(...authorBooks);
-          }
-          
-          // Add genre+type books next (second priority)
-          if (genreTypeBooks) {
-            // Filter out any duplicates already added from author
-            const uniqueGenreBooks = genreTypeBooks.filter(
-              book => !allRelated.some(b => b.id === book.id)
-            );
-            allRelated.push(...uniqueGenreBooks);
-          }
-          
-          // Add language books last (lowest priority)
-          if (languageBooks) {
-            // Filter out any duplicates already added
-            const uniqueLangBooks = languageBooks.filter(
-              book => !allRelated.some(b => b.id === book.id)
-            );
-            
-            // For language books, try to prioritize those with similar keywords in title
-            const currentBookKeywords = extractKeywords(currentBook.title);
-            uniqueLangBooks.sort((a, b) => {
-              const aKeywords = extractKeywords(a.title);
-              const bKeywords = extractKeywords(b.title);
-              
-              const aCommon = aKeywords.filter(k => currentBookKeywords.includes(k)).length;
-              const bCommon = bKeywords.filter(k => currentBookKeywords.includes(k)).length;
-              
-              return bCommon - aCommon; // Higher common count first
-            });
-            
-            allRelated.push(...uniqueLangBooks);
-          }
-          
-          // Limit to requested amount
-          setRelatedBooks(allRelated.slice(0, limit));
-          setIsLoading(false);
+          return;
         }
+        
+        // First get the current book to use its genre for related books
+        const { data: book } = await supabase
+          .from('books')
+          .select('*')
+          .eq('id', bookId)
+          .single();
+        
+        if (!book) {
+          throw new Error('Book not found');
+        }
+        
+        // Extract keywords from the book title for better matching
+        const keywords = extractKeywords(book.title);
+        const genreParts = book.genre ? book.genre.split(/[>\s,/&]+/).map((p: string) => p.trim()).filter(Boolean) : [];
+        
+        // Get related books by genre and keywords, excluding the current book
+        const { data, error } = await supabase
+          .from('books')
+          .select('*')
+          .neq('id', bookId)
+          .or(
+            keywords.map(k => `title.ilike.%${k}%`).join(',') +
+            (genreParts.length > 0 ? ',' + genreParts.map((g: string) => `genre.ilike.%${g}%`).join(',') : '')
+          )
+          .limit(limit);
+        
+        if (error) {
+          throw error;
+        }
+        
+        setRelatedBooks(data || []);
+        setIsLoading(false);
       } catch (err) {
         console.error('Error fetching related books:', err);
         setError(err instanceof Error ? err : new Error('Failed to fetch related books'));
         setIsLoading(false);
       }
     };
-
+    
     fetchRelatedBooks();
-  }, [currentBook, limit]);
-
+  }, [bookId, limit]);
+  
   return { relatedBooks, isLoading, error };
 };
 
@@ -446,19 +387,11 @@ export const useRelatedBooks = (
 function extractKeywords(title: string): string[] {
   if (!title) return [];
   
-  // Split by common separators and convert to lowercase
-  const words = title.toLowerCase()
-    .replace(/[^\w\s\-äöüß]/g, '') // Remove special chars except German umlauts
-    .split(/[\s\-_]+/);
+  const stopWords = ['der', 'die', 'das', 'ein', 'eine', 'und', 'oder', 'aber', 'für', 'mit', 'von', 'zu', 'in', 'an', 'auf'];
   
-  // Filter out common stop words and short words
-  const stopWords = [
-    'der', 'die', 'das', 'ein', 'eine', 'und', 'oder', 'aber', 'von', 'mit', 'zu', 'auf', 'für',
-    'an', 'in', 'über', 'unter', 'the', 'a', 'an', 'and', 'or', 'but', 'of', 'with', 'to', 'for',
-    'at', 'in', 'on', 'by', 'ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr', 'sie'
-  ];
-  
-  return words
-    .filter(word => word.length > 2) // Filter very short words
-    .filter(word => !stopWords.includes(word)); // Filter stop words
+  return title
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '') // Remove punctuation
+    .split(/\s+/)
+    .filter(word => word.length > 3 && !stopWords.includes(word));
 }

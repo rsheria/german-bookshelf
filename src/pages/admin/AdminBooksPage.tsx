@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiEdit, FiTrash2, FiPlus, FiSearch, FiDownload, FiActivity, FiEye, FiArchive, FiBook, FiCheckSquare, FiSquare } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiPlus, FiSearch, FiDownload, FiActivity, FiEye, FiArchive, FiBook } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import {
@@ -307,7 +307,7 @@ interface Book {
 }
 
 const AdminBooksPage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
@@ -592,10 +592,14 @@ const AdminBooksPage: React.FC = () => {
         <FilterDropdown>
           <label>{t('filterByType', 'Filter by Type:')}</label>
           <select value={typeFilter} onChange={(e) => handleTypeFilterChange(e.target.value as any)}>
-            <option value="all">{t('allTypes', 'All Types')}</option>
-            <option value="ebook">{t('ebook', 'E-book')}</option>
-            <option value="audiobook">{t('audiobook', 'Audiobook')}</option>
-          </select>
+  <option value="all">{t('allTypes', 'All Types')}</option>
+  <option value="ebook">E-Book</option>
+  {i18n.language === 'de' ? (
+    <option value="audiobook">Hörbuch</option>
+  ) : (
+    <option value="audiobook">Audiobook</option>
+  )}
+</select>
         </FilterDropdown>
         
         <FilterDropdown>

@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiUsers, FiBarChart2, FiBook, FiDownload, FiActivity, FiRefreshCw, FiAlertCircle, FiPlus, FiMessageSquare } from 'react-icons/fi';
+import { FiUsers, FiBarChart2, FiBook, FiDownload, FiActivity, FiRefreshCw, FiAlertCircle, FiPlus, FiMessageSquare, FiTag } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import AdminUserActivity from './AdminUserActivity';
 import OnlineUsersPanel from '../../components/admin/OnlineUsersPanel';
 import UserStatsPanel from '../../components/admin/UserStatsPanel';
+import CategoryManagementPanel from '../../components/admin/CategoryManagementPanel';
 import { getActivityStats } from '../../services/activityService';
 import { getDownloadStats } from '../../services/downloadService';
 import { getSessionStats } from '../../services/onlineUserService';
@@ -146,14 +147,14 @@ const StatLabel = styled.div`
 `;
 
 interface StatChangeProps {
-  positive?: boolean;
+  $positive?: boolean;
 }
 
 const StatChange = styled.div<StatChangeProps>`
   display: flex;
   align-items: center;
   font-size: ${props => props.theme.typography.fontSize.xs};
-  color: ${props => props.positive ? props.theme.colors.success : props.theme.colors.danger};
+  color: ${props => props.$positive ? props.theme.colors.success : props.theme.colors.danger};
   margin-top: 0.25rem;
 `;
 
@@ -305,12 +306,12 @@ const SectionDivider = styled.h2`
   border-bottom: 1px solid ${props => props.theme.colors.borderLight};
 `;
 
-const AdminDashboardPage = () => {
+const AdminDashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user } = useAuth();
-  
   const [isLoading, setIsLoading] = useState(true);
+  const [showCategoryPanel, setShowCategoryPanel] = useState(false);
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
     activeUsers: 0,
@@ -487,6 +488,11 @@ const AdminDashboardPage = () => {
               <FiBook />
               {t('admin.manageBooks', 'Manage Books')}
             </QuickActionButton>
+
+            <QuickActionButton onClick={() => setShowCategoryPanel(!showCategoryPanel)}>
+              <FiTag />
+              {t('admin.categories.title', 'Manage Categories')}
+            </QuickActionButton>
           </QuickActionsGrid>
         
           <StatsGrid>
@@ -497,7 +503,7 @@ const AdminDashboardPage = () => {
               <StatContent>
                 <StatValue>{stats.totalUsers}</StatValue>
                 <StatLabel>{t('totalUsers', 'Total Users')}</StatLabel>
-                <StatChange positive={true}>
+                <StatChange $positive>
                   {stats.newUsersToday > 0 && `+${stats.newUsersToday} ${t('today', 'today')}`}
                 </StatChange>
               </StatContent>
@@ -520,7 +526,7 @@ const AdminDashboardPage = () => {
               <StatContent>
                 <StatValue>{stats.totalDownloads}</StatValue>
                 <StatLabel>{t('totalDownloads', 'Total Downloads')}</StatLabel>
-                <StatChange positive={true}>
+                <StatChange $positive>
                   {downloadStats.downloadsToday > 0 && `+${downloadStats.downloadsToday} ${t('today', 'today')}`}
                 </StatChange>
               </StatContent>
@@ -569,6 +575,12 @@ const AdminDashboardPage = () => {
             <FullWidthCard>
               <UserStatsPanel />
             </FullWidthCard>
+
+            {showCategoryPanel && (
+              <FullWidthCard>
+                <CategoryManagementPanel />
+              </FullWidthCard>
+            )}
           </DashboardGrid>
         </>
       )}

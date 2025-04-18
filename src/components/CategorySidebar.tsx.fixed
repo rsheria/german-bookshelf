@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { FiBook, FiHeadphones } from 'react-icons/fi';
-import { getAllCategories, getCategoryStats } from '../services/categoryService';
+import { supabase } from '../services/supabase';
 
 const SidebarContainer = styled.div`
   width: 100%;
@@ -163,40 +163,88 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
   const [categories, setCategories] = useState<Record<string, Record<string, Record<string, number>>>>({});
   const [loading, setLoading] = useState(true);
   
-  const [existingCategories, setExistingCategories] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  
   useEffect(() => {
-    const fetchSidebarCategories = async () => {
+    const fetchCategories = async () => {
       setLoading(true);
       try {
-        // Fetch all categories from DB to respect blacklisting
-        const tableCats = await getAllCategories(true);
-        const blacklistMap = new Map(tableCats.map(c => [c.name, c.blacklisted]));
-        // Fetch stats directly from books
-        const stats = await getCategoryStats();
-        // Initialize grouped structure
+        // Show debugging information about the database structure
+        console.log('DEBUG: Fetching books to analyze categories structure...');
+        const { data } = await supabase
+          .from('books')
+          .select('id, type, fictionType, genre, categories');
+        
+        // Debug what we got from the database
+        if (data && Array.isArray(data) && data.length > 0) {
+          console.log('DEBUG: Sample book data structure:', {
+            id: data[0].id,
+            type: data[0].type,
+            genre: data[0].genre,
+            categories: data[0].categories,
+            fictionType: data[0].fictionType
+          });
+          
+          // Log all unique categories found in the database
+          const allCategories = new Set();
+          // Make sure data is an array before using forEach
+          const booksArray = Array.isArray(data) ? data : [];
+          booksArray.forEach(book => {
+            if (book.categories && Array.isArray(book.categories) && book.categories.length > 0) {
+              book.categories.forEach((cat: string) => allCategories.add(cat));
+            } else if (typeof book.genre === 'string' && book.genre) {
+              // If categories array is empty, try to extract from genre string
+              extractCategoryParts(book.genre).forEach(cat => allCategories.add(cat));
+            }
+          });
+          console.log('DEBUG: All unique categories found:', Array.from(allCategories));
+        }
+        
+        // Build a categorized structure for easy rendering 
+        // Top level: Book type (E-Books, Audiobooks)
+        // Second level: Fiction type (Fiction, Non-Fiction)
+        // Third level: Category with count
         const categorized: Record<string, Record<string, Record<string, number>>> = {
-          'E-Books': { Fiction: {}, 'Non-Fiction': {} },
-          'Audiobooks': { Fiction: {}, 'Non-Fiction': {} }
+          'E-Books': { 'Fiction': {}, 'Non-Fiction': {} },
+          'Audiobooks': { 'Fiction': {}, 'Non-Fiction': {} }
         };
-        stats.forEach(s => {
-          // Skip blacklisted categories
-          if (blacklistMap.get(s.name)) return;
-          const bookType = s.type === 'audiobook' ? 'Audiobooks' : 'E-Books';
-          const ficType = s.fictionType === 'Fiction' ? 'Fiction' : 'Non-Fiction';
-          categorized[bookType][ficType][s.name] = s.count;
-        });
+        
+        if (data && Array.isArray(data)) {
+          data.forEach(book => {
+            // Determine book type category
+            const bookType = book.type === 'ebook' ? 'E-Books' : 'Audiobooks';
+            
+            // Determine fiction type - default to Non-Fiction if not specified
+            // (this ensures that even books without fictionType still appear in the sidebar)
+            const fictionType = book.fictionType === 'Fiction' ? 'Fiction' : 'Non-Fiction';
+            
+            // If book has categories array, use that
+            let cats: string[] = [];
+            if (book.categories && Array.isArray(book.categories)) {
+              cats = book.categories;
+            } 
+            // Otherwise try to extract from genre field
+            else if (typeof book.genre === 'string' && book.genre) {
+              cats = extractCategoryParts(book.genre);
+            }
+            
+            // Add each category with count
+            cats.forEach(cat => {
+              if (!categorized[bookType][fictionType][cat]) {
+                categorized[bookType][fictionType][cat] = 0;
+              }
+              categorized[bookType][fictionType][cat]++;
+            });
+          });
+        }
+        
         setCategories(categorized);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching sidebar categories:', err);
-        setError(t('categories.error', 'Failed to load categories'));
-      } finally {
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
         setLoading(false);
       }
     };
-    fetchSidebarCategories();
+    
+    fetchCategories();
   }, [t]);
 
   // --- RENDER ---
@@ -205,15 +253,6 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
       <SidebarContainer>
         <SidebarHeader>{t('sidebar.categories', 'Categories')}</SidebarHeader>
         <div>{t('common.loading', 'Loading...')}</div>
-      </SidebarContainer>
-    );
-  }
-
-  if (error) {
-    return (
-      <SidebarContainer>
-        <SidebarHeader>{t('sidebar.categories', 'Categories')}</SidebarHeader>
-        <div>{error}</div>
       </SidebarContainer>
     );
   }
@@ -242,7 +281,7 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
       <TagList>
         {categories['E-Books']?.['Fiction'] && Object.entries(categories['E-Books']['Fiction']).map(([cat, count]) => {
           const isSelected = selectedCategories.includes(cat);
-          const translatedCategory = cat; // You can add translation here if needed
+          const translatedCategory = translateCategory(cat, t);
           
           return (
             <CategoryItem key={cat}>
@@ -285,7 +324,7 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
       <TagList>
         {categories['E-Books']?.['Non-Fiction'] && Object.entries(categories['E-Books']['Non-Fiction']).map(([cat, count]) => {
           const isSelected = selectedCategories.includes(cat);
-          const translatedCategory = cat; // You can add translation here if needed
+          const translatedCategory = translateCategory(cat, t);
           
           return (
             <CategoryItem key={cat}>
@@ -334,7 +373,7 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
       <TagList>
         {categories['Audiobooks']?.['Fiction'] && Object.entries(categories['Audiobooks']['Fiction']).map(([cat, count]) => {
           const isSelected = selectedCategories.includes(cat);
-          const translatedCategory = cat; // You can add translation here if needed
+          const translatedCategory = translateCategory(cat, t);
           
           return (
             <CategoryItem key={cat}>

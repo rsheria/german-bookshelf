@@ -32,6 +32,21 @@ import BookRequestPage from './pages/BookRequestPage';
 import DebugPage from './pages/DebugPage';
 import AdminBookRequestsPage from './pages/admin/AdminBookRequestsPage';
 import UserActivityPage from './pages/admin/UserActivityPage';
+import DiagnosticPage from './pages/DiagnosticPage'; // Import the new diagnostic page
+import TestCategoryPage from './pages/TestCategoryPage'; // Import the test category page
+import CategoryPage from './pages/CategoryPage'; // Import the CategoryPage
+import UpdateBooksUtil from './pages/UpdateBooksUtil'; // Import the UpdateBooksUtil page
+import FictionPage from './pages/FictionPage'; // Import Fiction page
+import NonFictionPage from './pages/NonFictionPage'; // Import Non-Fiction page
+import EbookFictionPage from './pages/EbookFictionPage'; // Import Ebook Fiction page
+import EbookNonFictionPage from './pages/EbookNonFictionPage'; // Import Ebook Non-Fiction page
+import AudiobookFictionPage from './pages/AudiobookFictionPage'; // Import Audiobook Fiction page
+import AudiobookNonFictionPage from './pages/AudiobookNonFictionPage'; // Import Audiobook Non-Fiction page
+import BookDebugPage from './pages/BookDebugPage'; // Import Book Debug page
+import DebugDatabasePage from './pages/DebugDatabasePage'; // Import Database Debug page
+import SqlFixPage from './pages/SqlFixPage'; // Import SQL Fix page
+import CategorySetupPage from './pages/admin/CategorySetupPage'; // Import Category Setup page
+import CategoryBlacklistFixPage from './pages/CategoryBlacklistFixPage'; // Import Category Blacklist Fix page
 
 // Import context and i18n
 import { AuthProvider } from './context/AuthContext';
@@ -371,6 +386,7 @@ const AppRoutes: React.FC = () => {
               <Route path="/ebooks" element={<EbooksPage />} />
               <Route path="/books/:id" element={<BookDetailsPage />} />
               <Route path="/search" element={<SearchResultsPage />} />
+              <Route path="/category/:category" element={<CategoryPage />} />
               <Route path="/login" element={<LoginForm />} />
               <Route path="/signup" element={<SignupForm />} />
               <Route path="/profile" element={<ProfilePage />} />
@@ -382,7 +398,21 @@ const AppRoutes: React.FC = () => {
               <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/admin/users/:userId" element={<UserActivityPage />} />
               <Route path="/admin/book-requests" element={<AdminBookRequestsPage />} />
+              <Route path="/admin/category-setup" element={<CategorySetupPage />} />
               <Route path="/debug" element={<DebugPage />} />
+              <Route path="/diagnostic" element={<DiagnosticPage />} />
+              <Route path="/test-categories" element={<TestCategoryPage />} />
+              <Route path="/update-books-util" element={<UpdateBooksUtil />} />
+              <Route path="/fiction" element={<FictionPage />} />
+              <Route path="/non-fiction" element={<NonFictionPage />} />
+              <Route path="/ebooks/fiction" element={<EbookFictionPage />} />
+              <Route path="/ebooks/non-fiction" element={<EbookNonFictionPage />} />
+              <Route path="/audiobooks/fiction" element={<AudiobookFictionPage />} />
+              <Route path="/audiobooks/non-fiction" element={<AudiobookNonFictionPage />} />
+              <Route path="/book-debug" element={<BookDebugPage />} />
+              <Route path="/database-debug" element={<DebugDatabasePage />} />
+              <Route path="/sql-fix" element={<SqlFixPage />} />
+              <Route path="/category-blacklist-fix" element={<CategoryBlacklistFixPage />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </MainContent>
@@ -405,6 +435,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/ebooks" element={<EbooksPage />} />
             <Route path="/books/:id" element={<BookDetailsPage />} />
             <Route path="/search" element={<SearchResultsPage />} />
+            <Route path="/category/:category" element={<CategoryPage />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/signup" element={<SignupForm />} />
             <Route 
@@ -479,7 +510,27 @@ const AppRoutes: React.FC = () => {
                 </AdminRoute>
               } 
             />
+            <Route 
+              path="/admin/category-setup" 
+              element={
+                <AdminRoute>
+                  <CategorySetupPage />
+                </AdminRoute>
+              } 
+            />
             <Route path="/debug" element={<DebugPage />} />
+            <Route path="/diagnostic" element={<DiagnosticPage />} />
+            <Route path="/update-books-util" element={<UpdateBooksUtil />} />
+            <Route path="/fiction" element={<FictionPage />} />
+            <Route path="/non-fiction" element={<NonFictionPage />} />
+            <Route path="/ebooks/fiction" element={<EbookFictionPage />} />
+            <Route path="/ebooks/non-fiction" element={<EbookNonFictionPage />} />
+            <Route path="/audiobooks/fiction" element={<AudiobookFictionPage />} />
+            <Route path="/audiobooks/non-fiction" element={<AudiobookNonFictionPage />} />
+            <Route path="/book-debug" element={<BookDebugPage />} />
+            <Route path="/database-debug" element={<DebugDatabasePage />} />
+            <Route path="/sql-fix" element={<SqlFixPage />} />
+            <Route path="/category-blacklist-fix" element={<CategoryBlacklistFixPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </MainContent>

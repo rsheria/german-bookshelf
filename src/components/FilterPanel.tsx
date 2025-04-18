@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { useBookFilter } from '../context/BookFilterContext';
+import { supabase } from '../services/supabase';
 
 const FilterContainer = styled.div`
   display: flex;
@@ -98,19 +99,56 @@ const ResetButton = styled.button`
 `;
 
 export const FilterPanel: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { filters, updateFilter, resetFilters } = useBookFilter();
   
-  const languageOptions = [
-    { value: '', label: t('filter.allLanguages', 'All Languages') },
-    { value: 'german', label: t('languages.german', 'German') },
-    { value: 'english', label: t('languages.english', 'English') },
-    { value: 'french', label: t('languages.french', 'French') },
-    // Add more languages as needed
-  ];
-  
+  const [languageOptions, setLanguageOptions] = useState<{ value: string; label: string }[]>([
+    { value: '', label: `${t('filter.allLanguages', 'All Languages')}` }
+  ]);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from('books')
+        .select('language')
+        .not('language', 'is', null);
+      if (!error && data) {
+        const langs = Array.from(new Set(data.map(b => b.language).filter(Boolean)));
+        setLanguageOptions([
+          { value: '', label: `${t('filter.allLanguages', 'All Languages')}` },
+          ...langs.map(lang => ({
+            value: lang,
+            label: `${t(`languages.${lang}`, lang.charAt(0).toUpperCase() + lang.slice(1))}`
+          }))
+        ]);
+      }
+    })();
+  }, [t]);
+
+  const [yearOptions, setYearOptions] = useState<{ value: string; label: string }[]>([
+    { value: '', label: t('filter.allYears', 'All Years') }
+  ]);
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from('books')
+        .select('published_year')
+        .not('published_year', 'is', null);
+      if (!error && data) {
+        // extract unique years
+        const yrs = Array.from(
+          new Set(data.map(b => b.published_year?.toString()).filter(Boolean))
+        ).sort((a, b) => Number(a) - Number(b));
+        setYearOptions([
+          { value: '', label: t('filter.allYears', 'All Years') },
+          ...yrs.map(y => ({ value: y, label: y }))
+        ]);
+      }
+    })();
+  }, [t]);
+
   const fileTypeOptions = [
-    { value: '', label: t('filter.allFormats', 'All Formats') },
+    { value: '', label: `${t('filter.allFormats', 'All Formats')}` },
     { value: 'pdf', label: 'PDF' },
     { value: 'epub', label: 'EPUB' },
     { value: 'mobi', label: 'MOBI' },
@@ -118,36 +156,47 @@ export const FilterPanel: React.FC = () => {
     // Add more file types as needed
   ];
   
-  const sortOptions = [
-    { value: 'popularity', label: t('sort.mostPopular', 'Most Popular') },
-    { value: 'latest', label: t('sort.recentlyAdded', 'Recently Added') },
-    { value: 'title_asc', label: t('sort.titleAsc', 'Title (A-Z)') },
-    { value: 'title_desc', label: t('sort.titleDesc', 'Title (Z-A)') },
-    { value: 'year', label: t('sort.year', 'Publication Year') },
-    { value: 'size_asc', label: t('sort.sizeAsc', 'File Size (Smallest)') },
-    { value: 'size_desc', label: t('sort.sizeDesc', 'File Size (Largest)') }
+  const fictionTypeOptions = [
+    { value: 'all', label: `${t('filter.allFictionTypes', 'All Fiction Types')}` },
+    { value: 'Fiction', label: i18n.language === 'de' ? 'Belletristik' : 'Fiction' },
+    { value: 'Non-Fiction', label: i18n.language === 'de' ? 'Sachbuch' : 'Non-Fiction' }
   ];
+  
+  const sortOptions = [
+    { value: 'popularity', label: `${t('sort.mostPopular', 'Most Popular')}` },
+    { value: 'latest', label: `${t('sort.recentlyAdded', 'Recently Added')}` },
+    { value: 'title_asc', label: `${t('sort.titleAsc', 'Title (A-Z)')}` },
+    { value: 'title_desc', label: `${t('sort.titleDesc', 'Title (Z-A)')}` },
+    { value: 'year', label: `${t('sort.year', 'Publication Year')}` },
+    { value: 'size_asc', label: `${t('sort.sizeAsc', 'File Size (Smallest)')}` },
+    { value: 'size_desc', label: `${t('sort.sizeDesc', 'File Size (Largest)')}` }
+  ];
+  
   
   return (
     <FilterContainer>
       <FilterGroup>
         <FilterLabel>{t('filter.yearFrom', 'Year from')}</FilterLabel>
-        <YearInput 
-          type="number" 
-          value={filters.yearFrom || ''} 
-          onChange={(e) => updateFilter('yearFrom', e.target.value ? Number(e.target.value) : null)} 
-          placeholder={t('filter.from', 'From')}
-        />
+        <FilterSelect
+          value={filters.yearFrom?.toString() || ''}
+          onChange={(e) => updateFilter('yearFrom', e.target.value ? Number(e.target.value) : null)}
+        >
+          {yearOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </FilterSelect>
       </FilterGroup>
       
       <FilterGroup>
         <FilterLabel>{t('filter.yearTo', 'Year to')}</FilterLabel>
-        <YearInput 
-          type="number" 
-          value={filters.yearTo || ''} 
-          onChange={(e) => updateFilter('yearTo', e.target.value ? Number(e.target.value) : null)} 
-          placeholder={t('filter.to', 'To')}
-        />
+        <FilterSelect
+          value={filters.yearTo?.toString() || ''}
+          onChange={(e) => updateFilter('yearTo', e.target.value ? Number(e.target.value) : null)}
+        >
+          {yearOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </FilterSelect>
       </FilterGroup>
       
       <FilterGroup>
@@ -181,9 +230,34 @@ export const FilterPanel: React.FC = () => {
           onChange={(e) => updateFilter('bookType', e.target.value as any)}
         >
           <option value="all">{t('filter.allTypes', 'All Types')}</option>
-          <option value="ebook">{t('books.ebook', 'E-Book')}</option>
-          <option value="audiobook">{t('books.audiobook', 'Audiobook')}</option>
-          <option value="Hörbuch">{t('books.hörbuch', 'Hörbuch')}</option>
+          {i18n.language === 'de' ? (
+            <>
+              <option value="ebook">{t('books.ebook', 'E-Book')}</option>
+              <option value="audiobook">{t('books.hörbuch', 'Hörbuch')}</option>
+            </>
+          ) : (
+            <>
+              <option value="ebook">{t('books.ebook', 'E-Book')}</option>
+              <option value="audiobook">{t('books.audiobook', 'Audiobook')}</option>
+            </>
+          )}
+        </FilterSelect>
+      </FilterGroup>
+      
+      <FilterGroup>
+        <FilterLabel>{t('filter.fictionType', 'Fiction Type')}</FilterLabel>
+        <FilterSelect 
+          id="fictionType"
+          value={filters.fictionType || 'all'}
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+            const newFictionType = e.target.value === 'all' ? null : e.target.value as any;
+            console.log('Selected fiction type:', newFictionType);
+            updateFilter('fictionType', newFictionType);
+          }}
+        >
+          {fictionTypeOptions.map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
         </FilterSelect>
       </FilterGroup>
       

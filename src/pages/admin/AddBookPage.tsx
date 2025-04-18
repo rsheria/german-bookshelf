@@ -97,7 +97,7 @@ const AddBookPage: React.FC = () => {
     ].includes(t)) {
       return 'ebook';
     }
-    if (lang === 'German' && (t === 'audiobook' || t === 'hörbuch' || t === 'hoerbuch')) return 'Hörbuch';
+    if (lang === 'German' && (t === 'audiobook' || t === 'hörbuch' || t === 'hoerbuch')) return 'audiobook';
     if (lang === 'English' && (t === 'audiobook' || t === 'hörbuch' || t === 'hoerbuch')) return 'audiobook';
     // fallback: if language unknown, preserve original but cast to Book['type']
     return rawType as Book['type'];

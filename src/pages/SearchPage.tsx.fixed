@@ -1,0 +1,480 @@
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import styled from 'styled-components';
+import { FiSearch, FiFilter } from 'react-icons/fi';
+import { BookType } from '../types/supabase';
+import { supabase } from '../services/supabase';
+import BookGrid from '../components/BookGrid';
+import { CategorySidebar } from '../components/CategorySidebar';
+import { useBookFilters } from '../hooks/useBookFilters';
+import { LoadingState } from '../styles/adminStyles';
+import theme from '../styles/theme';
+
+// Styled components
+const Container = styled.div`
+  display: flex;
+  flex-direction: column;
+  padding: ${theme.spacing.md};
+  
+  @media (min-width: 768px) {
+    flex-direction: row;
+  }
+`;
+
+const MainContent = styled.div`
+  flex: 1;
+  margin-top: ${theme.spacing.md};
+  
+  @media (min-width: 768px) {
+    margin-top: 0;
+    margin-left: ${theme.spacing.md};
+  }
+`;
+
+const SearchContainer = styled.form`
+  display: flex;
+  margin-bottom: ${theme.spacing.md};
+  position: relative;
+`;
+
+const SearchInput = styled.input`
+  flex: 1;
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  font-size: 1rem;
+  outline: none;
+  
+  &:focus {
+    border-color: ${theme.colors.primary};
+    box-shadow: 0 0 0 2px ${theme.colors.primaryLight};
+  }
+`;
+
+const SearchButton = styled.button`
+  background-color: ${theme.colors.primary};
+  color: white;
+  border: none;
+  border-radius: ${theme.borderRadius.md};
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  margin-left: ${theme.spacing.sm};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background-color: ${theme.colors.primaryDark};
+  }
+  
+  svg {
+    margin-right: ${props => props.children ? theme.spacing.sm : '0'};
+  }
+`;
+
+const Controls = styled.div`
+  display: flex;
+  margin-bottom: ${theme.spacing.md};
+  flex-wrap: wrap;
+`;
+
+const FilterSection = styled.div`
+  margin-right: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.sm};
+`;
+
+const FilterLabel = styled.div`
+  font-size: 0.9rem;
+  color: ${theme.colors.textSecondary};
+  margin-bottom: ${theme.spacing.xs};
+`;
+
+const FilterDropdown = styled.select`
+  padding: ${theme.spacing.sm};
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.sm};
+  background-color: white;
+  min-width: 150px;
+`;
+
+const Pagination = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-top: ${theme.spacing.xl};
+`;
+
+const PageButton = styled.button<{ active?: boolean }>`
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  margin: 0 ${theme.spacing.xs};
+  border: 1px solid ${props => props.active ? theme.colors.primary : theme.colors.border};
+  border-radius: ${theme.borderRadius.sm};
+  background-color: ${props => props.active ? theme.colors.primary : 'white'};
+  color: ${props => props.active ? 'white' : theme.colors.text};
+  cursor: pointer;
+  
+  &:hover {
+    background-color: ${props => props.active ? theme.colors.primary : theme.colors.background};
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const DebugBox = styled.div`
+  padding: 15px;
+  background-color: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+  margin-bottom: 20px;
+`;
+
+function SearchPage() {
+  const { t, i18n } = useTranslation();
+  
+  // Type options based on language
+  const typeOptions = i18n.language === 'de'
+    ? [
+        { value: 'ebook', label: 'E-Book' },
+        { value: 'audiobook', label: 'Hörbuch' }
+      ]
+    : [
+        { value: 'ebook', label: 'E-Book' },
+        { value: 'audiobook', label: 'Audiobook' }
+      ];
+
+  // State
+  const [books, setBooks] = useState<any[]>([]);
+  const [filteredBooks, setFilteredBooks] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [bookType, setBookType] = useState<BookType | null>(null);
+  const [yearFilter, setYearFilter] = useState<number | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [page, setPage] = useState(0);
+  
+  // Used only to track count when fetching
+  const [, setTotalCount] = useState(0);
+  
+  const { years } = useBookFilters();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  
+  // Get initial search term from URL
+  useEffect(() => {
+    const initialQuery = queryParams.get('q') || '';
+    setSearchTerm(initialQuery);
+  }, [location.search, queryParams]);
+  
+  // Load all books and extract categories
+  useEffect(() => {
+    const fetchAllBooks = async () => {
+      setIsLoading(true);
+      
+      try {
+        console.log('Fetching all books from database');
+        const { data, error, count } = await supabase
+          .from('books')
+          .select('*', { count: 'exact' });
+        
+        if (error) throw error;
+        
+        console.log(`Loaded ${data?.length || 0} books from database`);
+        setBooks(data || []);
+        setFilteredBooks(data || []);
+        setTotalCount(count || 0);
+      } catch (err) {
+        console.error('Error fetching books:', err);
+        setError(err instanceof Error ? err : new Error('Unknown error'));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchAllBooks();
+  }, []); // Only run once on component mount
+  
+  // Filter books based on selected categories and other filters
+  useEffect(() => {
+    // Skip if books aren't loaded yet
+    if (books.length === 0) return;
+    
+    console.log('Filtering books with:', {
+      searchTerm,
+      bookType,
+      yearFilter,
+      selectedCategories
+    });
+    
+    setIsLoading(true);
+    
+    // If we have categories selected, filter directly from the database
+    if (selectedCategories.length > 0) {
+      const fetchFilteredBooks = async () => {
+        try {
+          // Start with base query
+          let query = supabase.from('books').select('*');
+          
+          // Apply search term filter if provided
+          if (searchTerm) {
+            query = query.or(`title.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%`);
+          }
+          
+          // Apply book type filter if provided
+          if (bookType) {
+            query = query.eq('type', bookType);
+          }
+          
+          // Apply year filter if provided
+          if (yearFilter) {
+            query = query.eq('year', yearFilter);
+          }
+          
+          // Build category filters
+          const categoryFilters: string[] = [];
+          
+          for (const category of selectedCategories) {
+            const cat = category.toLowerCase().trim();
+            
+            // Check in both genre and categories array
+            categoryFilters.push(`genre.ilike.%${cat}%`);
+            categoryFilters.push(`categories.cs.{"${cat}"}`);
+          }
+          
+          // Apply category filters with OR logic
+          if (categoryFilters.length > 0) {
+            query = query.or(categoryFilters.join(','));
+          }
+          
+          // Execute query
+          const { data, error } = await query;
+          
+          if (error) throw error;
+          
+          console.log(`Found ${data?.length || 0} books matching filters`);
+          setFilteredBooks(data || []);
+        } catch (err) {
+          console.error('Error filtering books:', err);
+          setError(err instanceof Error ? err : new Error('Filter error'));
+          // Fall back to no filters
+          setFilteredBooks(books);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      fetchFilteredBooks();
+    } else {
+      // Just apply client-side filtering for non-category filters
+      let filtered = [...books];
+      
+      // Apply search term filter
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        filtered = filtered.filter(book => 
+          book.title?.toLowerCase().includes(term) || 
+          book.author?.toLowerCase().includes(term)
+        );
+      }
+      
+      // Apply book type filter
+      if (bookType) {
+        filtered = filtered.filter(book => book.type === bookType);
+      }
+      
+      // Apply year filter
+      if (yearFilter) {
+        filtered = filtered.filter(book => book.year === yearFilter);
+      }
+      
+      setFilteredBooks(filtered);
+      setIsLoading(false);
+    }
+  }, [books, searchTerm, bookType, yearFilter, selectedCategories]);
+  
+  // Calculate total pages for pagination
+  const totalPages = Math.max(1, Math.ceil(filteredBooks.length / 10));
+  
+  // Handle search form submission
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Search is handled by the useEffect
+  };
+  
+  // Generate pagination buttons
+  const renderPagination = () => {
+    const buttons = [];
+    
+    // Previous button
+    buttons.push(
+      <PageButton 
+        key="prev" 
+        onClick={() => setPage(prev => Math.max(0, prev - 1))}
+        disabled={page === 0}
+      >
+        {t('common.previous')}
+      </PageButton>
+    );
+    
+    // Page numbers
+    const maxPages = 5;
+    const startPage = Math.max(0, Math.min(page - Math.floor(maxPages / 2), totalPages - maxPages));
+    const endPage = Math.min(startPage + maxPages, totalPages);
+    
+    for (let i = startPage; i < endPage; i++) {
+      buttons.push(
+        <PageButton
+          key={i}
+          active={i === page}
+          onClick={() => setPage(i)}
+        >
+          {i + 1}
+        </PageButton>
+      );
+    }
+    
+    // Next button
+    buttons.push(
+      <PageButton
+        key="next"
+        onClick={() => setPage(prev => Math.min(totalPages - 1, prev + 1))}
+        disabled={page >= totalPages - 1}
+      >
+        {t('common.next')}
+      </PageButton>
+    );
+    
+    return buttons;
+  };
+  
+  // Get the current page of books
+  const currentPageBooks = filteredBooks.slice(page * 10, (page + 1) * 10);
+  
+  return (
+    <Container>
+      <CategorySidebar
+        selectedCategories={selectedCategories}
+        setSelectedCategories={setSelectedCategories}
+      />
+      
+      <MainContent>
+        <SearchContainer onSubmit={handleSearch}>
+          <SearchInput
+            type="text"
+            placeholder={t('search.placeholder')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <SearchButton type="submit">
+            <FiSearch />
+            {t('search.search')}
+          </SearchButton>
+        </SearchContainer>
+        
+        <Controls>
+          <FilterSection>
+            <FilterLabel>{t('search.filterByType')}</FilterLabel>
+            <FilterDropdown
+              value={bookType || ''}
+              onChange={(e) => setBookType(e.target.value ? e.target.value as BookType : null)}
+            >
+              <option value="">{t('search.allTypes')}</option>
+              {typeOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </FilterDropdown>
+          </FilterSection>
+          
+          <FilterSection>
+            <FilterLabel>{t('search.filterByYear')}</FilterLabel>
+            <FilterDropdown
+              value={yearFilter || ''}
+              onChange={(e) => setYearFilter(e.target.value ? parseInt(e.target.value) : null)}
+            >
+              <option value="">{t('search.allYears')}</option>
+              {years.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </FilterDropdown>
+          </FilterSection>
+          
+          <FilterSection>
+            <FilterLabel>
+              <FiFilter /> {t('search.activeFilters')}
+            </FilterLabel>
+            <div>
+              {selectedCategories.length > 0 && (
+                <span>{t('search.categories')}: {selectedCategories.join(', ')}</span>
+              )}
+              {bookType && (
+                <span>{t('search.type')}: {bookType}</span>
+              )}
+              {yearFilter && (
+                <span>{t('search.year')}: {yearFilter}</span>
+              )}
+            </div>
+          </FilterSection>
+        </Controls>
+        
+        {isLoading ? (
+          <LoadingState>{t('common.loading')}</LoadingState>
+        ) : error ? (
+          <div style={{ 
+            padding: theme.spacing.xl, 
+            textAlign: 'center', 
+            color: theme.colors.error 
+          }}>
+            {error.message}
+          </div>
+        ) : filteredBooks.length === 0 ? (
+          <div style={{ 
+            padding: theme.spacing.xl, 
+            textAlign: 'center', 
+            color: theme.colors.textSecondary,
+            backgroundColor: theme.colors.backgroundAlt,
+            borderRadius: theme.borderRadius.md,
+            boxShadow: theme.shadows.sm
+          }}>
+            {t('search.noResults')}
+          </div>
+        ) : (
+          <>
+            {selectedCategories.length > 0 && (
+              <DebugBox>
+                <h3 style={{ margin: '0 0 10px 0' }}>Filter Information</h3>
+                <p><strong>Selected Categories:</strong> {selectedCategories.join(', ')}</p>
+                <p><strong>Books Found:</strong> {filteredBooks.length}</p>
+                <button 
+                  onClick={() => setSelectedCategories([])}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#ff4d4f',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Clear Categories
+                </button>
+              </DebugBox>
+            )}
+            
+            <BookGrid books={currentPageBooks} isLoading={false} error={null} />
+            
+            {totalPages > 1 && (
+              <Pagination>
+                {renderPagination()}
+              </Pagination>
+            )}
+          </>
+        )}
+      </MainContent>
+    </Container>
+  );
+}
+
+export default SearchPage;
