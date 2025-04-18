@@ -163,7 +163,7 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
   const [categories, setCategories] = useState<Record<string, Record<string, Record<string, number>>>>({});
   const [loading, setLoading] = useState(true);
   
-  const [existingCategories, setExistingCategories] = useState<any[]>([]);
+  // Removing unused state variables
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {

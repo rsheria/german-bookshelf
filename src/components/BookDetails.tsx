@@ -527,7 +527,10 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
   const [visibleRelatedBooks, setVisibleRelatedBooks] = useState(12);
   
   // Fetch related books
-  const { relatedBooks, isLoading: relatedBooksLoading } = useRelatedBooks(book);
+  const { relatedBooks, isLoading: relatedBooksLoading } = useRelatedBooks({
+    bookId: book.id,
+    limit: 12
+  });
   
   const handleLoadMore = () => {
     setVisibleRelatedBooks(prev => Math.min(prev + 12, relatedBooks.length));
@@ -751,6 +754,35 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
                 <MetadataArrow>→</MetadataArrow>
                 <MetadataValue>{book.type === 'audiobook' ? t('books.audiobook') : t('books.ebook')}</MetadataValue>
               </MetadataRow>
+              {/* File Formats */}
+              {(book.ebook_format || book.audio_format) && (
+                <MetadataRow>
+                  <MetadataLabel>{t('books.fileFormats', 'File Formats')}</MetadataLabel>
+                  <MetadataArrow>→</MetadataArrow>
+                  <MetadataValue>
+                    {book.type === 'audiobook' 
+                      ? book.audio_format && book.audio_format.split(',').map(format => format.trim().toUpperCase()).join(', ')
+                      : book.ebook_format && book.ebook_format.split(',').map(format => format.trim().toUpperCase()).join(', ')
+                    }
+                  </MetadataValue>
+                </MetadataRow>
+              )}
+              {/* Narrator - only for audiobooks */}
+              {book.type === 'audiobook' && book.narrator && (
+                <MetadataRow>
+                  <MetadataLabel>{t('books.narrator', 'Narrator')}</MetadataLabel>
+                  <MetadataArrow>→</MetadataArrow>
+                  <MetadataValue>{book.narrator}</MetadataValue>
+                </MetadataRow>
+              )}
+              {/* Audio Length - only for audiobooks */}
+              {book.type === 'audiobook' && book.audio_length && (
+                <MetadataRow>
+                  <MetadataLabel>{t('books.audioLength', 'Length')}</MetadataLabel>
+                  <MetadataArrow>→</MetadataArrow>
+                  <MetadataValue>{book.audio_length}</MetadataValue>
+                </MetadataRow>
+              )}
               {/* Year */}
               {book.published_date && (
                 <MetadataRow>
@@ -902,7 +934,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
                     </RelatedBookTitle>
                     <RelatedBookAuthor>{relatedBook.author}</RelatedBookAuthor>
                     <RelatedBookType>
-                      {relatedBook.type === 'audiobook' || relatedBook.type === 'hörbuch' ? (
+                      {relatedBook.type === 'audiobook' ? (
                         <>
                           <FiHeadphones size={10} /> {t('books.audiobook')}
                         </>
