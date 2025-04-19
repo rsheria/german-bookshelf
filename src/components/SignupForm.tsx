@@ -164,18 +164,42 @@ const SignupForm: React.FC = () => {
       }
 
       if (data.user) {
-        // Insert user profile with username and referral
+        // Resolve referral code to referrer ID and initial count
+        let referredById: string | undefined;
+        let initialRefCount: number | undefined;
+        if (referral) {
+          const { data: refProfile, error: refErr } = await supabase
+            .from('profiles')
+            .select('id, referrals_count')
+            .eq('referral_code', referral)
+            .single();
+          if (!refErr && refProfile) {
+            referredById = refProfile.id;
+            initialRefCount = refProfile.referrals_count;
+          } else {
+            console.warn('Invalid referral code:', referral);
+          }
+        }
+        // Create user profile
         const profileData: any = {
           id: data.user.id,
           username,
           is_admin: false,
           daily_quota: 3,
-          ...(referral ? { referred_by: referral } : {})
+          ...(referredById ? { referred_by: referredById } : {})
         };
         const { error: profileError } = await supabase
           .from('profiles')
           .insert(profileData);
         if (profileError) throw profileError;
+        // Increment referrer's count
+        if (referredById && initialRefCount !== undefined) {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ referrals_count: initialRefCount + 1 })
+            .eq('id', referredById);
+          if (updateError) console.warn('Error updating referral count:', updateError);
+        }
 
         setSuccess(t('auth.signupSuccess') || 'Signup successful! Please check your email to confirm your account.');
         
