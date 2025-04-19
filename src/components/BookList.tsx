@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { FiGrid, FiList } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 import BookCard from './BookCard';
 import { Book } from '../types/supabase';
 import theme from '../styles/theme';
@@ -106,6 +107,44 @@ const LoadMoreButton = styled.button`
   }
 `;
 
+const placeholderCover = 'https://via.placeholder.com/60x90?text=No+Cover';
+
+const ListItem = styled(Link)`
+  display: flex;
+  align-items: flex-start;
+  padding: ${theme.spacing.sm};
+  border-bottom: 1px solid ${theme.colors.border};
+  text-decoration: none;
+  color: ${theme.colors.text};
+  gap: ${theme.spacing.md};
+`;
+
+const ListCover = styled.img`
+  width: 60px;
+  height: auto;
+  object-fit: cover;
+  border-radius: ${theme.borderRadius.sm};
+`;
+
+const ListInfo = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.xs};
+`;
+
+const ListTitle = styled.div`
+  font-weight: ${theme.typography.fontWeight.bold};
+  font-size: ${theme.typography.fontSize.md};
+`;
+
+const ListMeta = styled.div`
+  display: flex;
+  gap: ${theme.spacing.lg};
+  font-size: ${theme.typography.fontSize.sm};
+  color: ${theme.colors.textSecondary};
+`;
+
 interface BookListProps {
   books: Book[];
   loading: boolean;
@@ -167,7 +206,18 @@ const BookList: React.FC<BookListProps> = ({
       ) : (
         <ListView>
           {books.map((book) => (
-            <BookCard key={book.id} book={book} />
+            <ListItem key={book.id} to={`/books/${book.id}`}>
+              <ListCover src={book.cover_url || placeholderCover} alt={book.title} />
+              <ListInfo>
+                <ListTitle>{book.title}</ListTitle>
+                <ListMeta>
+                  <span>{book.author}</span>
+                  {book.publisher && <span>{book.publisher}</span>}
+                  {book.published_date && <span>{book.published_date}</span>}
+                  {book.page_count && <span>{book.page_count} pages</span>}
+                </ListMeta>
+              </ListInfo>
+            </ListItem>
           ))}
         </ListView>
       )}

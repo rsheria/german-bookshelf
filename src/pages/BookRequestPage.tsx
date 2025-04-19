@@ -378,14 +378,14 @@ const useBookRequestQuota = () => {
       // First get the user's monthly request limit
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('monthly_request_limit')
+        .select('monthly_request_quota')
         .eq('id', user.id)
         .single();
         
       if (profileError) throw profileError;
       
       // Set the total quota
-      const quota = profileData?.monthly_request_limit || 5;
+      const quota = profileData?.monthly_request_quota || 5;
       setTotalQuota(quota);
       
       // Use the database function to get remaining requests

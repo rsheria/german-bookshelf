@@ -11,6 +11,7 @@ import AdminUserActivity from './AdminUserActivity';
 import UserBanDialog from '../../components/admin/UserBanDialog';
 import UserIpTrackingDialog from '../../components/admin/UserIpTrackingDialog';
 import { isUserBanned } from '../../services/userBanService';
+import { updateSubscriptionPlan } from '../../services/subscriptionService';
 import {
   AdminContainer,
   AdminHeader,
@@ -843,6 +844,22 @@ const AdminUsersPage: React.FC = () => {
     }
   };
   
+  const handlePlanChange = async (userId: string, plan: 'free' | 'premium') => {
+    setIsUpdating(true);
+    setError(null);
+    try {
+      const success = await updateSubscriptionPlan(userId, plan);
+      if (!success) throw new Error(t('planUpdateError', 'Failed to update plan'));
+      setSuccess(t('planUpdateSuccess', 'Subscription plan updated'));
+      fetchUsers();
+    } catch (err) {
+      console.error('Error updating plan:', err);
+      setError((err as Error).message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+  
   const handleExportUsers = () => {
     // Convert users data to CSV format
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -1239,6 +1256,9 @@ const AdminUsersPage: React.FC = () => {
                   <TableHeader>{t('role')}</TableHeader>
                   <TableHeader>{t('quota')}</TableHeader>
                   <TableHeader>{t('requestQuota', 'Monthly Requests')}</TableHeader>
+                  <TableHeader>{t('subscriptionPlan', 'Plan')}</TableHeader>
+                  <TableHeader>{t('referralsCount', 'Referrals')}</TableHeader>
+                  <TableHeader>{t('referralCode', 'Referral Code')}</TableHeader>
                   <TableHeader>{t('actions')}</TableHeader>
                 </TableRow>
               </TableHead>
@@ -1296,6 +1316,18 @@ const AdminUsersPage: React.FC = () => {
                         userProfile.monthly_request_quota
                       )}
                     </TableCell>
+                    <TableCell>
+                      <select
+                        value={userProfile.subscription_plan}
+                        disabled={!isAdmin || isUpdating}
+                        onChange={(e) => handlePlanChange(userProfile.id, e.target.value as 'free' | 'premium')}
+                      >
+                        <option value="free">{t('free')}</option>
+                        <option value="premium">{t('premium')}</option>
+                      </select>
+                    </TableCell>
+                    <TableCell>{userProfile.referrals_count}</TableCell>
+                    <TableCell>{userProfile.referral_code}</TableCell>
                     <TableCell>
                       <ActionButtons>
                         {editingUser && editingUser.id === userProfile.id ? (

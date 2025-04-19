@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiUsers, FiBarChart2, FiBook, FiDownload, FiActivity, FiRefreshCw, FiAlertCircle, FiPlus, FiMessageSquare, FiTag } from 'react-icons/fi';
+import { FiUsers, FiBarChart2, FiBook, FiDownload, FiActivity, FiRefreshCw, FiAlertCircle, FiPlus, FiMessageSquare, FiTag, FiUserCheck, FiShare2 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import AdminUserActivity from './AdminUserActivity';
 import OnlineUsersPanel from '../../components/admin/OnlineUsersPanel';
@@ -11,6 +11,7 @@ import CategoryManagementPanel from '../../components/admin/CategoryManagementPa
 import { getActivityStats } from '../../services/activityService';
 import { getDownloadStats } from '../../services/downloadService';
 import { getSessionStats } from '../../services/onlineUserService';
+import { getSubscriptionStats } from '../../services/subscriptionService';
 import { supabase } from '../../services/supabase';
 import {
   AdminContainer,
@@ -97,6 +98,13 @@ const StatsGrid = styled.div`
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
   }
+`;
+
+const SubscriptionStatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
 `;
 
 const StatCard = styled.div`
@@ -259,6 +267,12 @@ interface Stats {
   newUsersToday: number;
 }
 
+interface SubscriptionStats {
+  free_count: number;
+  premium_count: number;
+  total_referrals: number;
+}
+
 const QuickActionButton = styled.button`
   display: flex;
   align-items: center;
@@ -332,6 +346,11 @@ const AdminDashboardPage: React.FC = () => {
     month: 0,
     byAction: {}
   });
+  const [subscriptionStats, setSubscriptionStats] = useState<SubscriptionStats>({
+    free_count: 0,
+    premium_count: 0,
+    total_referrals: 0
+  });
 
   useEffect(() => {
     if (!user) {
@@ -346,12 +365,13 @@ const AdminDashboardPage: React.FC = () => {
     setIsLoading(true);
     try {
       // Fetch all the data in parallel
-      const [userStatsData, bookStatsData, downloadStatsData, activityStatsData, onlineStatsData] = await Promise.all([
+      const [userStatsData, bookStatsData, downloadStatsData, activityStatsData, onlineStatsData, subscriptionStatsData] = await Promise.all([
         fetchUserStats(),
         fetchBookCount(),
         getDownloadStats(),
         getActivityStats(),
-        getSessionStats()
+        getSessionStats(),
+        getSubscriptionStats()
       ]);
       
       setStats({
@@ -364,6 +384,7 @@ const AdminDashboardPage: React.FC = () => {
       
       setActivityStats(activityStatsData);
       setDownloadStats(downloadStatsData);
+      setSubscriptionStats(subscriptionStatsData);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -542,6 +563,39 @@ const AdminDashboardPage: React.FC = () => {
               </StatContent>
             </StatCard>
           </StatsGrid>
+          
+          <SectionTitle>{t('subscriptionStats', 'Subscription Stats')}</SectionTitle>
+          <SubscriptionStatsGrid>
+            <StatCard>
+              <StatIcon>
+                <FiUsers />
+              </StatIcon>
+              <StatContent>
+                <StatValue>{subscriptionStats.free_count}</StatValue>
+                <StatLabel>{t('freeUsers', 'Free Users')}</StatLabel>
+              </StatContent>
+            </StatCard>
+            
+            <StatCard>
+              <StatIcon>
+                <FiUserCheck />
+              </StatIcon>
+              <StatContent>
+                <StatValue>{subscriptionStats.premium_count}</StatValue>
+                <StatLabel>{t('premiumUsers', 'Premium Users')}</StatLabel>
+              </StatContent>
+            </StatCard>
+            
+            <StatCard>
+              <StatIcon>
+                <FiShare2 />
+              </StatIcon>
+              <StatContent>
+                <StatValue>{subscriptionStats.total_referrals}</StatValue>
+                <StatLabel>{t('totalReferrals', 'Total Referrals')}</StatLabel>
+              </StatContent>
+            </StatCard>
+          </SubscriptionStatsGrid>
           
           <DashboardGrid>
             <QuarterWidthCard>

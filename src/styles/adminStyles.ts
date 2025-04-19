@@ -5,6 +5,7 @@ import darkTheme from './darkTheme';
 // Admin Page Container
 export const AdminContainer = styled.div`
   max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   padding: ${theme.spacing.xl} ${theme.spacing.md};
   
@@ -47,12 +48,12 @@ export const AdminTitle = styled.h1`
 `;
 
 export const AdminSubtitle = styled.p`
-  color: ${theme.colors.textLight};
+  color: ${theme.colors.textSecondary};
   margin: 0;
   font-size: ${theme.typography.fontSize.lg};
   
   body[data-theme='dark'] & {
-    color: ${darkTheme.colors.textLight};
+    color: ${darkTheme.colors.textSecondary};
   }
 `;
 
@@ -93,14 +94,14 @@ export const StatCard = styled.div`
 
 export const StatTitle = styled.div`
   font-size: ${theme.typography.fontSize.md};
-  color: ${theme.colors.textLight};
+  color: ${theme.colors.textSecondary};
   margin-bottom: ${theme.spacing.sm};
   display: flex;
   align-items: center;
   gap: ${theme.spacing.xs};
   
   body[data-theme='dark'] & {
-    color: ${darkTheme.colors.textLight};
+    color: ${darkTheme.colors.textSecondary};
   }
   
   svg {
@@ -417,10 +418,7 @@ export const PageButton = styled.button<{ active?: boolean }>`
   }
   
   &:disabled {
-    background-color: ${theme.colors.backgroundAlt};
-    color: ${theme.colors.textLight};
-    cursor: not-allowed;
-    transform: none;
+    color: ${theme.colors.textSecondary};
   }
   
   body[data-theme='dark'] & {
@@ -433,8 +431,7 @@ export const PageButton = styled.button<{ active?: boolean }>`
     }
     
     &:disabled {
-      background-color: ${darkTheme.colors.backgroundAlt};
-      color: ${darkTheme.colors.textLight};
+      color: ${darkTheme.colors.textSecondary};
     }
   }
 `;
@@ -475,10 +472,10 @@ export const SearchBar = styled.div`
   }
   
   svg {
-    color: ${theme.colors.textLight};
+    color: ${theme.colors.textSecondary};
     
     body[data-theme='dark'] & {
-      color: ${darkTheme.colors.textLight};
+      color: ${darkTheme.colors.textSecondary};
     }
   }
 `;
@@ -493,7 +490,7 @@ export const SearchInput = styled.input`
   color: ${theme.colors.text};
   
   &::placeholder {
-    color: ${theme.colors.textLight};
+    color: ${theme.colors.textSecondary};
     opacity: 0.7;
   }
   
@@ -501,7 +498,7 @@ export const SearchInput = styled.input`
     color: ${darkTheme.colors.text};
     
     &::placeholder {
-      color: ${darkTheme.colors.textLight};
+      color: ${darkTheme.colors.textSecondary};
     }
   }
 `;
@@ -538,23 +535,23 @@ export const FilterDropdown = styled.select`
 export const LoadingState = styled.div`
   text-align: center;
   padding: ${theme.spacing.xl};
-  color: ${theme.colors.textLight};
+  color: ${theme.colors.textSecondary};
   
   body[data-theme='dark'] & {
-    color: ${darkTheme.colors.textLight};
+    color: ${darkTheme.colors.textSecondary};
   }
 `;
 
 export const EmptyState = styled.div`
   text-align: center;
   padding: ${theme.spacing.xl};
-  color: ${theme.colors.textLight};
+  color: ${theme.colors.textSecondary};
   background-color: ${theme.colors.backgroundAlt};
   border-radius: ${theme.borderRadius.lg};
   border: 1px dashed ${theme.colors.border};
   
   body[data-theme='dark'] & {
-    color: ${darkTheme.colors.textLight};
+    color: ${darkTheme.colors.textSecondary};
     background-color: ${darkTheme.colors.backgroundAlt};
     border-color: ${darkTheme.colors.border};
   }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiMail, FiLock, FiUser, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
@@ -131,6 +131,9 @@ const StyledLink = styled(Link)`
 const SignupForm: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const [referral, setReferral] = useState(params.get('ref') || '');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -161,39 +164,18 @@ const SignupForm: React.FC = () => {
       }
 
       if (data.user) {
-        // Create a profile for the user with default quota
-        if (!supabase) {
-          throw new Error('Supabase client is not initialized');
-        }
-        
+        // Insert user profile with username and referral
+        const profileData: any = {
+          id: data.user.id,
+          username,
+          is_admin: false,
+          daily_quota: 3,
+          ...(referral ? { referred_by: referral } : {})
+        };
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert({
-            id: data.user.id,
-            username: username,
-            is_admin: false,
-            daily_quota: 3 // Default daily quota
-          });
-
-        // Handle the specific duplicate key error more gracefully
-        if (profileError) {
-          // Check if it's the duplicate key error
-          if (profileError.message && profileError.message.includes('duplicate key value violates unique constraint')) {
-            // This is expected in some cases - the user was already created
-            console.log('Profile already exists, this is likely due to email confirmation flow');
-            // Set a success message instead of throwing an error
-            setSuccess(t('auth.signupSuccess') || 'Signup successful! Please check your email to confirm your account.');
-            
-            // Redirect to login page after a short delay
-            setTimeout(() => {
-              navigate('/login');
-            }, 3000);
-            return;
-          } else {
-            // It's a different error, so throw it
-            throw profileError;
-          }
-        }
+          .insert(profileData);
+        if (profileError) throw profileError;
 
         setSuccess(t('auth.signupSuccess') || 'Signup successful! Please check your email to confirm your account.');
         
@@ -236,6 +218,18 @@ const SignupForm: React.FC = () => {
       )}
       
       <Form onSubmit={handleSubmit}>
+        <FormGroup>
+          <Label htmlFor="referral">{t('auth.referralCode', 'Referral Code')}</Label>
+          <InputWrapper>
+            <Input
+              id="referral"
+              type="text"
+              placeholder={t('auth.referralPlaceholder', 'Enter referral code (optional)')}
+              value={referral}
+              onChange={e => setReferral(e.target.value)}
+            />
+          </InputWrapper>
+        </FormGroup>
         <FormGroup>
           <Label htmlFor="email">{t('auth.email')}</Label>
           <InputWrapper>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
+import { useParams } from 'react-router-dom';
 import { useBookFilter } from '../context/BookFilterContext';
 import { supabase } from '../services/supabase';
 
@@ -48,25 +49,26 @@ const FilterSelect = styled.select`
   }
 `;
 
-const YearInput = styled.input`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  background-color: ${({ theme }) => theme.colors.card};
-  color: ${({ theme }) => theme.colors.text};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  width: 100px;
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary};
-    box-shadow: ${({ theme }) => theme.shadows.outline};
-  }
-  
-  &::placeholder {
-    color: ${({ theme }) => theme.colors.textMuted};
-  }
-`;
+// Note: YearInput is not currently used but kept for future reference if needed
+// const YearInput = styled.input`
+//   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+//   background-color: ${({ theme }) => theme.colors.card};
+//   color: ${({ theme }) => theme.colors.text};
+//   border: 1px solid ${({ theme }) => theme.colors.border};
+//   border-radius: ${({ theme }) => theme.borderRadius.md};
+//   width: 100px;
+//   font-size: ${({ theme }) => theme.typography.fontSize.sm};
+//   
+//   &:focus {
+//     outline: none;
+//     border-color: ${({ theme }) => theme.colors.primary};
+//     box-shadow: ${({ theme }) => theme.shadows.outline};
+//   }
+//   
+//   &::placeholder {
+//     color: ${({ theme }) => theme.colors.textMuted};
+//   }
+// `;
 
 const CheckboxContainer = styled.div`
   display: flex;
@@ -101,6 +103,7 @@ const ResetButton = styled.button`
 export const FilterPanel: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { filters, updateFilter, resetFilters } = useBookFilter();
+  const params = useParams<{ field?: string; value?: string }>();
   
   const [languageOptions, setLanguageOptions] = useState<{ value: string; label: string }[]>([
     { value: '', label: `${t('filter.allLanguages', 'All Languages')}` }
@@ -341,7 +344,21 @@ export const FilterPanel: React.FC = () => {
         </FilterLabel>
       </CheckboxContainer>
       
-      <ResetButton onClick={resetFilters}>
+      <ResetButton onClick={() => {
+        // Reset all filters first
+        resetFilters();
+        
+        // For metadata searches, we need to preserve the metadata query
+        if (params.field && params.value) {
+          // Get the decoded value
+          const decodedValue = decodeURIComponent(params.value?.replace(/-/g, ' ') || '');
+          // Set the query filter to the original metadata search
+          updateFilter('query', `${params.field}:"${decodedValue}"`);
+        }
+        
+        // Force a reload to ensure the search is executed with reset filters
+        window.location.reload();
+      }}>
         {t('filter.reset', 'Reset Filters')}
       </ResetButton>
     </FilterContainer>

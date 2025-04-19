@@ -41,6 +41,9 @@ export interface Profile {
   created_at: string;
   updated_at: string;
   daily_quota: number;
+  subscription_plan: string;
+  referral_code?: string;
+  referrals_count: number;
   website?: string;
   is_admin: boolean;
   monthly_request_quota: number;

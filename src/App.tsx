@@ -386,7 +386,9 @@ const AppRoutes: React.FC = () => {
               <Route path="/ebooks" element={<EbooksPage />} />
               <Route path="/books/:id" element={<BookDetailsPage />} />
               <Route path="/search" element={<SearchResultsPage />} />
+              <Route path="/search/:field/:value" element={<SearchResultsPage />} />
               <Route path="/category/:category" element={<CategoryPage />} />
+
               <Route path="/login" element={<LoginForm />} />
               <Route path="/signup" element={<SignupForm />} />
               <Route path="/profile" element={<ProfilePage />} />
@@ -435,6 +437,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/ebooks" element={<EbooksPage />} />
             <Route path="/books/:id" element={<BookDetailsPage />} />
             <Route path="/search" element={<SearchResultsPage />} />
+            <Route path="/search/:field/:value" element={<SearchResultsPage />} />
             <Route path="/category/:category" element={<CategoryPage />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/signup" element={<SignupForm />} />

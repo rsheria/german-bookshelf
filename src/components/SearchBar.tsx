@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { useBookFilter } from '../context/BookFilterContext';
@@ -95,8 +96,6 @@ const OptionsLink = styled.button`
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
   border-radius: ${({ theme }) => theme.borderRadius.sm};
-  
-  /* Add a faint background that works in both light and dark modes */
   background-color: rgba(255, 255, 255, 0.05);
   
   &:hover {
@@ -120,17 +119,113 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onToggleFilters }) => {
   const { filters, updateFilter } = useBookFilter();
   const [searchType, setSearchType] = useState<'general' | 'fullText'>('general');
   const [inputValue, setInputValue] = useState(filters.query);
+  const [searchParams] = useSearchParams();
+
+  // Update input value when filters change
+  useEffect(() => {
+    // Don't update input value if it's empty and we're on a metadata path
+    const pathParts = window.location.pathname.split('/');
+    const isOnMetadataPath = pathParts.length >= 4 && pathParts[1] === 'search';
+    
+    if (filters.query || !isOnMetadataPath) {
+      console.log('SearchBar: Updating input value to match filter:', filters.query);
+      setInputValue(filters.query);
+    } else {
+      console.log('SearchBar: Not updating empty input on metadata path');
+    }
+  }, [filters.query]);
   
+  // Read query from URL parameters and handle metadata paths
+  useEffect(() => {
+    const queryParam = searchParams.get('query');
+    // Check if we're on a metadata path (like /search/:field/:value)
+    const pathParts = window.location.pathname.split('/');
+    const isOnMetadataPath = pathParts.length >= 4 && pathParts[1] === 'search';
+    
+    if (isOnMetadataPath) {
+      // On metadata path, don't interfere with the automatic search
+      console.log('SearchBar detected metadata path, letting path parameters handle the search');
+      // The input value will be set by the filter context
+    } else if (queryParam) {
+      // For regular search with query parameter
+      setInputValue(queryParam);
+    }
+  }, [searchParams]);
+
+  // Handle form submission for search
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateFilter('query', inputValue);
+    
+    // Keep raw query in the field
+    setInputValue(inputValue);
+    
+    // Check if we're on a metadata path
+    const pathParts = window.location.pathname.split('/');
+    const isOnMetadataPath = pathParts.length >= 4 && pathParts[1] === 'search';
+    
+    // Only update the query if we're not on a metadata path or if the user has modified the input
+    if (!isOnMetadataPath || inputValue !== filters.query) {
+      console.log('SearchBar: Updating query to:', inputValue);
+      // Update base query
+      updateFilter('query', inputValue);
+      
+      // Parse any field:value clauses
+      parseAdvancedSearchQuery(inputValue);
+    } else {
+      console.log('SearchBar: Not updating query because we are on a metadata path and input matches current filter');
+    }
   };
-  
+
+  // New: parses field:value and applies filters
+  const parseAdvancedSearchQuery = (query: string) => {
+    const matches = query.match(/(\w+):(?:"([^"]+)"|([^\s]+))/g);
+    if (!matches) return;
+
+    matches.forEach(match => {
+      const [field, ...valueParts] = match.split(':');
+      let value = valueParts.join(':');
+
+      if (value.startsWith('"') && value.endsWith('"')) {
+        value = value.slice(1, -1);
+      }
+
+      switch (field.toLowerCase()) {
+        case 'publisher':
+          // (You’ll need to add publisher to your FilterContext if you want real filtering)
+          console.log('Publisher filter:', value);
+          break;
+        case 'year':
+          const year = parseInt(value, 10);
+          if (!isNaN(year)) {
+            updateFilter('yearFrom', year);
+            updateFilter('yearTo', year);
+          }
+          break;
+        case 'language':
+          updateFilter('language', value);
+          break;
+        case 'format':
+          updateFilter('fileType', value);
+          break;
+        case 'genre':
+        case 'category':
+          console.log('Genre/Category filter:', value);
+          break;
+        case 'narrator':
+          console.log('Narrator filter:', value);
+          break;
+        default:
+          // unknown field: leave it in the base query
+          break;
+      }
+    });
+  };
+
   const handleSearchTypeChange = (type: 'general' | 'fullText') => {
     setSearchType(type);
-    // Here you could also update context if you want to track search type
+    // optionally: updateFilter('searchType', type);
   };
-  
+
   return (
     <SearchContainer>
       <ToggleContainer>
@@ -152,12 +247,14 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onToggleFilters }) => {
       
       <SearchForm onSubmit={handleSubmit}>
         <SearchInput 
-          type="text" 
-          placeholder={t('search.placeholder', 'Search for title, author, ISBN...')}
+          type="text"
+          placeholder={t('search.placeholder', 'Search for title, author, ISBN, publisher...')}
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={e => setInputValue(e.target.value)}
         />
-        <SearchButton type="submit">{t('search.button', 'Search')}</SearchButton>
+        <SearchButton type="submit" id="search-button">
+          {t('search.button', 'Search')}
+        </SearchButton>
       </SearchForm>
       
       {onToggleFilters && (

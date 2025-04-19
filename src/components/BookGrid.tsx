@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import BookCard from './BookCard';
+import SkeletonBookCard from './SkeletonBookCard';
 import { Book } from '../types/supabase';
 import { FiLoader, FiAlertCircle, FiBookOpen } from 'react-icons/fi';
 import theme from '../styles/theme';
@@ -47,7 +48,7 @@ const Title = styled.h2`
 
 const Subtitle = styled.p`
   font-size: ${theme.typography.fontSize.lg};
-  color: ${theme.colors.textLight};
+  color: ${theme.colors.textSecondary};
   max-width: 600px;
   margin: ${theme.spacing.lg} auto 0;
   line-height: ${theme.typography.lineHeight.relaxed};
@@ -70,7 +71,7 @@ const GridContainer = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: ${theme.spacing['2xl']};
-  color: ${theme.colors.textLight};
+  color: ${theme.colors.textMuted};
   grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
@@ -136,16 +137,15 @@ const BookGrid: React.FC<BookGridProps> = ({ books = [], isLoading = false, erro
   const { t } = useTranslation();
 
   const renderContent = () => {
-    if (isLoading) {
-      return (
-        <LoadingState>
-          <Spinner />
-          {t('common.loading')}
-        </LoadingState>
-      );
+    // Initial load: show skeleton placeholders
+    if (isLoading && books.length === 0) {
+      return Array.from({ length: 4 }).map((_, idx) => (
+        <SkeletonBookCard key={idx} />
+      ));
     }
 
-    if (error) {
+    // Error on initial load
+    if (error && books.length === 0) {
       return (
         <ErrorState>
           <FiAlertCircle />
@@ -157,7 +157,8 @@ const BookGrid: React.FC<BookGridProps> = ({ books = [], isLoading = false, erro
       );
     }
 
-    if (books.length === 0) {
+    // No results after loading
+    if (!isLoading && books.length === 0) {
       return (
         <EmptyState>
           <FiBookOpen />
@@ -167,9 +168,20 @@ const BookGrid: React.FC<BookGridProps> = ({ books = [], isLoading = false, erro
       );
     }
 
-    return books.map((book) => (
-      <BookCard key={book.id} book={book} />
-    ));
+    // Render books and spinner for subsequent loads
+    return (
+      <>
+        {books.map(book => (
+          <BookCard key={book.id} book={book} />
+        ))}
+        {isLoading && (
+          <LoadingState>
+            <Spinner />
+            {t('common.loading')}
+          </LoadingState>
+        )}
+      </>
+    );
   };
 
   return (

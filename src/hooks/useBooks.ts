@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { Book, BookType } from '../types/supabase';
 
+// Static default arrays to prevent new references per call
+const DEFAULT_GENRES: string[] = [];
+const DEFAULT_CATEGORIES: string[] = [];
+
 // Check if Supabase is configured
 const supabaseAvailable = supabase && supabase.from;
 
@@ -58,11 +62,11 @@ interface UseBooksResult {
 export const useBooks = ({
   type,
   searchTerm = '',
-  genres = [],
+  genres = DEFAULT_GENRES,
   year = null,
   limit = 12,
   page = 0,
-  categories = [],
+  categories = DEFAULT_CATEGORIES,
   fileType = null
 }: UseBooksProps = {}): UseBooksResult => {
   const [books, setBooks] = useState<Book[]>([]);
@@ -91,19 +95,16 @@ export const useBooks = ({
           // Apply category filters (AND logic)
           if (categories && categories.length > 0) {
             console.log('Filtering by categories:', categories);
-            
-            filteredBooks = filteredBooks.filter(book => {
-              // Book must match ALL selected categories
-              return categories.every(category => {
+            filteredBooks = filteredBooks.filter(book =>
+              categories.every(category => {
                 const cat = category.toLowerCase().trim();
                 
                 // Check in categories array
                 if (book.categories && Array.isArray(book.categories)) {
-                  const hasMatchInArray = book.categories.some(bookCat => 
-                    typeof bookCat === 'string' && 
-                    bookCat.toLowerCase().includes(cat)
+                  const hasInArray = book.categories.some(bookCat =>
+                    typeof bookCat === 'string' && bookCat.toLowerCase().includes(cat)
                   );
-                  if (hasMatchInArray) return true;
+                  if (hasInArray) return true;
                 }
                 
                 // Check in genre string
@@ -114,30 +115,31 @@ export const useBooks = ({
                 }
                 
                 return false;
-              });
-            });
+              })
+            );
           }
           
           // Apply other filters
           if (genres && genres.length > 0) {
-            filteredBooks = filteredBooks.filter(b => {
-              if (!b.genre) return false;
-              return genres.some(g => b.genre.toLowerCase().includes(g.toLowerCase()));
-            });
+            filteredBooks = filteredBooks.filter(b =>
+              b.genre ? genres.some(g => b.genre.toLowerCase().includes(g.toLowerCase())) : false
+            );
           }
           
           if (year) {
             filteredBooks = filteredBooks.filter(b => {
-              const bookYear = b.published_date ? new Date(b.published_date).getFullYear() : undefined;
+              const bookYear = b.published_date
+                ? new Date(b.published_date).getFullYear()
+                : undefined;
               return bookYear === year;
             });
           }
           
           if (searchTerm) {
             const term = searchTerm.toLowerCase();
-            filteredBooks = filteredBooks.filter(book => 
-              book.title.toLowerCase().includes(term) || 
-              book.author.toLowerCase().includes(term) || 
+            filteredBooks = filteredBooks.filter(book =>
+              book.title.toLowerCase().includes(term) ||
+              book.author.toLowerCase().includes(term) ||
               (book.description && book.description.toLowerCase().includes(term))
             );
           }
@@ -145,9 +147,9 @@ export const useBooks = ({
           // Apply pagination
           const from = page * limit;
           const to = from + limit;
-          const paginatedBooks = filteredBooks.slice(from, to);
+          const paginated = filteredBooks.slice(from, to);
           
-          setBooks(paginatedBooks);
+          setBooks(paginated);
           setTotalCount(filteredBooks.length);
           setIsLoading(false);
         }, 500); // Simulate API delay
@@ -166,52 +168,140 @@ export const useBooks = ({
         
         if (year) {
           console.log('Filtering by year:', year);
-          query = query.filter('published_date', 'gte', `${year}-01-01`)
-                       .filter('published_date', 'lte', `${year}-12-31`);
+          query = query
+            .filter('published_date', 'gte', `${year}-01-01`)
+            .filter('published_date', 'lte', `${year}-12-31`);
         }
         
         // Add file type filtering
         if (fileType) {
           console.log('Filtering by file format:', fileType);
-          // Need to check both ebook_format and audio_format fields
-          query = query.or(`ebook_format.ilike.%${fileType}%,audio_format.ilike.%${fileType}%`);
+          query = query.or(
+            `ebook_format.ilike.%${fileType}%,audio_format.ilike.%${fileType}%`
+          );
         }
         
+        // ─── Advanced search syntax support ───
         if (searchTerm) {
           console.log('Filtering by search term:', searchTerm);
-          query = query.or(`title.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+          const advancedQueries = searchTerm.match(/(\w+):(?:"([^"]+)"|([^\s]+))/g);
+          
+          if (advancedQueries) {
+            // Extract the remaining text that isn't part of advanced queries
+            let basicSearchTerm = searchTerm;
+            advancedQueries.forEach(q => {
+              basicSearchTerm = basicSearchTerm.replace(q, '').trim();
+            });
+            
+            // Build advanced query conditions
+            const advancedConditions: string[] = [];
+            advancedQueries.forEach(match => {
+              const [field, ...valueParts] = match.split(':');
+              let value = valueParts.join(':');
+              
+              // Remove quotes if present
+              if (value.startsWith('"') && value.endsWith('"')) {
+                value = value.slice(1, -1);
+              }
+              
+              // Add specific field conditions
+              switch (field.toLowerCase()) {
+                case 'publisher':
+                  // Sanitize publisher value and log for debugging
+                  const sanitizedPublisher = value.replace(/[\u200E\u200F\u2028\u2029]/g, '').trim();
+                  console.log('Searching for publisher:', sanitizedPublisher);
+                  advancedConditions.push(`publisher.ilike.%${sanitizedPublisher}%`);
+                  break;
+                case 'narrator':
+                  // Sanitize narrator value and log for debugging
+                  const sanitizedNarrator = value.replace(/[\u200E\u200F\u2028\u2029]/g, '').trim();
+                  console.log('Searching for narrator:', sanitizedNarrator);
+                  advancedConditions.push(`narrator.ilike.%${sanitizedNarrator}%`);
+                  break;
+                case 'year':
+                  const y = parseInt(value, 10);
+                  if (!isNaN(y)) {
+                    advancedConditions.push(`published_date.gte.${y}-01-01`);
+                    advancedConditions.push(`published_date.lte.${y}-12-31`);
+                  }
+                  break;
+                case 'language':
+                  advancedConditions.push(`language.eq.${value}`);
+                  break;
+                case 'format':
+                  advancedConditions.push(
+                    `ebook_format.ilike.%${value}%,audio_format.ilike.%${value}%`
+                  );
+                  break;
+                case 'genre':
+                case 'category':
+                  advancedConditions.push(`genre.ilike.%${value}%`);
+                  advancedConditions.push(`categories.cs.{"${value}"}`);
+                  break;
+                default:
+                  // Unknown fields: search across title, author, description
+                  advancedConditions.push(
+                    `title.ilike.%${match}%,author.ilike.%${match}%,description.ilike.%${match}%`
+                  );
+                  break;
+              }
+            });
+            
+            // Apply basic search term if any
+            if (basicSearchTerm) {
+              query = query.or(
+                `title.ilike.%${basicSearchTerm}%` +
+                `,author.ilike.%${basicSearchTerm}%` +
+                `,description.ilike.%${basicSearchTerm}%`
+              );
+            }
+            
+            // Apply advanced conditions
+            advancedConditions.forEach(condition => {
+              if (condition.includes(',')) {
+                console.log('Applying OR condition:', condition);
+                query = query.or(condition);
+              } else {
+                const [f, op, ...rest] = condition.split('.');
+                const val = rest.join('.');
+                console.log(`Applying filter: ${f} ${op} ${val}`);
+                query = query.filter(f, op, val);
+              }
+            });
+          } else {
+            // Standard search if no advanced syntax
+            query = query.or(
+              `title.ilike.%${searchTerm}%` +
+              `,author.ilike.%${searchTerm}%` +
+              `,description.ilike.%${searchTerm}%`
+            );
+          }
         }
+        // ───────────────────────────────────────
         
-        // ⭐️ CRITICAL FIX: CATEGORY FILTERING ⭐️
+        // ⭐️ CATEGORY FILTERING ⭐️
         if (categories && categories.length > 0) {
           console.log('🎯 APPLYING CATEGORY FILTERS:', categories);
-          
-          // For each category, create filter conditions
-          let categoryFilters: string[] = [];
+          const categoryFilters: string[] = [];
           
           for (const category of categories) {
             const cat = category.toLowerCase().trim();
-            console.log(`Processing category: "${cat}"`);
-            
-            // Add both ways to match categories: in genre string or categories array
             categoryFilters.push(`genre.ilike.%${cat}%`);
             categoryFilters.push(`categories.cs.{"${cat}"}`);
           }
           
-          // Use OR logic between all filter conditions
-          if (categoryFilters.length > 0) {
+          if (categoryFilters.length) {
             const filterStr = categoryFilters.join(',');
             console.log('🔍 Combined filter:', filterStr);
             query = query.or(filterStr);
           }
         }
         
-        // Apply pagination
+        // Pagination
         const from = page * limit;
         const to = from + limit - 1;
         console.log(`Pagination: ${from}-${to}`);
         
-        // Execute query
         const { data, error, count } = await query
           .order('created_at', { ascending: false })
           .range(from, to);
@@ -221,18 +311,11 @@ export const useBooks = ({
           throw error;
         }
         
-        // 🚨 CRITICAL: USE DATA DIRECTLY, NO JAVASCRIPT FILTERING
         const fetchedBooks = data || [];
-        
         console.log(`✅ SUCCESS: Got ${fetchedBooks.length} books matching filters`);
-        if (fetchedBooks.length > 0) {
-          console.log('📚 First book:', fetchedBooks[0].title);
-          console.log('   - Categories:', fetchedBooks[0].categories);
-          console.log('   - Genre:', fetchedBooks[0].genre);
-        }
         
         setBooks(fetchedBooks);
-        setTotalCount(count || fetchedBooks.length);
+        setTotalCount(count ?? fetchedBooks.length);
         setIsLoading(false);
       }
     } catch (err) {
@@ -276,23 +359,18 @@ export const useBook = (id: string): UseBookResult => {
       
       try {
         if (!supabaseAvailable) {
-          // If Supabase is not available, return first mock book
           setBook(mockBooks[0]);
           setIsLoading(false);
           return;
         }
         
-        // Fetch the book by ID
         const { data, error } = await supabase
           .from('books')
           .select('*')
           .eq('id', id)
           .single();
         
-        if (error) {
-          throw error;
-        }
-        
+        if (error) throw error;
         setBook(data || null);
         setIsLoading(false);
       } catch (err) {
@@ -341,42 +419,37 @@ export const useRelatedBooks = ({
       
       try {
         if (!supabaseAvailable) {
-          // If Supabase is not available, return mock data
           setRelatedBooks(mockBooks.slice(0, limit));
           setIsLoading(false);
           return;
         }
         
-        // First get the current book to use its genre for related books
         const { data: book } = await supabase
           .from('books')
           .select('*')
           .eq('id', bookId)
           .single();
         
-        if (!book) {
-          throw new Error('Book not found');
-        }
+        if (!book) throw new Error('Book not found');
         
-        // Extract keywords from the book title for better matching
         const keywords = extractKeywords(book.title);
-        const genreParts = book.genre ? book.genre.split(/[>\s,/&]+/).map((p: string) => p.trim()).filter(Boolean) : [];
+        const genreParts = book.genre
+          ? book.genre.split(/[>\s,/&]+/).map((p: string) => p.trim()).filter(Boolean)
+          : [];
         
-        // Get related books by genre and keywords, excluding the current book
         const { data, error } = await supabase
           .from('books')
           .select('*')
           .neq('id', bookId)
           .or(
-            keywords.map(k => `title.ilike.%${k}%`).join(',') +
-            (genreParts.length > 0 ? ',' + genreParts.map((g: string) => `genre.ilike.%${g}%`).join(',') : '')
+            [
+              ...keywords.map(k => `title.ilike.%${k}%`),
+              ...genreParts.map((g: string) => `genre.ilike.%${g}%`)
+            ].join(',')
           )
           .limit(limit);
         
-        if (error) {
-          throw error;
-        }
-        
+        if (error) throw error;
         setRelatedBooks(data || []);
         setIsLoading(false);
       } catch (err) {
@@ -400,7 +473,7 @@ function extractKeywords(title: string): string[] {
   
   return title
     .toLowerCase()
-    .replace(/[^\w\s]/g, '') // Remove punctuation
+    .replace(/[^\w\s]/g, '')
     .split(/\s+/)
     .filter(word => word.length > 3 && !stopWords.includes(word));
 }

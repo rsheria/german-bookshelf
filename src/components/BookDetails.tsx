@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRelatedBooks } from '../hooks/useBooks';
 import RatingSystem from './RatingSystem';
 import i18next from 'i18next';
+import { ClickableMetadata } from './ClickableMetadata';  // ← new import
 
 interface BookDetailsProps {
   book: Book;
@@ -166,10 +167,10 @@ const ReadMoreButton = styled.button`
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   transition: all 0.2s ease;
-  background-color: rgba(0, 0, 0, 0.05); /* Very light gray background */
+  background-color: rgba(0, 0, 0, 0.05);
   
   &:hover {
-    background-color: rgba(0, 0, 0, 0.1); /* Slightly more visible on hover */
+    background-color: rgba(0, 0, 0, 0.1);
     text-decoration: underline;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -441,7 +442,7 @@ const LoadMoreButton = styled.button`
   background: none;
   border: 1px solid ${({ theme }) => theme.colors.border};
   color: ${({ theme }) => theme.colors.text};
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
+  padding: ${({ theme }) =>theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   font-size: 14px;
   cursor: pointer;
@@ -557,24 +558,18 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
   // Utility to extract publisher, year, edition from publisher string
   function parsePublisher(publisher: string, publishedDate?: string) {
     if (!publisher) return { name: '', edition: '', year: '' };
-    // Example: 'dtv Verlagsgesellschaft mbH & Co. KG; 2nd edition • 2016'
     let name = publisher;
     let edition = '';
     let year = '';
-    // Extract edition after ';'
     const parts = publisher.split(';');
     if (parts.length > 1) {
       name = parts[0].trim();
-      // Try to extract edition and/or year from the rest
       const rest = parts[1];
-      // Look for edition (e.g., '2nd edition')
       const editionMatch = rest.match(/([0-9]+(st|nd|rd|th)? edition)/i);
       if (editionMatch) edition = editionMatch[1];
-      // Look for year (e.g., '2016')
       const yearMatch = rest.match(/(19|20)\d{2}/);
       if (yearMatch) year = yearMatch[0];
     }
-    // If year not found, try to get from publishedDate
     if (!year && publishedDate) {
       const d = new Date(publishedDate);
       if (!isNaN(d.getTime())) year = d.getFullYear().toString();
@@ -631,7 +626,9 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
         
         <BookInfo>
           <Title>{book.title}</Title>
-          <Author>{book.author}</Author>
+          <Author>
+            <ClickableMetadata field="author" value={book.author} />
+          </Author>
           
           <RatingContainer>
             {renderStarRating(book.rating || 0)}
@@ -697,7 +694,8 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
                   </MetadataValue>
                 </MetadataRow>
               )}
-              {/* Genre */}
+
+              {/* Genre (clickable) */}
               {book.genre && (
                 <MetadataRow>
                   <MetadataLabel>{t('books.genre')}</MetadataLabel>
@@ -712,24 +710,45 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
                         .filter(Boolean)
                         .map(p => p.replace(/\(\d+\)$/g, '').trim().toLowerCase())
                         .filter((p, i, arr) => p && arr.indexOf(p) === i && !blacklist.includes(p));
-                      parts = parts.map(p => {
+                      
+                      return parts.map((p, index) => {
                         const key = `categories.${p}`;
                         const localized = i18next.t(key);
-                        return localized !== key ? localized : p.replace(/\b\w/g, c => c.toUpperCase());
+                        const displayValue = localized !== key
+                          ? localized
+                          : p.replace(/\b\w/g, c => c.toUpperCase());
+                          
+                        return (
+                          <React.Fragment key={p}>
+                            {index > 0 && ', '}
+                            <ClickableMetadata 
+                              field="genre" 
+                              value={p}
+                              displayValue={displayValue}
+                              multiple={true}
+                            />
+                          </React.Fragment>
+                        );
                       });
-                      return parts.join(', ');
                     })()}
                   </MetadataValue>
                 </MetadataRow>
               )}
-              {/* Publisher */}
+
+              {/* Publisher (clickable) */}
               {book.publisher && (
                 <MetadataRow>
                   <MetadataLabel>{t('books.publisher')}</MetadataLabel>
                   <MetadataArrow>→</MetadataArrow>
-                  <MetadataValue>{parsePublisher(book.publisher).name}</MetadataValue>
+                  <MetadataValue>
+                    <ClickableMetadata 
+                      field="publisher" 
+                      value={parsePublisher(book.publisher).name}
+                    />
+                  </MetadataValue>
                 </MetadataRow>
               )}
+
               {/* Pages */}
               {book.page_count && (
                 <MetadataRow>
@@ -738,6 +757,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
                   <MetadataValue>{book.page_count}</MetadataValue>
                 </MetadataRow>
               )}
+
               {/* File Size */}
               {book.file_size && (
                 <MetadataRow>
@@ -747,35 +767,70 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
                 </MetadataRow>
               )}
             </div>
+
             <div>
               {/* Type */}
               <MetadataRow>
                 <MetadataLabel>{t('books.type')}</MetadataLabel>
                 <MetadataArrow>→</MetadataArrow>
-                <MetadataValue>{book.type === 'audiobook' ? t('books.audiobook') : t('books.ebook')}</MetadataValue>
+                <MetadataValue>
+                  {book.type === 'audiobook' ? t('books.audiobook') : t('books.ebook')}
+                </MetadataValue>
               </MetadataRow>
-              {/* File Formats */}
+
+              {/* File Formats (clickable) */}
               {(book.ebook_format || book.audio_format) && (
                 <MetadataRow>
                   <MetadataLabel>{t('books.fileFormats', 'File Formats')}</MetadataLabel>
                   <MetadataArrow>→</MetadataArrow>
                   <MetadataValue>
-                    {book.type === 'audiobook' 
-                      ? book.audio_format && book.audio_format.split(',').map(format => format.trim().toUpperCase()).join(', ')
-                      : book.ebook_format && book.ebook_format.split(',').map(format => format.trim().toUpperCase()).join(', ')
+                    {book.type === 'audiobook'
+                      ? book.audio_format && book.audio_format.split(',').map((format, index) => {
+                          const formattedFormat = format.trim().toUpperCase();
+                          return (
+                            <React.Fragment key={format}>
+                              {index > 0 && ', '}
+                              <ClickableMetadata 
+                                field="format" 
+                                value={format.trim().toLowerCase()}
+                                displayValue={formattedFormat}
+                              />
+                            </React.Fragment>
+                          );
+                        })
+                      : book.ebook_format && book.ebook_format.split(',').map((format, index) => {
+                          const formattedFormat = format.trim().toUpperCase();
+                          return (
+                            <React.Fragment key={format}>
+                              {index > 0 && ', '}
+                              <ClickableMetadata 
+                                field="format" 
+                                value={format.trim().toLowerCase()}
+                                displayValue={formattedFormat}
+                              />
+                            </React.Fragment>
+                          );
+                        })
                     }
                   </MetadataValue>
                 </MetadataRow>
               )}
-              {/* Narrator - only for audiobooks */}
+
+              {/* Narrator (clickable) */}
               {book.type === 'audiobook' && book.narrator && (
                 <MetadataRow>
                   <MetadataLabel>{t('books.narrator', 'Narrator')}</MetadataLabel>
                   <MetadataArrow>→</MetadataArrow>
-                  <MetadataValue>{book.narrator}</MetadataValue>
+                  <MetadataValue>
+                    <ClickableMetadata 
+                      field="narrator" 
+                      value={book.narrator}
+                    />
+                  </MetadataValue>
                 </MetadataRow>
               )}
-              {/* Audio Length - only for audiobooks */}
+
+              {/* Audio Length */}
               {book.type === 'audiobook' && book.audio_length && (
                 <MetadataRow>
                   <MetadataLabel>{t('books.audioLength', 'Length')}</MetadataLabel>
@@ -783,20 +838,33 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
                   <MetadataValue>{book.audio_length}</MetadataValue>
                 </MetadataRow>
               )}
-              {/* Year */}
+
+              {/* Year (clickable) */}
               {book.published_date && (
                 <MetadataRow>
                   <MetadataLabel>{t('books.year')}</MetadataLabel>
                   <MetadataArrow>→</MetadataArrow>
-                  <MetadataValue>{new Date(book.published_date).getFullYear()}</MetadataValue>
+                  <MetadataValue>
+                    <ClickableMetadata 
+                      field="year" 
+                      value={new Date(book.published_date).getFullYear().toString()}
+                    />
+                  </MetadataValue>
                 </MetadataRow>
               )}
-              {/* Language */}
+
+              {/* Language (clickable) */}
               <MetadataRow>
                 <MetadataLabel>{t('books.language')}</MetadataLabel>
                 <MetadataArrow>→</MetadataArrow>
-                <MetadataValue>{book.language}</MetadataValue>
+                <MetadataValue>
+                  <ClickableMetadata 
+                    field="language" 
+                    value={book.language}
+                  />
+                </MetadataValue>
               </MetadataRow>
+
               {/* ISBN */}
               {book.isbn && (
                 <MetadataRow>
@@ -805,6 +873,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
                   <MetadataValue>{book.isbn}</MetadataValue>
                 </MetadataRow>
               )}
+
               {/* External ID */}
               {book.external_id && (
                 <MetadataRow>
@@ -822,7 +891,6 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
               <MetadataLabel>{t('books.categories')}</MetadataLabel>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 {(() => {
-                  // Flatten, clean, deduplicate, remove 'Kindle eBooks', split by '>', '&', ','
                   const blacklist = ['kindle ebooks', 'kindle'];
                   const all = book.categories.flatMap(cat =>
                     cat
@@ -838,7 +906,9 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
                     const localized = i18next.t(key);
                     const display = localized !== key ? localized : cat.replace(/\b\w/g, c => c.toUpperCase());
                     return (
-                      <CategoryTag key={cat} to={`/category/${encodeURIComponent(cat)}`}>{display}</CategoryTag>
+                      <CategoryTag key={cat} to={`/category/${encodeURIComponent(cat)}`}>
+                        {display}
+                      </CategoryTag>
                     );
                   });
                 })()}
@@ -919,7 +989,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
               <BookGrid>
                 {relatedBooks.slice(0, visibleRelatedBooks).map(relatedBook => (
                   <RelatedBookCard key={relatedBook.id}>
-                    <Link to={`/book/${relatedBook.id}`}>
+                    <Link to={`/books/${relatedBook.id}`}>
                       <RelatedBookCover 
                         src={relatedBook.cover_url || placeholderCover} 
                         alt={relatedBook.title}
@@ -929,7 +999,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
                         }}
                       />
                     </Link>
-                    <RelatedBookTitle to={`/book/${relatedBook.id}`}>
+                    <RelatedBookTitle to={`/books/${relatedBook.id}`}>
                       {relatedBook.title}
                     </RelatedBookTitle>
                     <RelatedBookAuthor>{relatedBook.author}</RelatedBookAuthor>
