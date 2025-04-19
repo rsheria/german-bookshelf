@@ -242,7 +242,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Then sign out from Supabase
       await supabase.auth.signOut();
-      
+      // Clear localAuth data
+      clearAuthData();
+
       // Force reload the page to clear any in-memory state
       window.location.href = '/';
     } catch (logoutError) {
@@ -255,6 +257,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('sb-access-token');
       localStorage.removeItem('sb-refresh-token');
       localStorage.removeItem('user_is_admin');
+      // Clear localAuth data in fallback
+      clearAuthData();
       
       // Force reset auth state
       setUser(null);

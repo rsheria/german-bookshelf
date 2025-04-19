@@ -5,7 +5,6 @@ import styled from 'styled-components';
 import { FiHeadphones, FiBook } from 'react-icons/fi';
 import { motion, useMotionValue, useTransform } from 'framer-motion'; 
 import { Book } from '../types/supabase';
-import { useTheme } from '../context/ThemeContext';
 import { extractCategoryParts } from './CategorySidebar';
 
 interface BookCardProps {
@@ -250,6 +249,19 @@ const RatingBadge = styled(motion.div)<{ rating: number | undefined }>`
   }
 `;
 
+const AccessBadge = styled(motion.div)<{premium: boolean}>`
+  position: absolute;
+  bottom: ${({ theme }) => theme.spacing.md};
+  left: ${({ theme }) => theme.spacing.md};
+  background-color: ${props => props.premium ? props.theme.colors.warning : props.theme.colors.success};
+  color: white;
+  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  z-index: 2;
+`;
+
 const BookInfo = styled.div`
   display: flex;
   flex-direction: column;
@@ -345,7 +357,7 @@ const Genre = styled.span`
 
 const BookCard: React.FC<BookCardProps> = ({ book }) => {
   const { t } = useTranslation();
-  // We removed the unused isDark variable
+  // Removed unused useTheme import
   const placeholderCover = 'https://via.placeholder.com/300x450?text=No+Cover';
   const isMobile = useMediaQuery('(max-width: 768px)');
   
@@ -455,6 +467,9 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
           >
             {(book.rating || mockRating).toFixed(1)}
           </RatingBadge>
+          <AccessBadge premium={book.premium_only}>
+            {book.premium_only ? 'Premium only' : 'Free'}
+          </AccessBadge>
         </CoverContainer>
         <BookInfo>
           <Title>{book.title}</Title>

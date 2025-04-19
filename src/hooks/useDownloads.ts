@@ -17,34 +17,20 @@ export const useDownloads = (): UseDownloadsResult => {
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
 
   const checkRemainingQuota = async (): Promise<number> => {
-    if (!user || !profile) {
-      return 0;
-    }
-
+    if (!user || !profile) return 0;
     try {
-      // Get today's date at midnight for comparison
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayISOString = today.toISOString();
-
-      // Count downloads made today
-      if (!supabase) {
-        throw new Error('Supabase client is not initialized');
+      // Use RPC to count unique daily downloads per user
+      const { data: uniqueCountRes, error: rpcError } = await supabase
+        .rpc('count_unique_daily_downloads', { uid: user.id });
+      if (rpcError) throw rpcError;
+      let used = 0;
+      if (typeof uniqueCountRes === 'number') {
+        used = uniqueCountRes;
+      } else if (Array.isArray(uniqueCountRes) && uniqueCountRes.length > 0) {
+        const row = uniqueCountRes[0] as Record<string, any>;
+        used = Number(Object.values(row)[0]) || 0;
       }
-      
-      const { count, error } = await supabase
-        .from('download_logs')
-        .select('*', { count: 'exact' })
-        .eq('user_id', user.id)
-        .gte('downloaded_at', todayISOString);
-
-      if (error) {
-        throw error;
-      }
-
-      const used = count || 0;
       const remaining = Math.max(0, profile.daily_quota - used);
-      
       setRemainingQuota(remaining);
       return remaining;
     } catch (err) {
@@ -71,28 +57,23 @@ export const useDownloads = (): UseDownloadsResult => {
         throw new Error('You have reached your daily download limit');
       }
 
-      // Log the download
-      if (!supabase) {
-        throw new Error('Supabase client is not initialized');
-      }
-      
+      // Log the download; ignore duplicates so quota isn't decremented
       const { error: logError } = await supabase
         .from('download_logs')
-        .insert({
-          user_id: user.id,
-          book_id: bookId
-        });
-
+        .insert({ user_id: user.id, book_id: bookId });
+      const isNew = !logError;
       if (logError) {
-        throw logError;
+        // If not a unique constraint violation, rethrow
+        if (!/unique/i.test(logError.message)) {
+          throw logError;
+        }
       }
-
-      // Open the download URL in a new tab
+      // Proceed with download
       window.open(downloadUrl, '_blank');
-      
-      // Update remaining quota
-      setRemainingQuota(prev => prev !== null ? prev - 1 : null);
-      
+      // Decrement quota only on first download per book
+      if (isNew) {
+        setRemainingQuota(prev => prev !== null ? prev - 1 : null);
+      }
       return true;
     } catch (err) {
       setError(err as Error);

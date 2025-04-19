@@ -5,6 +5,7 @@ import styled from 'styled-components';
 import { FiEdit, FiTrash2, FiPlus, FiSearch, FiDownload, FiActivity, FiEye, FiArchive, FiBook } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
+import type { Book } from '../../types/supabase';
 import {
   AdminContainer,
   AdminHeader,
@@ -139,7 +140,7 @@ const PageButton = styled.button<{ active?: boolean }>`
   }
 `;
 
-const Chip = styled.span<{ variant?: 'audiobook' | 'ebook' | 'advanced' | 'intermediate' | 'beginner' }>`
+const Chip = styled.span<{ variant?: 'audiobook' | 'ebook' | 'advanced' | 'intermediate' | 'beginner' | 'premium' | 'free' }>`
   padding: 0.25rem 0.75rem;
   border-radius: ${props => props.theme.borderRadius.full};
   font-size: ${props => props.theme.typography.fontSize.xs};
@@ -170,6 +171,16 @@ const Chip = styled.span<{ variant?: 'audiobook' | 'ebook' | 'advanced' | 'inter
           color: #de9e1f;
         `;
       case 'beginner':
+        return `
+          background-color: rgba(40, 167, 69, 0.1);
+          color: ${props.theme.colors.success};
+        `;
+      case 'premium':
+        return `
+          background-color: rgba(63, 118, 156, 0.1);
+          color: ${props.theme.colors.primary};
+        `;
+      case 'free':
         return `
           background-color: rgba(40, 167, 69, 0.1);
           color: ${props.theme.colors.success};
@@ -293,19 +304,6 @@ const StatsCard = styled.div`
   }
 `;
 
-interface Book {
-  id: string;
-  title: string;
-  author: string;
-  description: string;
-  cover_url: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
-  type: 'ebook' | 'audiobook';
-  published_at: string;
-  language: string;
-  download_count: number;
-}
-
 const AdminBooksPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -314,7 +312,7 @@ const AdminBooksPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'ebook' | 'audiobook'>('all');
-  const [levelFilter, setLevelFilter] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');
+  const [accessFilter, setAccessFilter] = useState<'all' | 'free' | 'premium'>('all');
   const [page, setPage] = useState(0);
   const [totalBooks, setTotalBooks] = useState(0);
   const [bookStats, setBookStats] = useState({
@@ -341,7 +339,7 @@ const AdminBooksPage: React.FC = () => {
     
     fetchBooks();
     fetchBookStats();
-  }, [user, isAdmin, page, searchTerm, typeFilter, levelFilter]);
+  }, [user, isAdmin, page, searchTerm, typeFilter, accessFilter]);
 
   const fetchBooks = async () => {
     if (!user || !isAdmin) return;
@@ -350,7 +348,7 @@ const AdminBooksPage: React.FC = () => {
     
     try {
       let query = supabase
-        .from('books')
+        .from('books_with_download_count')
         .select('*', { count: 'exact' });
       
       // Apply search filter
@@ -363,9 +361,9 @@ const AdminBooksPage: React.FC = () => {
         query = query.eq('type', typeFilter);
       }
       
-      // Apply level filter
-      if (levelFilter !== 'all') {
-        query = query.eq('level', levelFilter);
+      // Apply access filter
+      if (accessFilter !== 'all') {
+        query = query.eq('premium_only', accessFilter === 'premium');
       }
       
       // Get total count for pagination
@@ -410,7 +408,7 @@ const AdminBooksPage: React.FC = () => {
         
       // Fetch total downloads
       const { count: totalDownloads } = await supabase
-        .from('downloads')
+        .from('download_logs')
         .select('*', { count: 'exact', head: true });
         
       setBookStats({
@@ -434,9 +432,9 @@ const AdminBooksPage: React.FC = () => {
     setPage(0); // Reset to first page when filter changes
   };
   
-  const handleLevelFilterChange = (level: 'all' | 'beginner' | 'intermediate' | 'advanced') => {
-    setLevelFilter(level);
-    setPage(0); // Reset to first page when filter changes
+  const handleAccessFilterChange = (filter: 'all' | 'free' | 'premium') => {
+    setAccessFilter(filter);
+    setPage(0); // Reset to first page when access filter changes
   };
   
   const handlePageChange = (newPage: number) => {
@@ -592,23 +590,22 @@ const AdminBooksPage: React.FC = () => {
         <FilterDropdown>
           <label>{t('filterByType', 'Filter by Type:')}</label>
           <select value={typeFilter} onChange={(e) => handleTypeFilterChange(e.target.value as any)}>
-  <option value="all">{t('allTypes', 'All Types')}</option>
-  <option value="ebook">E-Book</option>
-  {i18n.language === 'de' ? (
-    <option value="audiobook">Hörbuch</option>
-  ) : (
-    <option value="audiobook">Audiobook</option>
-  )}
-</select>
+            <option value="all">{t('allTypes', 'All Types')}</option>
+            <option value="ebook">E-Book</option>
+            {i18n.language === 'de' ? (
+              <option value="audiobook">Hörbuch</option>
+            ) : (
+              <option value="audiobook">Audiobook</option>
+            )}
+          </select>
         </FilterDropdown>
         
         <FilterDropdown>
-          <label>{t('filterByLevel', 'Filter by Level:')}</label>
-          <select value={levelFilter} onChange={(e) => handleLevelFilterChange(e.target.value as any)}>
-            <option value="all">{t('allLevels', 'All Levels')}</option>
-            <option value="beginner">{t('beginner', 'Beginner')}</option>
-            <option value="intermediate">{t('intermediate', 'Intermediate')}</option>
-            <option value="advanced">{t('advanced', 'Advanced')}</option>
+          <label>Filter by Access:</label>
+          <select value={accessFilter} onChange={(e) => handleAccessFilterChange(e.target.value as any)}>
+            <option value="all">All</option>
+            <option value="free">Free</option>
+            <option value="premium">Premium Only</option>
           </select>
         </FilterDropdown>
         
@@ -633,7 +630,7 @@ const AdminBooksPage: React.FC = () => {
               <TableHeader>{t('title', 'Title')}</TableHeader>
               <TableHeader>{t('author', 'Author')}</TableHeader>
               <TableHeader>{t('type', 'Type')}</TableHeader>
-              <TableHeader>{t('level', 'Level')}</TableHeader>
+              <TableHeader>{t('access', 'Access')}</TableHeader>
               <TableHeader>{t('published', 'Published')}</TableHeader>
               <TableHeader>{t('downloads', 'Downloads')}</TableHeader>
               <TableHeader>{t('actions', 'Actions')}</TableHeader>
@@ -660,12 +657,12 @@ const AdminBooksPage: React.FC = () => {
                   </Chip>
                 </TableCell>
                 <TableCell>
-                  <Chip variant={book.level}>
-                    {t(`${book.level}`)}
+                  <Chip variant={book.premium_only ? 'premium' : 'free'}>
+                    {book.premium_only ? t('premium_only', 'Premium Only') : t('free', 'Free')}
                   </Chip>
                 </TableCell>
-                <TableCell>{formatDate(book.published_at)}</TableCell>
-                <TableCell>{book.download_count || 0}</TableCell>
+                <TableCell>{formatDate(book.created_at)}</TableCell>
+                <TableCell>{book.download_count ?? 0}</TableCell>
                 <TableCell>
                   <ActionButtons>
                     <IconButton 
@@ -697,7 +694,7 @@ const AdminBooksPage: React.FC = () => {
             {books.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} style={{ textAlign: 'center' }}>
-                  {searchTerm || typeFilter !== 'all' || levelFilter !== 'all'
+                  {searchTerm || typeFilter !== 'all' || accessFilter !== 'all'
                     ? t('noSearchResults', 'No matching books found')
                     : t('noBooks', 'No books in the library yet')}
                 </TableCell>

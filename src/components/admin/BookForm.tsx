@@ -299,11 +299,10 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
   const [fileSize, setFileSize] = useState(book?.file_size || '');
   const [fileTypes, setFileTypes] = useState<string[]>(() => (
     book?.type === 'ebook'
-      ? (book.ebook_format ? book.ebook_format.split(',').map(f => f.trim()) : [])
-      : book?.type === 'audiobook'
-        ? (book.audio_format ? book.audio_format.split(',').map(f => f.trim()) : [])
-        : []
+      ? book.ebook_format?.split(',') || []
+      : book?.audio_format?.split(',') || []
   ));
+  const [premiumOnly, setPremiumOnly] = useState(book?.premium_only || false);
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -389,6 +388,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
         ebook_format: type === 'ebook' ? fileTypes.join(',') : undefined,
         audio_format: type === 'audiobook' ? fileTypes.join(',') : undefined,
         categories: categories.split(',').map((cat) => cat.trim()).filter(Boolean),
+        premium_only: premiumOnly,
       };
       
       if (isEdit && book) {
@@ -626,6 +626,20 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEdit = false }) => {
               onChange={(e) => setFileSize(e.target.value)}
               placeholder="z.B. 250MB"
             />
+          </FormGroup>
+        </FormRow>
+        
+        <FormRow>
+          <FormGroup>
+            <CheckboxLabel htmlFor="premiumOnly">
+              <input
+                id="premiumOnly"
+                type="checkbox"
+                checked={premiumOnly}
+                onChange={(e) => setPremiumOnly(e.target.checked)}
+              />
+              {t('admin.premiumOnly', 'Premium Only')}
+            </CheckboxLabel>
           </FormGroup>
         </FormRow>
         

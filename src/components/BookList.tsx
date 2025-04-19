@@ -134,8 +134,20 @@ const ListInfo = styled.div`
 `;
 
 const ListTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
   font-weight: ${theme.typography.fontWeight.bold};
   font-size: ${theme.typography.fontSize.md};
+`;
+
+const ListAccessBadge = styled.span<{premium: boolean}>`
+  background-color: ${props => props.premium ? theme.colors.warning : theme.colors.success};
+  color: white;
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.sm};
+  font-size: ${theme.typography.fontSize.xs};
+  font-weight: ${theme.typography.fontWeight.bold};
 `;
 
 const ListMeta = styled.div`
@@ -209,7 +221,12 @@ const BookList: React.FC<BookListProps> = ({
             <ListItem key={book.id} to={`/books/${book.id}`}>
               <ListCover src={book.cover_url || placeholderCover} alt={book.title} />
               <ListInfo>
-                <ListTitle>{book.title}</ListTitle>
+                <ListTitle>
+                  {book.title}
+                  <ListAccessBadge premium={book.premium_only}>
+                    {book.premium_only ? 'Premium only' : 'Free'}
+                  </ListAccessBadge>
+                </ListTitle>
                 <ListMeta>
                   <span>{book.author}</span>
                   {book.publisher && <span>{book.publisher}</span>}

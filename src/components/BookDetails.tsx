@@ -520,8 +520,10 @@ function DarkModeMetadataStyleFix() {
 
 const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const { downloadBook, isLoading, error, remainingQuota, checkRemainingQuota } = useDownloads();
+  const { user, profile } = useAuth();
+  const { downloadBook, isLoading, error: hookError, remainingQuota, checkRemainingQuota } = useDownloads();
+  const [localError, setLocalError] = useState<Error | null>(null);
+  const displayedError = localError || hookError;
   const [showError, setShowError] = useState(false);
   const [bookRating, setBookRating] = useState<number | undefined>(book.rating);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -539,6 +541,14 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
   
   const handleDownload = async () => {
     if (!user) return;
+    
+    // Prevent free users from downloading premium-only books
+    if (book.premium_only && profile?.subscription_plan !== 'premium') {
+      const msg = t('books.premiumOnlyError','This is a premium-only book. Please upgrade to download.');
+      setLocalError(new Error(msg));
+      setShowError(true);
+      return;
+    }
     
     // Check quota first if not already checked
     if (remainingQuota === null) {
@@ -965,10 +975,10 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
             </QuotaText>
           )}
           
-          {(showError || error) && (
+          {(showError || displayedError) && (
             <Alert>
               <FiAlertCircle />
-              {error?.message || t('books.downloadError')}
+              {displayedError?.message || t('books.downloadError')}
             </Alert>
           )}
         </BookInfo>

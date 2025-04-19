@@ -388,19 +388,88 @@ const AppRoutes: React.FC = () => {
               <Route path="/search" element={<SearchResultsPage />} />
               <Route path="/search/:field/:value" element={<SearchResultsPage />} />
               <Route path="/category/:category" element={<CategoryPage />} />
-
-              <Route path="/login" element={<LoginForm />} />
-              <Route path="/signup" element={<SignupForm />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/book-requests" element={<BookRequestPage />} />
-              <Route path="/admin" element={<AdminDashboardPage />} />
-              <Route path="/admin/books" element={<AdminBooksPage />} />
-              <Route path="/admin/books/add" element={<AddBookPage />} />
-              <Route path="/admin/books/edit/:id" element={<EditBookPage />} />
-              <Route path="/admin/users" element={<AdminUsersPage />} />
-              <Route path="/admin/users/:userId" element={<UserActivityPage />} />
-              <Route path="/admin/book-requests" element={<AdminBookRequestsPage />} />
-              <Route path="/admin/category-setup" element={<CategorySetupPage />} />
+              <Route path="/login" element={user ? <Navigate to="/" /> : <LoginForm />} />
+              <Route path="/signup" element={user ? <Navigate to="/" /> : <SignupForm />} />
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/book-requests" 
+                element={
+                  <ProtectedRoute>
+                    <BookRequestPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin" 
+                element={
+                  <AdminRoute>
+                    <AdminDashboardPage />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/books" 
+                element={
+                  <AdminRoute>
+                    <AdminBooksPage />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/books/add" 
+                element={
+                  <AdminRoute>
+                    <AddBookPage />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/books/edit/:id" 
+                element={
+                  <AdminRoute>
+                    <EditBookPage />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/users" 
+                element={
+                  <AdminRoute>
+                    <AdminUsersPage />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/users/:userId" 
+                element={
+                  <AdminRoute>
+                    <UserActivityPage />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/book-requests" 
+                element={
+                  <AdminRoute>
+                    <AdminBookRequestsPage />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/category-setup" 
+                element={
+                  <AdminRoute>
+                    <CategorySetupPage />
+                  </AdminRoute>
+                } 
+              />
               <Route path="/debug" element={<DebugPage />} />
               <Route path="/diagnostic" element={<DiagnosticPage />} />
               <Route path="/test-categories" element={<TestCategoryPage />} />
@@ -439,8 +508,8 @@ const AppRoutes: React.FC = () => {
             <Route path="/search" element={<SearchResultsPage />} />
             <Route path="/search/:field/:value" element={<SearchResultsPage />} />
             <Route path="/category/:category" element={<CategoryPage />} />
-            <Route path="/login" element={<LoginForm />} />
-            <Route path="/signup" element={<SignupForm />} />
+            <Route path="/login" element={user ? <Navigate to="/" /> : <LoginForm />} />
+            <Route path="/signup" element={user ? <Navigate to="/" /> : <SignupForm />} />
             <Route 
               path="/profile" 
               element={

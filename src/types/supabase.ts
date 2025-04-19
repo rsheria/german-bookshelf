@@ -30,6 +30,8 @@ export interface Book {
   file_size?: string; // File size (e.g., '250MB')
   categories?: string[]; // Categories/genres as an array
   fictionType?: 'Fiction' | 'Non-Fiction';
+  premium_only: boolean;
+  download_count?: number;  // aggregated downloads per book
 
 }
 

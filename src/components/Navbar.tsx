@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../services/supabase';
+import { useTheme } from '../context/ThemeContext';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import theme from '../styles/theme';
-import { useTheme } from '../context/ThemeContext';
 import { FiMenu, FiX, FiSearch, FiUser, FiLogOut, FiBook, FiHeadphones, FiPlusCircle, FiSettings, FiSun, FiMoon } from 'react-icons/fi';
 
 // Define variants for navbar animations
@@ -468,7 +467,7 @@ const NewBadge = styled.span`
 
 const Navbar: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -503,32 +502,12 @@ const Navbar: React.FC = () => {
     }
   };
 
-  const forceLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      
-      // Clear any stored tokens or user data from localStorage
-      localStorage.removeItem('supabase.auth.token');
-      
-      // Clean up any other app state - this will depend on your app
-      // For example, if you're using a state management library like Redux
-      // you might need to dispatch an action to clear the user state
-      
-      // Redirect to home page or login page
-      window.location.href = '/';
-    } catch (error) {
-      console.error('Force logout error:', error);
-      
-      // If the normal logout fails, try to clean up everything manually
-      localStorage.clear();
-      
-      // Force a page reload to reset all app state
-      window.location.href = '/';
-    }
-  };
-
   const handleLogout = async () => {
-    forceLogout();
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   const NavItem: React.FC<{ 

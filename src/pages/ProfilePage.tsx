@@ -73,6 +73,11 @@ const InfoItem = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.spacing.sm};
+  background-color: ${props => props.theme.colors.card};
+  border: 1px solid ${props => props.theme.colors.border};
+  padding: ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.md};
+  box-shadow: ${props => props.theme.shadows.sm};
 `;
 
 const InfoLabel = styled.span`
@@ -84,6 +89,8 @@ const InfoValue = styled.span`
   font-size: ${theme.typography.fontSize.lg};
   font-weight: ${props => props.theme.typography.fontWeight.medium};
   color: ${props => props.theme.colors.text};
+  word-break: break-all;
+  overflow-wrap: anywhere;
 `;
 
 const QuotaBar = styled.div`
@@ -709,14 +716,14 @@ const ProfilePage: React.FC = () => {
             <QuotaCard>
               <QuotaTitle>{t('profile.dailyQuota', 'Daily Quota')}</QuotaTitle>
               <QuotaValue>
-                {quotaUsed} / {displayProfile.daily_quota}
+                {t('profile.downloads', 'Downloads')}: {quotaUsed} / {displayProfile.daily_quota}
               </QuotaValue>
               <QuotaBar><QuotaProgress percent={quotaPercentUsed} /></QuotaBar>
             </QuotaCard>
             <QuotaCard>
               <QuotaTitle>{t('profile.monthlyQuota', 'Monthly Quota')}</QuotaTitle>
               <QuotaValue>
-                {requestUsed} / {requestMax}
+                {t('profile.requests', 'Requests')}: {requestUsed} / {requestMax}
               </QuotaValue>
               <QuotaBar><QuotaProgress percent={requestPercentUsed} /></QuotaBar>
             </QuotaCard>
