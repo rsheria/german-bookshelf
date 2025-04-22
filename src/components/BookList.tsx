@@ -218,7 +218,7 @@ const BookList: React.FC<BookListProps> = ({
       ) : (
         <ListView>
           {books.map((book) => (
-            <ListItem key={book.id} to={`/books/${book.id}`}>
+            <ListItem key={book.id} to={`/${book.type === 'audiobook' ? 'audiobook' : 'book'}/${book.seq_no}/${book.slug}.html`}>
               <ListCover src={book.cover_url || placeholderCover} alt={book.title} />
               <ListInfo>
                 <ListTitle>

@@ -13,17 +13,18 @@ import { getUserDownloadStats } from '../../services/downloadService';
 import { getDownloadStats } from '../../services/downloadService';
 import { getActivityStats } from '../../services/activityService';
 import { UserDownloadStats } from '../../types/supabase';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, BarController, Title } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
 
 // Register ChartJS components
 ChartJS.register(
-  ArcElement, 
-  Tooltip, 
+  ArcElement,
+  Tooltip,
   Legend,
   CategoryScale,
   LinearScale,
   BarElement,
+  BarController,
   Title
 );
 
@@ -189,6 +190,33 @@ const Username = styled.span`
   color: ${props => props.theme.colors.primary};
 `;
 
+const BookBar = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: ${props => props.theme.spacing.sm};
+`;
+
+const ProgressWrapper = styled.div`
+  flex: 1;
+  height: 8px;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  margin: 0 ${props => props.theme.spacing.sm};
+  overflow: hidden;
+`;
+
+const ProgressBar = styled.div<{percentage: number}>`
+  width: ${props => props.percentage}%;
+  height: 100%;
+  background-color: ${props => props.theme.colors.primary};
+  transition: width 0.3s ease;
+`;
+
+const CountLabel = styled.span`
+  font-size: ${props => props.theme.typography.fontSize.xs};
+  color: ${props => props.theme.colors.textDim};
+`;
+
 interface UserStatsPanelProps {
   className?: string;
 }
@@ -296,21 +324,9 @@ const UserStatsPanel: React.FC<UserStatsPanelProps> = ({ className }) => {
     ]
   };
   
-  // Bar chart for top books
-  const topBooksChartData = {
-    labels: downloadStats.topBooks.map(book => book.title),
-    datasets: [
-      {
-        label: t('downloads', 'Downloads'),
-        data: downloadStats.topBooks.map(book => book.count),
-        backgroundColor: 'rgba(52, 152, 219, 0.7)',
-        borderColor: 'rgba(52, 152, 219, 1)',
-        borderWidth: 1
-      }
-    ]
-  };
-  
   const renderOverviewTab = () => {
+    // Compute max downloads for normalization
+    const maxCount = downloadStats.topBooks[0]?.count || 0;
     return (
       <>
         <StatsGrid>
@@ -375,36 +391,18 @@ const UserStatsPanel: React.FC<UserStatsPanelProps> = ({ className }) => {
               <FiBarChart2 />
               {t('topDownloadedBooks', 'Top Downloaded Books')}
             </ChartTitle>
-            <Bar 
-              data={topBooksChartData}
-              options={{
-                indexAxis: 'y' as const,
-                responsive: true,
-                plugins: {
-                  legend: {
-                    display: false
-                  }
-                },
-                scales: {
-                  x: {
-                    ticks: {
-                      precision: 0
-                    }
-                  },
-                  y: {
-                    ticks: {
-                      callback: function(value) {
-                        const label = this.getLabelForValue(value as number);
-                        if (label && label.length > 20) {
-                          return label.substr(0, 20) + '...';
-                        }
-                        return label;
-                      }
-                    }
-                  }
-                }
-              }}
-            />
+            {downloadStats.topBooks.map(book => {
+              const percentage = maxCount > 0 ? (book.count / maxCount) * 100 : 0;
+              return (
+                <BookBar key={book.book_id}>
+                  <span>{book.title}</span>
+                  <ProgressWrapper>
+                    <ProgressBar percentage={percentage} />
+                  </ProgressWrapper>
+                  <CountLabel>{book.count}</CountLabel>
+                </BookBar>
+              );
+            })}
           </ChartCard>
         </ChartContainer>
       </>

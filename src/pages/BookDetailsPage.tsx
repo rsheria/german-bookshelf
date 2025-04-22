@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { FiArrowLeft } from 'react-icons/fi';
 import BookDetails from '../components/BookDetails';
-import { useBook } from '../hooks/useBooks';
+import { useBookBySlug } from '../hooks/useBooks';
 import { AdminContainer, LoadingState } from '../styles/adminStyles';
 
 const BackButton = styled.button`
@@ -50,10 +50,16 @@ const ErrorState = styled.div`
 
 const BookDetailsPage: React.FC = () => {
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  const { book, isLoading, error } = useBook(id || '');
+  // Parse URL path segments for SEO-friendly routing
+  const navigateLocation = useLocation();
+  const parts = navigateLocation.pathname.split('/');
+  const typeParam = parts[1] || 'book';
+  const seq = parts[2] || '';
+  const slugWithHtml = parts[3] || '';
+  const slug = slugWithHtml.replace(/\.html$/, '');
+  const { book, isLoading, error } = useBookBySlug(typeParam, seq, slug);
   
   const handleBack = () => {
     navigate(-1);

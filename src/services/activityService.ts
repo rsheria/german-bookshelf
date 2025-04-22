@@ -43,7 +43,7 @@ export const logUserActivity = async (
     const userAgent = window.navigator.userAgent;
     
     // Use our new function that includes IP address tracking
-    const { data, error } = await supabase.rpc('log_user_activity_with_type', {
+    console.log('[logUserActivity] RPC params:', {
       p_user_id: userId,
       p_action: action,
       p_entity_id: entityId,
@@ -53,19 +53,29 @@ export const logUserActivity = async (
       p_ip_address: ipAddress,
       p_user_agent: userAgent
     });
-
+    const { data, error } = await supabase.rpc('log_user_activity_with_type', {
+      p_user_id: userId,
+      p_action: action,
+      p_entity_id: entityId ?? null,
+      p_entity_type: entityType ?? null,
+      p_entity_name: entityName ?? null,
+      p_details: details ? JSON.stringify(details) : null,
+      p_ip_address: ipAddress,
+      p_user_agent: userAgent
+    });
+    console.log('[logUserActivity] RPC response:', { data, error });
     if (error) {
       console.error('Error logging activity with IP:', error);
       // Fall back to the original function if the new one fails
       try {
         const { data: fallbackData } = await supabase.rpc('log_user_activity', {
-          user_id: userId,
-          action,
-          entity_id: entityId,
-          entity_type: entityType,
-          entity_name: entityName,
-          details: details ? JSON.stringify(details) : null,
-          ip_address: null
+          p_user_id: userId,
+          p_action: action,
+          p_entity_id: entityId ?? null,
+          p_entity_type: entityType ?? null,
+          p_entity_name: entityName ?? null,
+          p_details: details ? JSON.stringify(details) : null,
+          p_ip_address: null
         });
         return fallbackData;
       } catch (fbError) {
@@ -125,36 +135,18 @@ export const getRecentActivities = async (limit = 10): Promise<ActivityLog[]> =>
  */
 export const getUserActivities = async (userId: string, limit = 20): Promise<ActivityLog[]> => {
   try {
-    // Try to use our new renamed function first
-    const { data, error } = await supabase.rpc('get_user_activities', { 
-      user_id_param: userId,
-      limit_param: limit 
-    });
+    // Directly query activity_logs for the given user
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
     if (error) {
-      console.error('Error fetching user activities with optimized function:', error);
-      // Fall back to direct table query if the function fails
-      try {
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('activity_logs')
-          .select('*')
-          .eq('entity_id', userId)
-          .eq('entity_type', 'user')
-          .order('created_at', { ascending: false })
-          .limit(limit);
-        
-        if (fallbackError) {
-          console.error('Fallback query for user activities failed:', fallbackError);
-          return [];
-        }
-        
-        return fallbackData || [];
-      } catch (fbError) {
-        console.error('Exception in fallback query for user activities:', fbError);
-        return [];
-      }
+      console.error('Error fetching user activities:', error);
+      return [];
     }
-
     return data || [];
   } catch (error) {
     console.error('Exception fetching user activities:', error);
@@ -272,7 +264,7 @@ export const getUserLoginHistory = async (limit = 20): Promise<ActivityLog[]> =>
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('activity_logs')
           .select('*')
-          .eq('action', ActivityType.LOGIN)
+          .ilike('action', ActivityType.LOGIN)
           .order('created_at', { ascending: false })
           .limit(limit);
         
@@ -292,5 +284,29 @@ export const getUserLoginHistory = async (limit = 20): Promise<ActivityLog[]> =>
   } catch (error) {
     console.error('Exception fetching login history:', error);
     return [];
+  }
+};
+
+/**
+ * Get the user's last login timestamp
+ */
+export const getUserLastLogin = async (userId: string): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .select('created_at')
+      .eq('user_id', userId)
+      .ilike('action', ActivityType.LOGIN)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    if (error) {
+      console.error('Error fetching last login:', error);
+      return null;
+    }
+    return data?.created_at || null;
+  } catch (error) {
+    console.error('Exception fetching last login:', error);
+    return null;
   }
 };

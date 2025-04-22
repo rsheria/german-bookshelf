@@ -70,14 +70,23 @@ export const trackPageView = async (userId: string, pagePath: string): Promise<v
     // Get client IP for more accurate tracking
     const ipAddress = await getClientIp();
     
-    // Call our custom RPC that includes IP address
-    await supabase.rpc('track_page_view_with_ip', {
+    // Call our custom RPC that includes IP address (with debug logs)
+    console.log('[trackPageView] RPC params:', {
       p_user_id: userId,
       p_page_path: pagePath,
       p_session_id: getSessionId(),
       p_ip_address: ipAddress,
       p_user_agent: window.navigator.userAgent
     });
+    const { data, error } = await supabase.rpc('track_page_view_with_ip', {
+      p_user_id: userId,
+      p_page_path: pagePath,
+      p_session_id: getSessionId(),
+      p_ip_address: ipAddress,
+      p_user_agent: window.navigator.userAgent
+    });
+    console.log('[trackPageView] RPC response:', { data, error });
+    if (error) throw error;
   } catch (error) {
     console.error('Error tracking page view with IP:', error);
     // Fallback to original function if the custom one fails

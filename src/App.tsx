@@ -108,6 +108,7 @@ const MainContent = styled.main`
   flex-direction: column;
   position: relative;
   z-index: 1;
+  padding-bottom: 150px; /* prevent content hidden under footer */
 `;
 
 // Debug component to show environment variables
@@ -333,7 +334,6 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 };
 
 const AppRoutes: React.FC = () => {
-  const ScrollToTop = getScrollToTop();
   const location = useLocation();
   const { user } = useAuth();
   const { i18n } = useTranslation();
@@ -379,12 +379,12 @@ const AppRoutes: React.FC = () => {
         <AppContainer>
           <Navbar />
           <MainContent>
-            {ScrollToTop}
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/audiobooks" element={<AudiobooksPage />} />
               <Route path="/ebooks" element={<EbooksPage />} />
-              <Route path="/books/:id" element={<BookDetailsPage />} />
+              <Route path="/book/:seq/:slug.html" element={<BookDetailsPage />} />
+              <Route path="/audiobook/:seq/:slug.html" element={<BookDetailsPage />} />
               <Route path="/search" element={<SearchResultsPage />} />
               <Route path="/search/:field/:value" element={<SearchResultsPage />} />
               <Route path="/category/:category" element={<CategoryPage />} />
@@ -499,12 +499,12 @@ const AppRoutes: React.FC = () => {
       <AppContainer>
         <Navbar />
         <MainContent>
-          {ScrollToTop}
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/audiobooks" element={<AudiobooksPage />} />
             <Route path="/ebooks" element={<EbooksPage />} />
-            <Route path="/books/:id" element={<BookDetailsPage />} />
+            <Route path="/book/:seq/:slug.html" element={<BookDetailsPage />} />
+            <Route path="/audiobook/:seq/:slug.html" element={<BookDetailsPage />} />
             <Route path="/search" element={<SearchResultsPage />} />
             <Route path="/search/:field/:value" element={<SearchResultsPage />} />
             <Route path="/category/:category" element={<CategoryPage />} />

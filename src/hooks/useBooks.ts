@@ -22,7 +22,10 @@ const mockBooks: Book[] = [
     language: 'German',
     file_url: '#',
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
+    premium_only: false,
+    seq_no: 1,
+    slug: 'der-prozess'
   },
   {
     id: '2',
@@ -35,7 +38,10 @@ const mockBooks: Book[] = [
     language: 'German',
     file_url: '#',
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
+    premium_only: false,
+    seq_no: 2,
+    slug: 'die-verwandlung'
   }
 ];
 
@@ -383,6 +389,60 @@ export const useBook = (id: string): UseBookResult => {
     fetchBook();
   }, [id]);
   
+  return { book, isLoading, error };
+};
+
+// Hook to fetch a book by seq_no and slug for SEO-friendly URLs
+export const useBookBySlug = (
+  typeParam: string,
+  seqParam: string,
+  slugParam: string
+): UseBookResult => {
+  const [book, setBook] = useState<Book | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const fetchBookBySlug = async () => {
+      // Support both 'audiobook' and legacy 'Hörbuch' in DB
+      const types = typeParam === 'audiobook' ? ['audiobook', 'Hörbuch'] : ['ebook'];
+      const seqNo = parseInt(seqParam, 10);
+      // Remove .html suffix from slug
+      const cleanSlug = slugParam.replace(/\.html$/, '');
+      setIsLoading(true);
+      setError(null);
+      try {
+        console.debug('useBookBySlug fetching', { typeParam, seqParam, cleanSlug });
+        const res = await supabase
+          .from('books')
+          .select('*')
+          .in('type', types)
+          .eq('seq_no', seqNo)
+          .eq('slug', cleanSlug)
+          .maybeSingle();  // Use maybeSingle to avoid errors when no match
+        console.debug('useBookBySlug response', res);
+        const { data, error } = res;
+        if (error) {
+          console.error('Supabase error:', error);
+          setError(new Error(error.message));
+          setBook(null);
+          setIsLoading(false);
+          return;
+        }
+        setBook(data || null);
+      } catch (err) {
+        console.error('Error fetching book by slug:', err);
+        setError(err instanceof Error ? err : new Error('Failed to fetch book'));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (typeParam && seqParam && slugParam) {
+      fetchBookBySlug();
+    }
+  }, [typeParam, seqParam, slugParam]);
+
   return { book, isLoading, error };
 };
 

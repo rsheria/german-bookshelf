@@ -32,6 +32,8 @@ export interface Book {
   fictionType?: 'Fiction' | 'Non-Fiction';
   premium_only: boolean;
   download_count?: number;  // aggregated downloads per book
+  seq_no: number; // Sequence number for SEO URL
+  slug: string; // SEO-friendly slug of title
 
 }
 
@@ -64,6 +66,7 @@ export interface IpLog {
   user_id: string;
   ip_address: string;
   user_agent?: string;
+  country_code?: string;
   location?: Record<string, any>; // Geolocation data in JSON format
   created_at: string;
 }
@@ -110,6 +113,29 @@ export interface UserDownloadStats {
   downloads_this_month: number;
 }
 
+export interface BookRequest {
+  id: string;
+  user_id: string;
+  title: string;
+  author: string | null;
+  language: string;
+  format: string;
+  description: string | null;
+  priority: string;
+  status: string;
+  admin_notes: string | null;
+  fulfilled_at: string | null;
+  created_at: string;
+}
+
+export interface RequestVote {
+  id: string;
+  request_id: string;
+  user_id: string;
+  vote: number;
+  created_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -143,6 +169,16 @@ export interface Database {
         Row: UserSession;
         Insert: Omit<UserSession, 'id' | 'started_at' | 'last_active_at'>;
         Update: Partial<Omit<UserSession, 'id' | 'started_at'>>;
+      };
+      book_requests: {
+        Row: BookRequest;
+        Insert: Omit<BookRequest, 'id' | 'created_at'>;
+        Update: Partial<Omit<BookRequest, 'id' | 'created_at'>>;
+      };
+      request_votes: {
+        Row: RequestVote;
+        Insert: Omit<RequestVote, 'id' | 'created_at'>;
+        Update: Partial<Omit<RequestVote, 'id' | 'created_at'>>;
       };
     };
     Functions: {

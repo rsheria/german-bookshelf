@@ -10,7 +10,8 @@ import {
   FiClock,
   FiArrowLeft,
   FiRefreshCw,
-  FiGlobe
+  FiGlobe,
+  FiLogIn
 } from 'react-icons/fi';
 import { HiOutlineBan as FiBan } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
@@ -19,6 +20,8 @@ import { getUserActivities } from '../../services/activityService';
 import { getUserDownloads } from '../../services/downloadService';
 import { getUserIpLogs } from '../../services/ipTrackingService';
 import { isUserBanned } from '../../services/userBanService';
+import { getUserLastLogin } from '../../services/activityService';
+import { countryCodeToEmoji } from '../../utils/flagUtils';
 import { format } from 'date-fns';
 import {
   AdminContainer,
@@ -262,6 +265,7 @@ interface IpLog {
   ip_address: string;
   created_at: string;
   user_agent?: string;
+  country_code?: string;
 }
 
 interface UserData {
@@ -293,7 +297,8 @@ const UserActivityPage: React.FC = () => {
     totalActivities: 0,
     totalDownloads: 0,
     uniqueIps: 0,
-    lastActive: ''
+    lastActive: '',
+    lastLogin: ''
   });
   
   useEffect(() => {
@@ -302,10 +307,11 @@ const UserActivityPage: React.FC = () => {
       return;
     }
     
-    // Load user data and activities
+    // Load user data, activities, downloads, and IP logs for stats
     fetchUserData();
     fetchActivities();
-    
+    fetchDownloads();
+    fetchIpLogs();
   }, [user, userId, navigate]);
   
   useEffect(() => {
@@ -361,6 +367,16 @@ const UserActivityPage: React.FC = () => {
       };
       
       setUserData(user);
+      // Use last active timestamp from sessions
+      const lastActiveTs = sessionData?.last_active_at || '';
+      setStats(prev => ({ ...prev, lastActive: lastActiveTs }));
+      
+      // Fetch actual last login timestamp, fallback to profile.last_sign_in
+      let loginTs = await getUserLastLogin(userId);
+      if (!loginTs && profileData.last_sign_in) {
+        loginTs = profileData.last_sign_in;
+      }
+      setStats(prev => ({ ...prev, lastLogin: loginTs || '' }));
       
     } catch (error) {
       console.error('Exception fetching user data:', error);
@@ -376,14 +392,11 @@ const UserActivityPage: React.FC = () => {
       const activityLogs = await getUserActivities(userId, 50);
       setActivities(activityLogs);
       
-      // Update stats
-      if (activityLogs.length > 0) {
-        setStats(prev => ({
-          ...prev,
-          totalActivities: activityLogs.length,
-          lastActive: activityLogs[0].created_at
-        }));
-      }
+      // Update stats count
+      setStats(prev => ({
+        ...prev,
+        totalActivities: activityLogs.length
+      }));
     } catch (error) {
       console.error('Error fetching user activities:', error);
     }
@@ -408,14 +421,16 @@ const UserActivityPage: React.FC = () => {
   
   const fetchIpLogs = async () => {
     if (!userId) return;
-    
+
     try {
-      const ipLogsList = await getUserIpLogs(userId, 50);
-      setIpLogs(ipLogsList);
-      
+      const ipLogsList = await getUserIpLogs(userId, 1000);
+      // Filter out invalid or placeholder IPs (e.g., 0.0.0.0)
+      const filteredLogs = ipLogsList.filter(log => log.ip_address !== '0.0.0.0');
+      setIpLogs(filteredLogs);
+
       // Count unique IPs
-      const uniqueIps = new Set(ipLogsList.map(log => log.ip_address));
-      
+      const uniqueIps = new Set(filteredLogs.map(log => log.ip_address));
+
       // Update stats
       setStats(prev => ({
         ...prev,
@@ -618,6 +633,7 @@ const UserActivityPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
+              <TableHeader>{t('country', 'Country')}</TableHeader>
               <TableHeader>{t('ipAddress', 'IP Address')}</TableHeader>
               <TableHeader>{t('userAgent', 'User Agent')}</TableHeader>
               <TableHeader>{t('timestamp', 'Timestamp')}</TableHeader>
@@ -626,6 +642,11 @@ const UserActivityPage: React.FC = () => {
           <tbody>
             {ipLogs.map(ip => (
               <TableRow key={ip.id}>
+                <TableCell>
+                  {ip.country_code
+                    ? countryCodeToEmoji(ip.country_code)
+                    : <FiGlobe />}
+                </TableCell>
                 <TableCell>{ip.ip_address}</TableCell>
                 <TableCell>{ip.user_agent || '-'}</TableCell>
                 <TableCell>
@@ -673,6 +694,7 @@ const UserActivityPage: React.FC = () => {
             className="refresh"
             title={t('refresh', 'Refresh')}
             onClick={() => {
+              fetchUserData();
               if (activeTab === 'activity') fetchActivities();
               else if (activeTab === 'downloads') fetchDownloads();
               else if (activeTab === 'ips') fetchIpLogs();
@@ -698,10 +720,16 @@ const UserActivityPage: React.FC = () => {
               <FiCalendar size={14} />
               {t('joined', 'Joined')}: {formatDate(userData.created_at)}
             </UserMetaItem>
-            {userData.last_sign_in_at && (
+            {stats.lastActive && (
               <UserMetaItem>
                 <FiClock size={14} />
-                {t('lastLogin', 'Last Login')}: {formatDate(userData.last_sign_in_at)}
+                {t('lastActive', 'Last Active')}: {formatDate(stats.lastActive)}
+              </UserMetaItem>
+            )}
+            {stats.lastLogin && (
+              <UserMetaItem>
+                <FiLogIn size={14} />
+                {t('lastLogin', 'Last Login')}: {formatDate(stats.lastLogin)}
               </UserMetaItem>
             )}
             {userData.email && (
@@ -741,6 +769,20 @@ const UserActivityPage: React.FC = () => {
           <StatLabel>
             <FiDownload size={16} />
             {t('dailyQuota', 'Daily Download Quota')}
+          </StatLabel>
+        </StatCard>
+        <StatCard>
+          <StatValue>{stats.lastActive ? formatDate(stats.lastActive) : '-'}</StatValue>
+          <StatLabel>
+            <FiClock size={16} />
+            {t('lastActive', 'Last Active')}
+          </StatLabel>
+        </StatCard>
+        <StatCard>
+          <StatValue>{stats.lastLogin ? formatDate(stats.lastLogin) : '-'}</StatValue>
+          <StatLabel>
+            <FiLogIn size={16} />
+            {t('lastLogin', 'Last Login')}
           </StatLabel>
         </StatCard>
       </StatsGrid>

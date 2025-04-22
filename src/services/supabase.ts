@@ -18,19 +18,6 @@ const supabase = createClient<Database>(
       storageKey: 'sb-auth-token', // Use standard key that Supabase expects
       flowType: 'implicit' // Use implicit flow for better token management
     },
-    global: {
-      // Global error handler to make fetch operations more resilient
-      fetch: (...args) => {
-        return fetch(...args).catch(err => {
-          console.error('Network error in Supabase client:', err);
-          // Return empty OK response instead of crashing
-          return new Response(JSON.stringify({}), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        });
-      }
-    },
     realtime: {
       params: {
         eventsPerSecond: 1

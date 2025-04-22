@@ -667,7 +667,10 @@ const AdminBooksPage: React.FC = () => {
                   <ActionButtons>
                     <IconButton 
                       className="view"
-                      onClick={() => navigate(`/books/${book.id}`)} 
+                      onClick={() => {
+                        const typePath = book.type === 'audiobook' ? 'audiobook' : 'book';
+                        navigate(`/${typePath}/${book.seq_no}/${book.slug}.html`);
+                      }} 
                       aria-label={t('view')}
                     >
                       <FiEye size={16} />

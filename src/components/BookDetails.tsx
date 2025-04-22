@@ -999,7 +999,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
               <BookGrid>
                 {relatedBooks.slice(0, visibleRelatedBooks).map(relatedBook => (
                   <RelatedBookCard key={relatedBook.id}>
-                    <Link to={`/books/${relatedBook.id}`}>
+                    <Link to={`/${relatedBook.type === 'audiobook' ? 'audiobook' : 'book'}/${relatedBook.seq_no}/${relatedBook.slug}.html`}>
                       <RelatedBookCover 
                         src={relatedBook.cover_url || placeholderCover} 
                         alt={relatedBook.title}
@@ -1009,7 +1009,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
                         }}
                       />
                     </Link>
-                    <RelatedBookTitle to={`/books/${relatedBook.id}`}>
+                    <RelatedBookTitle to={`/${relatedBook.type === 'audiobook' ? 'audiobook' : 'book'}/${relatedBook.seq_no}/${relatedBook.slug}.html`}>
                       {relatedBook.title}
                     </RelatedBookTitle>
                     <RelatedBookAuthor>{relatedBook.author}</RelatedBookAuthor>

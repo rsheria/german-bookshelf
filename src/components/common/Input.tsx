@@ -2,7 +2,7 @@ import React, { forwardRef } from 'react';
 import styled, { css } from 'styled-components';
 import theme from '../../styles/theme';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
   helperText?: string;
   error?: string;
@@ -11,11 +11,13 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   isFullWidth?: boolean;
 }
 
-const InputContainer = styled.div<{ isFullWidth?: boolean }>`
+const InputContainer = styled.div.withConfig({
+  shouldForwardProp: prop => prop !== 'isFullWidth',
+})<{ isFullWidth: boolean }>`
   display: flex;
   flex-direction: column;
   margin-bottom: ${theme.spacing.md};
-  width: ${props => props.isFullWidth ? '100%' : 'auto'};
+  width: ${({ isFullWidth }) => (isFullWidth ? '100%' : 'auto')};
 `;
 
 const InputLabel = styled.label`
@@ -34,112 +36,119 @@ const InputWrapper = styled.div`
 const LeftIconWrapper = styled.div`
   position: absolute;
   left: ${theme.spacing.md};
-  color: ${theme.colors.textLight};
+  pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
+  color: ${theme.colors.inputPlaceholder};
 `;
 
 const RightIconWrapper = styled.div`
   position: absolute;
   right: ${theme.spacing.md};
-  color: ${theme.colors.textLight};
   display: flex;
   align-items: center;
   justify-content: center;
+  color: ${theme.colors.inputPlaceholder};
 `;
 
-const StyledInput = styled.input.attrs<{ hasLeftIcon?: boolean; hasRightIcon?: boolean; hasError?: boolean }>(() => ({
-  // Explicitly omit custom props from DOM
-}))<{ hasLeftIcon?: boolean; hasRightIcon?: boolean; hasError?: boolean }>`
+const StyledInput = styled.input<{
+  $hasLeftIcon: boolean;
+  $hasRightIcon: boolean;
+  $hasError: boolean;
+}>`
   width: 100%;
   height: 42px;
   padding: ${theme.spacing.sm} ${theme.spacing.md};
   font-size: ${theme.typography.fontSize.md};
   font-family: ${theme.typography.fontFamily.body};
-  color: ${theme.colors.text};
-  background-color: white;
-  border: 1px solid ${theme.colors.border};
+  color: ${theme.colors.inputText};
+  background-color: ${theme.colors.input};
+  border: 1px solid ${theme.colors.inputBorder};
   border-radius: ${theme.borderRadius.md};
   transition: all ${theme.transitions.fast};
-  
-  ${props => props.hasLeftIcon && css`
-    padding-left: ${theme.spacing.xl};
-  `}
-  
-  ${props => props.hasRightIcon && css`
-    padding-right: ${theme.spacing.xl};
-  `}
-  
+
+  ${({ $hasLeftIcon }) =>
+    $hasLeftIcon &&
+    css`
+      padding-left: ${theme.spacing.xl};
+    `}
+
+  ${({ $hasRightIcon }) =>
+    $hasRightIcon &&
+    css`
+      padding-right: ${theme.spacing.xl};
+    `}
+
+  ${({ $hasError }) =>
+    $hasError &&
+    css`
+      border-color: ${theme.colors.error};
+      &:focus {
+        box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+      }
+    `}
+
   &:focus {
     outline: none;
-    border-color: ${theme.colors.primary};
-    box-shadow: 0 0 0 3px rgba(26, 54, 93, 0.1);
+    border-color: ${({ $hasError }) => ($hasError ? theme.colors.error : theme.colors.primary)};
+    box-shadow: 0 0 0 3px
+      ${({ $hasError }) =>
+        $hasError ? 'rgba(231,76,60,0.1)' : 'rgba(26,54,93,0.1)'};
   }
-  
+
   &:disabled {
-    background-color: ${theme.colors.backgroundAlt};
+    background-color: ${theme.colors.inputPlaceholder};
     cursor: not-allowed;
     opacity: 0.7;
   }
-  
+
   &::placeholder {
-    color: ${theme.colors.textLight};
+    color: ${theme.colors.inputPlaceholder};
     opacity: 0.7;
   }
-  
-  ${props => props.hasError && css`
-    border-color: ${theme.colors.error};
-    
-    &:focus {
-      box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
-    }
-  `}
 `;
 
-const HelperText = styled.div<{ isError?: boolean }>`
+const HelperText = styled.div<{ isError: boolean }>`
   font-size: ${theme.typography.fontSize.xs};
   margin-top: ${theme.spacing.xs};
-  color: ${props => props.isError ? theme.colors.error : theme.colors.textLight};
   display: flex;
   align-items: center;
   gap: ${theme.spacing.xs};
+  color: ${({ isError }) => (isError ? theme.colors.error : theme.colors.inputPlaceholder)};
 `;
 
-const Input = forwardRef<HTMLInputElement, InputProps>(({
-  label,
-  helperText,
-  error,
-  leftIcon,
-  rightIcon,
-  isFullWidth = true,
-  ...props
-}, ref) => {
-  return (
-    <InputContainer isFullWidth={isFullWidth}>
-      {label && <InputLabel>{label}</InputLabel>}
-      <InputWrapper>
-        {leftIcon && <LeftIconWrapper>{leftIcon}</LeftIconWrapper>}
-        <StyledInput
-          ref={ref}
-          hasLeftIcon={!!leftIcon}
-          hasRightIcon={!!rightIcon}
-          hasError={!!error}
-          aria-invalid={!!error}
-          {...props}
-        />
-        {rightIcon && <RightIconWrapper>{rightIcon}</RightIconWrapper>}
-      </InputWrapper>
-      {(helperText || error) && (
-        <HelperText isError={!!error}>
-          {error || helperText}
-        </HelperText>
-      )}
-    </InputContainer>
-  );
-});
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  (
+    { label, helperText, error, leftIcon, rightIcon, isFullWidth = true, ...inputProps },
+    ref
+  ) => {
+    const hasLeft = Boolean(leftIcon);
+    const hasRight = Boolean(rightIcon);
+    const hasError = Boolean(error);
+
+    return (
+      <InputContainer isFullWidth={isFullWidth}>
+        {label && <InputLabel>{label}</InputLabel>}
+        <InputWrapper>
+          {hasLeft && <LeftIconWrapper>{leftIcon}</LeftIconWrapper>}
+          <StyledInput
+            ref={ref}
+            {...inputProps}
+            $hasLeftIcon={hasLeft}
+            $hasRightIcon={hasRight}
+            $hasError={hasError}
+            aria-invalid={hasError}
+          />
+          {hasRight && <RightIconWrapper>{rightIcon}</RightIconWrapper>}
+        </InputWrapper>
+        {(helperText || error) && (
+          <HelperText isError={hasError}>{error || helperText}</HelperText>
+        )}
+      </InputContainer>
+    );
+  }
+);
 
 Input.displayName = 'Input';
-
 export default Input;

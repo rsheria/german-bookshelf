@@ -431,7 +431,7 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
       onClick={handleClick}
     >
       <Card 
-        to={`/books/${book.id}`}
+        to={`/${book.type === 'audiobook' ? 'audiobook' : 'book'}/${book.seq_no}/${book.slug}.html`}
         style={{ rotateX, rotateY }} 
         variants={cardVariants}      
         initial="initial"           

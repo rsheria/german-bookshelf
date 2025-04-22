@@ -9,6 +9,7 @@ import { AdminContainer, LoadingState } from '../styles/adminStyles';
 import { Profile } from '../types/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { getUserLastLogin } from '../services/activityService';
 
 const PageHeader = styled.div`
   margin-bottom: ${props => props.theme.spacing.xl};
@@ -427,6 +428,9 @@ interface SimpleBook {
   title: string;
   author: string;
   cover_url: string;
+  type: string;
+  seq_no: number;
+  slug: string;
 }
 
 interface DownloadHistoryItem {
@@ -454,6 +458,7 @@ const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const [userStatus, setUserStatus] = useState<'online'|'offline'>('offline');
   const [lastLogin, setLastLogin] = useState<string | null>(null);
+  const [actualLastLogin, setActualLastLogin] = useState<string | null>(null);
 
   const fetchDownloadHistory = async (pageParam = 0, append = false): Promise<void> => {
     if (!user) return;
@@ -487,7 +492,7 @@ const ProfilePage: React.FC = () => {
       const bookIds = downloadData.map(d => d.book_id);
       const { data: bookData, error: bookError } = await supabase
         .from('books')
-        .select('id, title, author, cover_url')
+        .select('id, title, author, cover_url, type, seq_no, slug')
         .in('id', bookIds);
 
       if (bookError) {
@@ -508,7 +513,10 @@ const ProfilePage: React.FC = () => {
             id: download.book_id,
             title: t('profile.unknownBook', 'Unknown Book'),
             author: t('profile.unknownAuthor', 'Unknown Author'),
-            cover_url: 'https://via.placeholder.com/50x75?text=No+Cover'
+            cover_url: 'https://via.placeholder.com/50x75?text=No+Cover',
+            type: '',
+            seq_no: 0,
+            slug: ''
           },
           downloaded_at: download.downloaded_at
         };
@@ -568,6 +576,13 @@ const ProfilePage: React.FC = () => {
     }
     setUserStatus(data.is_active ? 'online' : 'offline');
     setLastLogin(data.last_active_at || data.started_at);
+    // Fetch actual last login timestamp
+    try {
+      const loginTs = await getUserLastLogin(user.id);
+      setActualLastLogin(loginTs);
+    } catch (err) {
+      console.error('Error fetching actual last login:', err);
+    }
   };
 
   useEffect(() => {
@@ -685,7 +700,8 @@ const ProfilePage: React.FC = () => {
           </StatusBadge>
           <MetaInfo>
             <MetaLabel>{t('profile.joined', 'Joined')}: {formatDate(displayProfile.created_at)}</MetaLabel>
-            {lastLogin && <MetaLabel>{t('profile.lastLogin', 'Last Login')}: {formatDate(lastLogin)}</MetaLabel>}
+            {lastLogin && <MetaLabel>{t('profile.lastActive', 'Last Active')}: {formatDate(lastLogin)}</MetaLabel>}
+            {actualLastLogin && <MetaLabel>{t('profile.lastLogin', 'Last Login')}: {formatDate(actualLastLogin)}</MetaLabel>}
           </MetaInfo>
         </UserDetails>
       </UserHeader>
@@ -764,10 +780,11 @@ const ProfilePage: React.FC = () => {
               <DownloadItem
                 key={item.id}
                 onClick={() => {
-                  const bookId = Array.isArray(item.book)
-                    ? item.book[0]?.id
-                    : item.book?.id;
-                  if (bookId) navigate(`/books/${bookId}`);
+                  const b = Array.isArray(item.book) ? item.book[0] : item.book;
+                  const typePath = b?.type === 'audiobook' ? 'audiobook' : 'book';
+                  if (b && b.seq_no && b.slug) {
+                    navigate(`/${typePath}/${b.seq_no}/${b.slug}.html`);
+                  }
                 }}
               >
                 <BookCover

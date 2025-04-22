@@ -8,15 +8,15 @@ CREATE OR REPLACE FUNCTION public.authorize_download(
 ) RETURNS text AS $$
 DECLARE
   used_count integer;
-  limit integer;
+  quota_limit integer;
   url text;
 BEGIN
-  SELECT daily_quota INTO limit FROM public.profiles WHERE id = user_id;
+  SELECT daily_quota INTO quota_limit FROM public.profiles WHERE id = user_id;
   SELECT count(*) INTO used_count
     FROM public.download_logs
     WHERE user_id = user_id
       AND downloaded_at >= date_trunc('day', now());
-  IF used_count >= limit THEN
+  IF used_count >= quota_limit THEN
     RAISE EXCEPTION 'Download limit reached for today';
   END IF;
   INSERT INTO public.download_logs(user_id, book_id)

@@ -1,5 +1,16 @@
 import { supabase } from './supabase';
-import { DownloadLog, UserDownloadStats } from '../types/supabase';
+import { UserDownloadStats } from '../types/supabase';
+
+// Interface for user download log with nested book info
+export interface DownloadLog {
+  id: string;
+  downloaded_at: string;
+  book?: {
+    id: string;
+    title: string;
+    author: string;
+  };
+}
 
 /**
  * Get download logs for a specific user
@@ -8,17 +19,23 @@ export const getUserDownloads = async (userId: string, limit = 50): Promise<Down
   try {
     const { data, error } = await supabase
       .from('download_logs')
-      .select('*, books(*)')
+      // nest the related book record under 'book' key
+      .select('id, downloaded_at, book:books(id, title, author)')
       .eq('user_id', userId)
       .order('downloaded_at', { ascending: false })
       .limit(limit);
     
-    if (error) {
+    if (error || !data) {
       console.error('Error fetching user downloads:', error);
       return [];
     }
-    
-    return data || [];
+    // Map nested book array to single object
+    const downloadLogs: DownloadLog[] = (data as any[]).map(d => ({
+      id: d.id,
+      downloaded_at: d.downloaded_at,
+      book: Array.isArray(d.book) && d.book.length > 0 ? d.book[0] : undefined
+    }));
+    return downloadLogs;
   } catch (error) {
     console.error('Exception fetching user downloads:', error);
     return [];
@@ -32,7 +49,7 @@ export const getAllDownloads = async (
   page = 0, 
   limit = 20,
   searchTerm = ''
-): Promise<{ data: DownloadLog[], count: number }> => {
+): Promise<{ data: any[], count: number }> => {
   try {
     let query = supabase
       .from('download_logs')
@@ -126,20 +143,30 @@ export const getDownloadStats = async (): Promise<{
       console.error('Error fetching month downloads:', monthError);
     }
     
-    // Get top downloaded books
-    const { data: topBooks, error: topError } = await supabase
-      .rpc('get_top_downloaded_books', { limit_count: 10 });
+    // Get top downloaded books from view
+    const { data: topBooksView, error: topViewError } = await supabase
+      .from('books_with_download_count')
+      .select('id, title, download_count')
+      .order('download_count', { ascending: false })
+      .limit(10);
     
-    if (topError) {
-      console.error('Error fetching top downloaded books:', topError);
+    if (topViewError) {
+      console.error('Error fetching top downloaded books:', topViewError);
     }
+    
+    // Map view data to expected format
+    const topBooks = (topBooksView || []).map(book => ({
+      book_id: book.id,
+      title: book.title,
+      count: book.download_count
+    }));
     
     return {
       totalDownloads: totalDownloads || 0,
       downloadsToday: downloadsToday || 0,
       downloadsThisWeek: downloadsThisWeek || 0,
       downloadsThisMonth: downloadsThisMonth || 0,
-      topBooks: topBooks || []
+      topBooks
     };
   } catch (error) {
     console.error('Exception fetching download stats:', error);

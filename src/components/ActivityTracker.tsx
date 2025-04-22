@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../services/supabase';
 import { getClientIp, recordIpLog } from '../services/ipTrackingService';
+import { trackUserActivity, trackPageView } from '../services/trackingService';
 
 // This component tracks user activity across the site
 const ActivityTracker = () => {
   const location = useLocation();
   const { user } = useAuth();
   const [userIp, setUserIp] = useState<string | null>(null);
-  
+  const hasLoggedRef = useRef(false);
+
   // Get and store the user's IP address when component mounts
   useEffect(() => {
     // Only fetch IP once when component mounts
@@ -22,39 +23,22 @@ const ActivityTracker = () => {
         console.error('Error getting client IP:', error);
       }
     };
-    
+
     fetchIp();
   }, []);
 
+  // Log IP once when we have both user and IP
+  useEffect(() => {
+    if (user?.id && userIp && !hasLoggedRef.current) {
+      recordIpLog(user.id, userIp);
+      hasLoggedRef.current = true;
+    }
+  }, [user, userIp]);
+
   // Track page views and update last active time
   useEffect(() => {
-    const trackActivity = async () => {
-      if (!user?.id) return;
-      
-      try {
-        // Use stored IP address or get it again if needed
-        const ipAddress = userIp || await getClientIp();
-        
-        // Call our tracking function
-        await supabase.rpc('update_user_last_active', {
-          user_id_param: user.id,
-          url_param: location.pathname,
-          ip_param: ipAddress
-        });
-        
-        // Also record IP directly to ensure it's logged
-        await recordIpLog(user.id, ipAddress);
-        
-        console.log(`Activity tracked: ${location.pathname}`);
-      } catch (error) {
-        console.error('Error tracking activity:', error);
-      }
-    };
-
-    if (user?.id) {
-      trackActivity();
-    }
-  }, [location.pathname, user, userIp]);
+    if (user?.id) trackPageView(user.id, location.pathname);
+  }, [location.pathname, user]);
 
   // Set up user activity monitoring
   useEffect(() => {
@@ -62,17 +46,7 @@ const ActivityTracker = () => {
 
     // Track activity on user interactions
     const trackInteraction = async () => {
-      try {
-        // Use stored IP or get a new one
-        const ipToUse = userIp || await getClientIp();
-        
-        await supabase.rpc('update_user_last_active', {
-          user_id_param: user.id,
-          ip_param: ipToUse
-        });
-      } catch (error) {
-        console.error('Error updating last active time:', error);
-      }
+      trackUserActivity(user.id);
     };
 
     // Debounce the tracking to avoid excessive calls
@@ -95,7 +69,7 @@ const ActivityTracker = () => {
       });
       clearTimeout(timeout);
     };
-  }, [user, userIp]);
+  }, [user]);
 
   return null; // This component doesn't render anything
 };

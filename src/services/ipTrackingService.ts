@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { IpLog } from '../types/supabase';
 import axios from 'axios';
+import { getCountryCode } from './geoService';
 
 /**
  * Get the client's IP address using an external service
@@ -171,27 +172,36 @@ export const recordIpLog = async (
   try {
     // If no IP address is provided, get it from the client
     const finalIpAddress = ipAddress || await getClientIp();
-    
+
     // Get user agent from browser if not provided
     const finalUserAgent = userAgent || window.navigator.userAgent;
-    
+
+    // Fetch country code for this IP
+    const countryCode = await getCountryCode(finalIpAddress);
+
+    // Upsert to avoid duplicate entries per user+IP
     const { data, error } = await supabase
       .from('ip_logs')
-      .insert([
-        {
-          user_id: userId,
-          ip_address: finalIpAddress,
-          user_agent: finalUserAgent
-        }
-      ])
+      .upsert(
+        [
+          {
+            user_id: userId,
+            ip_address: finalIpAddress,
+            user_agent: finalUserAgent,
+            country_code: countryCode,
+            created_at: new Date().toISOString(),
+          }
+        ],
+        { onConflict: 'user_id,ip_address' }
+      )
       .select()
       .single();
-    
+
     if (error) {
       console.error('Error recording IP log:', error);
       return null;
     }
-    
+
     return data?.id || null;
   } catch (error) {
     console.error('Exception recording IP log:', error);

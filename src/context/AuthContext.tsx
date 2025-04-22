@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, signUp, signIn } from '../services/supabase';
 import { setUserFromSupabase, isLoggedIn as isLocalLoggedIn, getCurrentUser, clearAuthData, initializeLocalAuth } from '../services/localAuth';
+import { logUserActivity, ActivityType } from '../services/activityService';
 
 interface AuthContextType {
   session: Session | null;
@@ -329,13 +330,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Log the login activity in our tracking system
         try {
-          await supabase.rpc('log_login_activity', { 
-            user_id_param: data.session.user.id 
-          });
+          await logUserActivity(data.session.user.id, ActivityType.LOGIN);
           console.log('Login activity tracked successfully');
         } catch (trackError) {
           console.error('Error tracking login:', trackError);
-          // Non-critical error, continue with login
         }
         
         // Show success toast or notification here if needed
