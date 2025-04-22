@@ -29,6 +29,20 @@ import {
 } from '../../styles/adminStyles';
 
 // Additional styled components specific to this page
+const Input = styled.input`
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  background-color: ${props => props.theme.colors.backgroundLight};
+  color: ${props => props.theme.colors.text};
+  outline: none;
+  transition: border-color 0.2s;
+  &:focus {
+    border-color: ${props => props.theme.colors.primary};
+  }
+`;
 const StatusBadge = styled.span<{ $variant: 'Pending' | 'Approved' | 'Fulfilled' | 'Rejected' }>`
   display: inline-flex;
   align-items: center;
@@ -193,17 +207,16 @@ const ActionButtons = styled.div`
 `;
 
 // Modal styled components
+import { createPortal } from 'react-dom';
+
 const Modal = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background-color: rgba(0,0,0,0.5);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: ${props => props.theme.zIndex.modalBackdrop};
 `;
 
 const ModalContent = styled.div`
@@ -470,6 +483,7 @@ interface BookRequest {
   updated_at: string;
   fulfilled_at: string | null;
   admin_notes: string | null;
+  book_link?: string | null; // Link to the fulfilled book
   requester_username?: string;
 }
 
@@ -477,6 +491,7 @@ interface BookRequest {
 interface EditFormData {
   status: 'Pending' | 'Approved' | 'Fulfilled' | 'Rejected';
   admin_notes: string;
+  book_link: string; // Link to the fulfilled book
 }
 
 const AdminBookRequestsPage: React.FC = () => {
@@ -495,7 +510,8 @@ const AdminBookRequestsPage: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<BookRequest | null>(null);
   const [editFormData, setEditFormData] = useState<EditFormData>({
     status: 'Pending',
-    admin_notes: ''
+    admin_notes: '',
+    book_link: ''
   });
   
   // Filters
@@ -597,7 +613,8 @@ const AdminBookRequestsPage: React.FC = () => {
     setSelectedRequest(request);
     setEditFormData({
       status: request.status,
-      admin_notes: request.admin_notes || ''
+      admin_notes: request.admin_notes || '',
+      book_link: request.book_link || ''
     });
     setIsEditModalOpen(true);
   };
@@ -618,36 +635,46 @@ const AdminBookRequestsPage: React.FC = () => {
   const handleUpdateRequest = async () => {
     if (!selectedRequest) return;
     
+    // Validate that book_link is provided when status is Fulfilled
+    if (editFormData.status === 'Fulfilled' && !editFormData.book_link.trim()) {
+      setError('A book link is required when marking a request as fulfilled');
+      return;
+    }
+    
     try {
-      // Use the admin_update_book_request function instead of direct update
+      // Update book_requests table directly to trigger realtime updates
+      const newStatusDb = editFormData.status.toLowerCase();
+      const fulfilledAt = editFormData.status === 'Fulfilled' ? new Date().toISOString() : null;
+      
+      // Only include book_link when request is fulfilled
+      const bookLink = editFormData.status === 'Fulfilled' ? editFormData.book_link.trim() || null : null;
+      
       const { error } = await supabase
-        .rpc('admin_update_book_request', {
-          request_id: selectedRequest.id,
-          new_status: editFormData.status,
-          new_admin_notes: editFormData.admin_notes.trim() || null
-        });
+        .from('book_requests')
+        .update({
+          status: newStatusDb,
+          admin_notes: editFormData.admin_notes.trim() || null,
+          fulfilled_at: fulfilledAt,
+          book_link: bookLink
+        })
+        .eq('id', selectedRequest.id);
         
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
-      // Determine the fulfilled_at date based on status
-      const fulfilled_at = editFormData.status === 'Fulfilled' ? new Date().toISOString() : null;
-      
-      // Update local state with the changes
-      setRequests(prev => 
-        prev.map(request => 
-          request.id === selectedRequest.id 
-            ? { 
-                ...request, 
-                status: editFormData.status,
-                admin_notes: editFormData.admin_notes.trim() || null,
-                fulfilled_at: fulfilled_at,
-                updated_at: new Date().toISOString()
-              } 
-            : request
-        )
-      );
+      // Update local state to reflect changes immediately
+      setRequests(prev => prev.map(request => {
+        if (request.id === selectedRequest.id) {
+          return { 
+            ...request, 
+            status: editFormData.status, 
+            admin_notes: editFormData.admin_notes.trim() || null, 
+            fulfilled_at: fulfilledAt, 
+            book_link: bookLink,
+            updated_at: new Date().toISOString() 
+          };
+        }
+        return request;
+      }));
       
       setSuccess('Request updated successfully!');
       handleCloseModal();
@@ -894,7 +921,7 @@ const AdminBookRequestsPage: React.FC = () => {
       </TableContainer>
       
       {/* Edit Modal */}
-      {isEditModalOpen && selectedRequest && (
+      {isEditModalOpen && selectedRequest && createPortal(
         <Modal>
           <ModalContent>
             <ModalHeader>
@@ -967,12 +994,31 @@ const AdminBookRequestsPage: React.FC = () => {
               />
             </FormGroup>
             
+            {/* Book Link field - only show when status is Fulfilled */}
+            {editFormData.status === 'Fulfilled' && (
+              <FormGroup>
+                <Label htmlFor="book_link">{t('Book Link', 'Book Link')} <span style={{ color: 'red' }}>*</span></Label>
+                <Input
+                  id="book_link"
+                  name="book_link"
+                  value={editFormData.book_link}
+                  onChange={handleEditFormChange}
+                  placeholder={t('Enter link to the fulfilled book', 'Enter link to the fulfilled book')}
+                  required
+                />
+                <small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                  {t('Add a direct link where users can access this book', 'Add a direct link where users can access this book')}
+                </small>
+              </FormGroup>
+            )}
+            
             <Button $variant="primary" onClick={handleUpdateRequest}>
               <FiCheck />
               {t('Update Request', 'Update Request')}
             </Button>
           </ModalContent>
-        </Modal>
+        </Modal>,
+        document.body
       )}
     </AdminContainer>
   );
