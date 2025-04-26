@@ -121,10 +121,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setSession(session);
       setUser(session?.user || null);
       
-      // SECURITY: Only use server-verified admin status
+      // SECURITY: First try server verification, then fall back to JWT claims if needed
       if (session?.user) {
-        const isUserAdmin = session.user.app_metadata?.is_admin === true;
-        setIsAdmin(isUserAdmin);
+        try {
+          // First try to get admin status from profile table (most secure)
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (!profileError && profileData) {
+            setIsAdmin(!!profileData.is_admin);
+            console.log('Admin status verified from database:', !!profileData.is_admin);
+          } else {
+            // Fall back to JWT claims as backup
+            const isUserAdmin = session.user.app_metadata?.is_admin === true;
+            setIsAdmin(isUserAdmin);
+            console.log('Using JWT claims for admin status:', isUserAdmin);
+          }
+        } catch (error) {
+          console.error('Error verifying admin status:', error);
+          // Last resort fallback to JWT claims
+          const isUserAdmin = session.user.app_metadata?.is_admin === true;
+          setIsAdmin(isUserAdmin);
+        }
       } else {
         setIsAdmin(false);
       }

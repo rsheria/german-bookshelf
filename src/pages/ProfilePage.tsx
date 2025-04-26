@@ -563,19 +563,30 @@ const ProfilePage: React.FC = () => {
 
   const fetchStatus = async () => {
     if (!user) return;
+    
+    // Remove the .single() call that was causing the error
     const { data, error } = await supabase
       .from('user_sessions')
       .select('is_active, last_active_at, started_at')
       .eq('user_id', user.id)
       .order('last_active_at', { ascending: false })
-      .limit(1)
-      .single();
-    if (error || !data) {
+      .limit(1);
+      
+    // Handle case when no session exists
+    if (error) {
       console.error('Error fetching user session status:', error);
       return;
     }
-    setUserStatus(data.is_active ? 'online' : 'offline');
-    setLastLogin(data.last_active_at || data.started_at);
+    
+    // If we have session data, use it, otherwise set default values
+    if (data && data.length > 0) {
+      setUserStatus(data[0].is_active ? 'online' : 'offline');
+      setLastLogin(data[0].last_active_at || data[0].started_at);
+    } else {
+      // Default to offline if no session exists
+      setUserStatus('offline');
+      setLastLogin(null);
+    }
     // Fetch actual last login timestamp
     try {
       const loginTs = await getUserLastLogin(user.id);

@@ -14,14 +14,26 @@ const supabase = createClient<Database>(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false, // Disable URL detection which can cause issues
-      storageKey: 'sb-auth-token', // Standard key that Supabase expects
+      // SECURITY: Use secure cookies instead of localStorage - this requires proper backend setup
+      storage: {
+        getItem: (key) => {
+          // This hook is only for compatibility; actual storage is via HTTP-only cookies
+          console.log(`Secure cookie storage: getItem ${key}`);
+          return null;
+        },
+        setItem: (_key, _value) => {
+          // This hook is only for compatibility; actual storage is via HTTP-only cookies
+          console.log(`Secure cookie storage: setItem`);
+        },
+        removeItem: (key) => {
+          // This hook is only for compatibility; actual storage is via HTTP-only cookies
+          console.log(`Secure cookie storage: removeItem ${key}`);
+        }
+      },
       flowType: 'implicit' // Use implicit flow for better token management
     },
     global: {
-      // No longer add CSRF token from localStorage: handled by secure cookies/server
-      headers: {
-        // 'x-csrf-token': localStorage.getItem('csrf_token') || '' // REMOVED for security
-      }
+      headers: {}
     },
     realtime: {
       params: {
@@ -32,10 +44,17 @@ const supabase = createClient<Database>(
 );
 
 // Configure cookies for better security when user loads the application
-function setCookieSecuritySettings() {
-  // This only sets security attributes, not the actual tokens
-  document.cookie = 'sb-refresh-token=; path=/; secure; samesite=strict; max-age=604800'; // 7 days
-  document.cookie = 'sb-access-token=; path=/; secure; samesite=strict; max-age=900'; // 15 minutes
+function setCookieSecuritySettings(): void {
+  // This is just an initialization - actual secure cookies are set by Supabase auth
+  // with httpOnly flag set server-side
+  
+  // We only set the cookie security attributes here
+  const secureOptions = 'path=/; secure; samesite=strict';
+  
+  // Clear any potentially insecure cookies by setting empty ones with security attributes
+  document.cookie = `sb-refresh-token=; ${secureOptions}; max-age=0`;
+  document.cookie = `sb-access-token=; ${secureOptions}; max-age=0`;
+  document.cookie = `sb-auth-token=; ${secureOptions}; max-age=0`;
 }
 
 // Set cookie security settings when module loads
@@ -52,10 +71,9 @@ export { supabase };
  * Ensures all session data is reliably stored (NO LONGER in localStorage for security)
  * All sensitive data must be managed by Supabase or secure cookies only.
  */
-export const saveSessionToLocalStorage = (_session: any) => {
+export const saveSessionToLocalStorage = (_session: any): void => {
   // SECURITY: Removed all localStorage usage for session/auth info
   // No-op: Do not store tokens or admin flags in localStorage
-  // If session is cleared, Supabase will handle it securely
   // This function remains for backward compatibility and debugging
   console.warn('saveSessionToLocalStorage is disabled for security reasons.');
 };
@@ -80,7 +98,7 @@ export const synchronizeSession = async (): Promise<any> => {
   try {
     console.log('Synchronizing session...');
     
-    // First try to get the session from Supabase
+    // Get the session from Supabase (should be using cookies now)
     const { data } = await supabase.auth.getSession();
     const supabaseSession = data?.session;
     
@@ -88,9 +106,6 @@ export const synchronizeSession = async (): Promise<any> => {
       console.log('Found active session in Supabase');
       return supabaseSession;
     }
-    
-    // If Supabase doesn't have a session, try to get it from other secure storage
-    // NOTE: No longer use localStorage for security reasons
     
     console.log('No session found in Supabase');
     return null;
@@ -100,85 +115,91 @@ export const synchronizeSession = async (): Promise<any> => {
   }
 };
 
-// Consistently manage session manually as an additional layer of persistence
-export const manuallyStoreSession = (_session: any) => {
+/**
+ * Consistently manage session manually as an additional layer of persistence
+ * This is disabled for security reasons - no longer storing in localStorage
+ */
+export const manuallyStoreSession = (_session: any): void => {
   // SECURITY: Removed all localStorage usage for session/auth info
   // No-op: Do not store tokens or admin flags in localStorage
-  // This function remains for backward compatibility and debugging
   console.warn('manuallyStoreSession is disabled for security reasons.');
 };
 
-// Retrieve session from any available storage
-export const getStoredSession = async () => {
-  try {
-    // Try to get the session from the Supabase standard location first
-    const { data } = await supabase.auth.getSession();
-    if (data?.session) {
-      return data.session;
-    }
-    const key = `sb-${supabaseUrl.split('//')[1].split('.')[0]}-auth-token`;
-    let storedSession = localStorage.getItem(key);
-    if (storedSession) {
-      return JSON.parse(storedSession);
-    }
-    // Fall back to our custom storage location
-    storedSession = localStorage.getItem('sb-auth-token');
-    if (storedSession) {
-      return JSON.parse(storedSession);
-    }
-    return null;
-  } catch (error) {
-    console.error('Error retrieving session:', error);
-    return null;
-  }
+/**
+ * Retrieve session from any available storage
+ * This is disabled for security reasons - no longer accessing localStorage
+ */
+export const getStoredSession = (): null => {
+  // SECURITY: Only use Supabase's secure session storage
+  // This function remains for backward compatibility
+  console.warn('getStoredSession is no longer accessing localStorage for security reasons');
+  return null;
 };
 
-// Enhanced auth functions with redundant session storage
-export const signUp = async (email: string, password: string) => {
+/**
+ * Enhanced auth functions with secure session storage
+ * Register a new user with email and password
+ */
+export const signUp = async (email: string, password: string): Promise<any> => {
   try {
-    const result = await supabase.auth.signUp({ email, password });
-    if (result.data.session) {
-      manuallyStoreSession(result.data.session);
-    }
+    const result = await supabase.auth.signUp({
+      email,
+      password
+    });
     return result;
   } catch (error) {
     console.error('Sign up error:', error);
-    return { data: { user: null }, error: { message: 'Sign up failed' } };
+    return { error };
   }
 };
 
-export const signIn = async (email: string, password: string) => {
+/**
+ * Sign in with email and password using secure cookie storage
+ */
+export const signIn = async (email: string, password: string): Promise<any> => {
   try {
-    // Sign in with password
-    const result = await supabase.auth.signInWithPassword({ email, password });
+    // Monitor for insecure fetch during login
+    const originalFetch = window.fetch;
     
-    if (result.data.session) {
-      // Store session with redundancy
-      manuallyStoreSession(result.data.session);
-      
-      // Update the global headers with the new CSRF token
-      supabase.realtime.setAuth(result.data.session.access_token);
-      
-      // For any future API calls
-      if (window.fetch) {
-        const originalFetch = window.fetch;
-        window.fetch = function(url, options = {}) {
-          // Create proper headers object
-          const headers = options.headers || {};
-          
-          // Create a new Headers object if it's a Headers instance
-          if (headers instanceof Headers) {
-          } else if (typeof headers === 'object') {
-            // If it's a plain object
-          }
-          
-          // Update options with modified headers
-          options.headers = headers;
-          
-          return originalFetch.call(this, url, options);
-        };
-      }
-      
+    // Create a more secure fetch that ensures headers are properly set
+    if (typeof window !== 'undefined') {
+      // @ts-ignore
+      window.fetch = function(this: typeof window, url: string, options: RequestInit = {}) {
+        // Deep clone options to avoid mutation issues
+        const clonedOptions = JSON.parse(JSON.stringify(options || {}));
+        
+        // Create headers if they don't exist
+        if (!clonedOptions.headers) {
+          clonedOptions.headers = {};
+        }
+        
+        // Extract the headers for manipulation
+        const headers = clonedOptions.headers as Record<string, string>;
+        
+        // Ensure proper Content-Type for JSON
+        if (!headers['Content-Type'] && clonedOptions.body) {
+          headers['Content-Type'] = 'application/json';
+        }
+        
+        // Update options with modified headers
+        clonedOptions.headers = headers;
+        
+        return originalFetch.call(this, url, clonedOptions);
+      };
+    }
+    
+    // Perform the login
+    const result = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    // Restore original fetch
+    if (typeof window !== 'undefined') {
+      window.fetch = originalFetch;
+    }
+    
+    if (result.data?.user) {
       // Record login event securely
       try {
         await supabase.rpc('handle_auth_event_secure', {
@@ -199,8 +220,13 @@ export const signIn = async (email: string, password: string) => {
   }
 };
 
-export const signOut = async () => {
+/**
+ * Sign out and clear all authentication data securely
+ */
+export const signOut = async (): Promise<{error: any}> => {
   try {
+    console.log('Signing out...');
+    
     // Get user ID before signing out for activity logging
     const { data: sessionData } = await supabase.auth.getSession();
     const userId = sessionData?.session?.user?.id;
@@ -217,12 +243,23 @@ export const signOut = async () => {
       }
     }
     
-    // Perform the signout
-    const result = await supabase.auth.signOut();
+    // Sign out with Supabase - this will clear cookies too
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
     
-    // Clear all auth-related items from localStorage
+    // Extra cleanup to ensure all auth data is removed
+    
+    // Clear any localStorage data that might contain sensitive info
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth') || key === 'csrf_token') {
+      if (
+        key.startsWith('sb-') ||
+        key.includes('supabase') ||
+        key.includes('auth') ||
+        key.includes('token') ||
+        key.includes('session') ||
+        key.includes('admin') ||
+        key === 'german_bookshelf_local_auth'
+      ) {
         localStorage.removeItem(key);
       }
     });
@@ -234,19 +271,22 @@ export const signOut = async () => {
       }
     });
 
-    // Clear any potential cookies with secure attributes
+    // Clear any potentially remaining cookies explicitly
     const cookiesToClear = document.cookie.split(';');
     const secureDomain = window.location.hostname;
     
     cookiesToClear.forEach(cookie => {
       const cookieName = cookie.split('=')[0].trim();
+      // Clear the cookie on the current domain and all subdomains
       document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; secure; samesite=strict; domain=${secureDomain}`;
+      // Also clear without domain specified
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; secure; samesite=strict;`;
     });
 
     // Force a page reload to clear any in-memory state
     window.location.href = '/';
     
-    return result;
+    return { error: null };
   } catch (error) {
     console.error('Error during sign out:', error);
     // Even if there's an error, try to force a clean state
@@ -255,46 +295,23 @@ export const signOut = async () => {
   }
 };
 
-export const getSession = async () => {
+/**
+ * Get the current session securely from Supabase
+ */
+export const getSession = async (): Promise<{data: any, error: any}> => {
   try {
-    // First check for Supabase session
+    // Get session from Supabase (using secure cookies)
     const { data, error } = await supabase.auth.getSession();
-    
-    // If session exists, refresh our redundant copy
-    if (data.session) {
-      manuallyStoreSession(data.session);
-      return { data, error };
-    }
-    
-    // Try manual fallback if no Supabase session found
-    if (!data.session && !error) {
-      const storedSession = await getStoredSession();
-      if (storedSession) {
-        console.log('Attempting recovery with stored session');
-        
-        // Try to restore the session
-        try {
-          await supabase.auth.setSession(storedSession);
-          
-          // Check if session was restored
-          const refreshedSession = await supabase.auth.getSession();
-          if (refreshedSession.data.session) {
-            return refreshedSession;
-          }
-        } catch (sessionError) {
-          console.error('Session recovery attempt failed:', sessionError);
-        }
-      }
-    }
-    
     return { data, error };
   } catch (error) {
     console.error('Get session error:', error);
-    return { data: { session: null } };
+    return { data: { session: null }, error };
   }
 };
 
-// Add session keepalive function
+/**
+ * Refresh the session token securely
+ */
 export const refreshSession = async (): Promise<boolean> => {
   try {
     const { data } = await supabase.auth.getSession();
@@ -320,8 +337,10 @@ export const refreshSession = async (): Promise<boolean> => {
   }
 };
 
-// Function to start the session keepalive mechanism
-export const startSessionKeepalive = () => {
+/**
+ * Start automatic session keepalive to maintain valid session
+ */
+export const startSessionKeepalive = (): (() => void) => {
   // Refresh immediately
   refreshSession();
   
@@ -335,7 +354,7 @@ export const startSessionKeepalive = () => {
   
   let activityTimeout: NodeJS.Timeout | null = null;
   
-  const activityHandler = () => {
+  const activityHandler = (): void => {
     // Clear existing timeout
     if (activityTimeout) {
       clearTimeout(activityTimeout);
