@@ -342,34 +342,18 @@ const UserActivityPage: React.FC = () => {
         return;
       }
       
-      // Get the user's last active status from user_sessions
-      const { data: sessionData } = await supabase
-        .from('user_sessions')
-        .select('last_active_at')
-        .eq('user_id', userId)
-        .order('last_active_at', { ascending: false })
-        .limit(1)
-        .single();
-      
-      // Check if user is banned
-      const userBanned = await isUserBanned(userId);
-      
-      // Construct a user data object
-      const user: UserData = {
-        id: profileData.id,
-        username: profileData.username,
-        email: profileData.email || '',
-        created_at: profileData.created_at,
-        last_sign_in_at: profileData.last_sign_in || (sessionData?.last_active_at || null),
-        is_admin: profileData.is_admin || false,
-        daily_quota: profileData.daily_quota || 10,
-        is_banned: userBanned
+      let user = {
+        ...profileData,
+        is_banned: await isUserBanned(userId),
+        is_admin: !!profileData.is_admin,
+        last_sign_in_at: profileData.last_sign_in || null,
+        last_active: profileData.last_active || null
       };
+
       
       setUserData(user);
-      // Use last active timestamp from sessions
-      const lastActiveTs = sessionData?.last_active_at || '';
-      setStats(prev => ({ ...prev, lastActive: lastActiveTs }));
+      // Use last_active from the user/profile directly
+      setStats(prev => ({ ...prev, lastActive: user.last_active || '' }));
       
       // Fetch actual last login timestamp, fallback to profile.last_sign_in
       let loginTs = await getUserLastLogin(userId);

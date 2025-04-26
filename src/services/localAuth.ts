@@ -114,6 +114,16 @@ export const clearAuthData = () => {
   
   const emptyStore = initializeLocalStore();
   saveLocalStore(emptyStore);
+  
+  // Also clear any persisted supabase session
+  try {
+    localStorage.removeItem('sb-auth-token');
+    localStorage.removeItem('supabase.auth.token');
+    localStorage.removeItem('user_is_admin');
+    sessionStorage.removeItem('supabase.auth.token');
+  } catch (e) {
+    console.error('Error clearing supabase tokens:', e);
+  }
 };
 
 // Set up event listeners to keep auth fresh

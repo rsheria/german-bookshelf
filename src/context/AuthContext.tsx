@@ -56,6 +56,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       setAuthStatusChecked(false);
       
+      // Helper function to check if user still exists in Supabase
+      const verifyUserExists = async (userId: string): Promise<boolean> => {
+        try {
+          // Try to fetch the user's profile from the database
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', userId)
+            .single();
+            
+          if (error || !data) {
+            console.log('User no longer exists in Supabase:', userId);
+            return false;
+          }
+          return true;
+        } catch (e) {
+          console.error('Error verifying user existence:', e);
+          return false;
+        }
+      };
+      
       try {
         // COMPLETELY NEW APPROACH: First check if we have local auth data
         if (isLocalLoggedIn()) {
@@ -63,7 +84,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const localUser = getCurrentUser();
           
           if (localUser) {
-            // We have local data, use it immediately to prevent loading state
+            // IMPORTANT: Verify the user still exists in Supabase before proceeding
+            const userExists = await verifyUserExists(localUser.id);
+            if (!userExists) {
+              console.log('User was deleted from Supabase, clearing local auth...');
+              clearAuthData();
+              setUser(null);
+              setSession(null);
+              setProfile(null);
+              setIsAdmin(false);
+              setIsLoading(false);
+              setAuthStatusChecked(true);
+              return;
+            }
+            
+            // User exists, we can use local data to prevent loading state
             setIsAdmin(localUser.isAdmin);
             
             // Attempt to get Supabase session in the background
@@ -169,10 +204,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error('Error initializing auth:', error);
         setError(error instanceof Error ? error : new Error(String(error)));
         
-        // LAST RESORT FALLBACK: If we have local auth data, use it
+        // LAST RESORT FALLBACK: If we have local auth data, verify user still exists
         if (isLocalLoggedIn()) {
           const localUser = getCurrentUser();
           if (localUser) {
+            // Verify the user still exists in Supabase
+            const userExists = await verifyUserExists(localUser.id);
+            if (!userExists) {
+              console.log('User was deleted from Supabase, clearing local auth...');
+              clearAuthData();
+              setUser(null);
+              setSession(null);
+              setProfile(null);
+              setIsAdmin(false);
+              return;
+            }
+            
             console.log(' LAST RESORT: Using local auth data after error');
             setIsAdmin(localUser.isAdmin);
             setUser({

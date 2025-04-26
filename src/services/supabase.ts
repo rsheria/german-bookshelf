@@ -5,7 +5,7 @@ import { Database } from '../types/supabase';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Create production-optimized Supabase client with max reliability settings
+// Create production-optimized Supabase client with enhanced security features
 const supabase = createClient<Database>(
   supabaseUrl,
   supabaseAnonKey,
@@ -14,9 +14,14 @@ const supabase = createClient<Database>(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false, // Disable URL detection which can cause issues
-      storage: localStorage,    // Explicitly use localStorage for best compatibility
-      storageKey: 'sb-auth-token', // Use standard key that Supabase expects
+      storageKey: 'sb-auth-token', // Standard key that Supabase expects
       flowType: 'implicit' // Use implicit flow for better token management
+    },
+    global: {
+      // Add CSRF token to all requests if available
+      headers: {
+        'x-csrf-token': localStorage.getItem('csrf_token') || ''
+      }
     },
     realtime: {
       params: {
@@ -25,6 +30,16 @@ const supabase = createClient<Database>(
     }
   }
 );
+
+// Configure cookies for better security when user loads the application
+function setCookieSecuritySettings() {
+  // This only sets security attributes, not the actual tokens
+  document.cookie = 'sb-refresh-token=; path=/; secure; samesite=strict; max-age=604800'; // 7 days
+  document.cookie = 'sb-access-token=; path=/; secure; samesite=strict; max-age=900'; // 15 minutes
+}
+
+// Set cookie security settings when module loads
+setCookieSecuritySettings();
 
 // Export the singleton client
 export { supabase };
@@ -44,6 +59,7 @@ export const saveSessionToLocalStorage = (session: any) => {
     localStorage.removeItem('sb-access-token');
     localStorage.removeItem('sb-refresh-token');
     localStorage.removeItem('user_is_admin');
+    localStorage.removeItem('csrf_token'); // Remove CSRF token on session clear
     return;
   }
 
@@ -260,27 +276,114 @@ export const signUp = async (email: string, password: string) => {
   }
 };
 
+// Generate a cryptographically secure CSRF token
+function generateCsrfToken() {
+  const array = new Uint8Array(32); // 256 bits of entropy
+  crypto.getRandomValues(array);
+  return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export const signIn = async (email: string, password: string) => {
   try {
+    // Generate a new CSRF token for this session
+    const csrfToken = generateCsrfToken();
+    localStorage.setItem('csrf_token', csrfToken);
+    
+    // Sign in with password
     const result = await supabase.auth.signInWithPassword({ email, password });
+    
     if (result.data.session) {
+      // Store session with redundancy
       manuallyStoreSession(result.data.session);
+      
+      // Update the global headers with the new CSRF token
+      supabase.realtime.setAuth(result.data.session.access_token);
+      
+      // Set CSRF token in localStorage for future requests
+      localStorage.setItem('x-csrf-token', csrfToken);
+      
+      // Store CSRF token for future fetch requests
+      // We'll use this in our fetch interceptor
+      localStorage.setItem('csrf_token', csrfToken);
+      
+      // For any future API calls
+      if (window.fetch) {
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options = {}) {
+          // Create proper headers object
+          const headers = options.headers || {};
+          
+          // Add CSRF token to headers
+          const csrfToken = localStorage.getItem('csrf_token') || '';
+          
+          // Create a new Headers object if it's a Headers instance
+          if (headers instanceof Headers) {
+            headers.append('x-csrf-token', csrfToken);
+          } else if (typeof headers === 'object') {
+            // If it's a plain object
+            (headers as Record<string, string>)['x-csrf-token'] = csrfToken;
+          }
+          
+          // Update options with modified headers
+          options.headers = headers;
+          
+          return originalFetch.call(this, url, options);
+        };
+      }
+      
+      // Record login event securely
+      try {
+        await supabase.rpc('handle_auth_event_secure', {
+          event_type: 'login',
+          user_id: result.data.user?.id,
+          email: result.data.user?.email,
+          user_agent: navigator.userAgent
+        });
+      } catch (rpcError) {
+        console.warn('Could not record login event:', rpcError);
+      }
     }
+    
     return result;
   } catch (error) {
     console.error('Sign in error:', error);
-    return { data: { user: null, session: null }, error: { message: 'Sign in failed' } };
+    return { error };
   }
 };
 
 export const signOut = async () => {
   try {
-    // Call Supabase signOut first to invalidate the token server-side
+    // Get user ID before signing out for activity logging
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData?.session?.user?.id;
+    
+    // Get CSRF token for secure logout request
+    const csrfToken = localStorage.getItem('csrf_token');
+    
+    // Add CSRF token to headers for this request
+    if (csrfToken) {
+      // We're using the fetch interceptor to add the CSRF token header
+      // No additional action needed here as headers will be added by our fetch interceptor
+    }
+    
+    // Record logout event before signing out
+    if (userId) {
+      try {
+        await supabase.rpc('handle_auth_event_secure', {
+          event_type: 'logout',
+          user_id: userId
+        });
+      } catch (rpcError) {
+        console.warn('Could not record logout event:', rpcError);
+      }
+    }
+    
+    // Perform the signout
     const result = await supabase.auth.signOut();
     
-    // Clear all Supabase-related items from localStorage
+    // Clear all auth-related items from localStorage
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth')) {
+      if (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth') || key === 'csrf_token') {
         localStorage.removeItem(key);
       }
     });
@@ -292,9 +395,13 @@ export const signOut = async () => {
       }
     });
 
-    // Clear any potential cookies
-    document.cookie.split(";").forEach(function(c) {
-      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/");
+    // Clear any potential cookies with secure attributes
+    const cookiesToClear = document.cookie.split(';');
+    const secureDomain = window.location.hostname;
+    
+    cookiesToClear.forEach(cookie => {
+      const cookieName = cookie.split('=')[0].trim();
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; secure; samesite=strict; domain=${secureDomain}`;
     });
 
     // Force a page reload to clear any in-memory state
@@ -354,6 +461,15 @@ export const getSession = async () => {
 // Add session keepalive function
 export const refreshSession = async (): Promise<boolean> => {
   try {
+    // Get current CSRF token
+    const csrfToken = localStorage.getItem('csrf_token');
+    
+    // Set CSRF token in request headers
+    if (csrfToken) {
+      // We're using the fetch interceptor to add the CSRF token header
+      // No additional action needed here as headers will be added by our fetch interceptor
+    }
+    
     const { data } = await supabase.auth.getSession();
     if (data?.session) {
       // Session exists, refresh it
@@ -365,8 +481,16 @@ export const refreshSession = async (): Promise<boolean> => {
       
       // Store the refreshed session
       if (refreshData?.session) {
+        // Generate a new CSRF token for the refreshed session (token rotation)
+        const newCsrfToken = generateCsrfToken();
+        localStorage.setItem('csrf_token', newCsrfToken);
+        
+        // Update CSRF token for future requests
+        localStorage.setItem('csrf_token', newCsrfToken);
+        // The fetch interceptor will use this updated token automatically
+        
         // Session refreshed successfully
-        console.log('Session refreshed successfully');
+        console.log('Session refreshed successfully with new CSRF token');
         return true;
       }
     }

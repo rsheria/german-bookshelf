@@ -179,32 +179,37 @@ export const recordIpLog = async (
     // Fetch country code for this IP
     const countryCode = await getCountryCode(finalIpAddress);
 
-    // Upsert to avoid duplicate entries per user+IP
-    const { data, error } = await supabase
+    // Insert (or ignore duplicate) using upsert with conflict on (user_id, ip_address)
+    const { error } = await supabase
       .from('ip_logs')
-      .upsert(
-        [
-          {
-            user_id: userId,
-            ip_address: finalIpAddress,
-            user_agent: finalUserAgent,
-            country_code: countryCode,
-            created_at: new Date().toISOString(),
-          }
-        ],
-        { onConflict: 'user_id,ip_address' }
-      )
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error recording IP log:', error);
-      return null;
+      .upsert({
+        user_id: userId,
+        ip_address: finalIpAddress,
+        user_agent: finalUserAgent,
+        country_code: countryCode,
+        created_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id,ip_address'
+      });
+    if (error && error.code !== '42501') {
+      throw error;
     }
-
-    return data?.id || null;
+      
+    // Also directly update the last_active timestamp and capture potential error
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ last_active: new Date().toISOString() })
+      .eq('id', userId);
+      
+    // Throw if either operation failed so callers can see the reason
+    if ((error && error.code !== '23505' && error.code !== '42501') || profileError) {
+      console.error('Error recording IP log or updating last_active:', error || profileError);
+      throw new Error(error?.message ?? profileError?.message);
+    }
+    
+    return null;
   } catch (error) {
-    console.error('Exception recording IP log:', error);
+    console.error('Error recording IP log:', error);
     return null;
   }
 };

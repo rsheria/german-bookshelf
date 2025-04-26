@@ -92,19 +92,7 @@ BEGIN
   RETURN json_build_object(
     'user', user_data,
     'activity', activity_data,
-    'sessions', (
-      SELECT json_agg(json_build_object(
-        'id', session_id,
-        'started_at', started_at,
-        'last_active_at', last_active_at,
-        'is_active', is_active,
-        'ip_address', ip_address
-      ))
-      FROM public.user_sessions
-      WHERE user_id = p_user_id
-      ORDER BY last_active_at DESC
-      LIMIT 10
-    )
+    'sessions', NULL
   );
 END;
 $$;

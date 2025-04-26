@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { FiUsers, FiEdit, FiCheck, FiX, FiSearch, FiDownload, FiCalendar, FiBarChart2, FiPieChart, FiActivity, FiGlobe } from 'react-icons/fi';
+import { FiUsers, FiEdit, FiCheck, FiX, FiSearch, FiDownload, FiCalendar, FiBarChart2, FiPieChart, FiActivity, FiGlobe, FiLogIn } from 'react-icons/fi';
 import { HiOutlineBan as FiBan } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
@@ -33,6 +33,76 @@ import {
   Pagination
 } from '../../styles/adminStyles';
 
+// --- User Profile Card Styled Components (from UserActivityPage) ---
+const UserInfoCard = styled.div`
+  background-color: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  padding: 1.5rem;
+  box-shadow: ${props => props.theme.shadows.sm};
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+`;
+const UserAvatar = styled.div`
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: ${props => props.theme.colors.backgroundAlt};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: ${props => props.theme.colors.textDim};
+  flex-shrink: 0;
+`;
+const UserDetails = styled.div`
+  flex: 1;
+`;
+const UserName = styled.h2`
+  margin: 0 0 0.5rem 0;
+  font-size: ${props => props.theme.typography.fontSize.xl};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+const UserMeta = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+`;
+const UserMetaItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: ${props => props.theme.typography.fontSize.sm};
+  color: ${props => props.theme.colors.textDim};
+`;
+const BannedBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  background-color: rgba(231, 76, 60, 0.1);
+  color: ${props => props.theme.colors.danger};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  font-size: ${props => props.theme.typography.fontSize.xs};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  margin-left: 0.5rem;
+`;
+const AdminBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  background-color: rgba(52, 152, 219, 0.1);
+  color: ${props => props.theme.colors.primary};
+  border-radius: ${props => props.theme.borderRadius.sm};
+  font-size: ${props => props.theme.typography.fontSize.xs};
+  font-weight: ${props => props.theme.typography.fontWeight.medium};
+  margin-left: 0.5rem;
+`;
 // Register ChartJS components
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
@@ -420,6 +490,7 @@ const BannedIndicator = styled.span`
 interface UserWithEmail extends Profile {
   email?: string;
   last_sign_in?: string;
+  last_active?: string;
 }
 
 interface EditingUser {
@@ -543,22 +614,27 @@ const AdminUsersPage: React.FC = () => {
 
   const fetchUsers = async () => {
     if (!user || !isAdmin) return;
-    
+  
     setIsLoading(true);
     setError(null);
-    
+  
     try {
       if (!supabase) {
         throw new Error('Supabase client is not initialized');
       }
       
+      // Set up pagination parameters
+      const from = page * limit;
+      const to = from + limit - 1;
+      
+      // Use direct table query instead of RPC
       let query = supabase
         .from('profiles')
         .select('*', { count: 'exact' });
       
       // Apply filters
       if (searchTerm) {
-        query = query.or(`username.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+        query = query.or(`username.ilike.%${searchTerm}%`);
       }
       
       // Role filter
@@ -576,10 +652,7 @@ const AdminUsersPage: React.FC = () => {
         query = query.lte('created_at', dateRange.to);
       }
       
-      // Apply pagination
-      const from = page * limit;
-      const to = from + limit - 1;
-      
+      // Apply pagination and ordering
       const { data, error: fetchError, count } = await query
         .order('created_at', { ascending: false })
         .range(from, to);
@@ -588,8 +661,37 @@ const AdminUsersPage: React.FC = () => {
         throw fetchError;
       }
       
-      setUsers(data || []);
-      setFilteredUsers(data || []);
+      // Fetch the last_active timestamps separately from profiles table
+      if (data && data.length > 0) {
+        const userIds = data.map((u: UserWithEmail) => u.id);
+        const { data: lastActiveData, error: lastActiveError } = await supabase
+          .from('profiles')
+          .select('id, last_active')
+          .in('id', userIds);
+        
+        if (lastActiveError) {
+          console.error('Error fetching last_active data:', lastActiveError);
+        } else if (lastActiveData) {
+          // Merge the last_active data with user data
+          const enhancedData = data.map((user: UserWithEmail) => {
+            const lastActiveInfo = lastActiveData.find((la: {id: string, last_active: string|null}) => la.id === user.id);
+            return {
+              ...user,
+              last_active: lastActiveInfo?.last_active || null
+            };
+          });
+          
+          setUsers(enhancedData);
+          setFilteredUsers(enhancedData);
+        } else {
+          setUsers(data);
+          setFilteredUsers(data);
+        }
+      } else {
+        setUsers(data || []);
+        setFilteredUsers(data || []);
+      }
+      
       setTotalCount(count || 0);
     } catch (err) {
       console.error('Error fetching users:', err);
@@ -1191,6 +1293,31 @@ const AdminUsersPage: React.FC = () => {
         </SuccessMessage>
       )}
       
+      {/* User Profile Card Section */}
+      {selectedUser && (
+        <UserInfoCard>
+          <UserAvatar>
+            {(selectedUser as any).username?.charAt(0).toUpperCase() || (selectedUser as any).email?.charAt(0).toUpperCase() || '?'}
+          </UserAvatar>
+          <UserDetails>
+            <UserName>
+              {(selectedUser as any).username || (selectedUser as any).email}
+              {(selectedUser as any).is_banned && (
+                <BannedBadge><FiBan size={14} /> {t('banned', 'Banned')}</BannedBadge>
+              )}
+              {selectedUser.is_admin && (
+                <AdminBadge>{t('adminRole', 'Admin')}</AdminBadge>
+              )}
+            </UserName>
+            <UserMeta>
+              <UserMetaItem><FiCalendar /> {t('joined', 'Joined')}: {selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleString() : '-'}</UserMetaItem>
+              <UserMetaItem><FiLogIn /> {t('lastLogin', 'Last Login')}: {(selectedUser as any).last_sign_in_at ? new Date((selectedUser as any).last_sign_in_at).toLocaleString() : '-'}</UserMetaItem>
+              <UserMetaItem><FiActivity /> {t('lastActive', 'Last Active')}: {(selectedUser as any).last_active ? new Date((selectedUser as any).last_active).toLocaleString() : '-'}</UserMetaItem>
+            </UserMeta>
+          </UserDetails>
+        </UserInfoCard>
+      )}
+      
       {/* User Statistics Section */}
       {renderStatsSection()}
       
@@ -1259,6 +1386,7 @@ const AdminUsersPage: React.FC = () => {
                   <TableHeader>{t('subscriptionPlan', 'Plan')}</TableHeader>
                   <TableHeader>{t('referralsCount', 'Referrals')}</TableHeader>
                   <TableHeader>{t('referralCode', 'Referral Code')}</TableHeader>
+                  <TableHeader>{t('lastActive', 'Last Active')}</TableHeader>
                   <TableHeader>{t('actions')}</TableHeader>
                 </TableRow>
               </TableHead>
@@ -1328,6 +1456,11 @@ const AdminUsersPage: React.FC = () => {
                     </TableCell>
                     <TableCell>{userProfile.referrals_count}</TableCell>
                     <TableCell>{userProfile.referral_code}</TableCell>
+                    <TableCell>
+                      {userProfile.last_active 
+                        ? new Date(userProfile.last_active).toLocaleString() 
+                        : t('never', 'Never')}
+                    </TableCell>
                     <TableCell>
                       <ActionButtons>
                         {editingUser && editingUser.id === userProfile.id ? (
