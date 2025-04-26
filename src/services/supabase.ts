@@ -18,9 +18,9 @@ const supabase = createClient<Database>(
       flowType: 'implicit' // Use implicit flow for better token management
     },
     global: {
-      // Add CSRF token to all requests if available
+      // No longer add CSRF token from localStorage: handled by secure cookies/server
       headers: {
-        'x-csrf-token': localStorage.getItem('csrf_token') || ''
+        // 'x-csrf-token': localStorage.getItem('csrf_token') || '' // REMOVED for security
       }
     },
     realtime: {
@@ -45,114 +45,31 @@ setCookieSecuritySettings();
 export { supabase };
 
 // -------------------- SESSION MANAGEMENT --------------------
-// We use localStorage as a reliable backup for Supabase's built-in session store
+// Removed: localStorage as a backup for Supabase's built-in session store for authentication/session data.
+// All session management must use Supabase's secure storage or HttpOnly cookies. No sensitive data in localStorage.
 
 /**
- * Ensures all session data is reliably stored in localStorage to prevent login loss on refresh
+ * Ensures all session data is reliably stored (NO LONGER in localStorage for security)
+ * All sensitive data must be managed by Supabase or secure cookies only.
  */
-export const saveSessionToLocalStorage = (session: any) => {
-  if (!session) {
-    console.log('Removing session from localStorage');
-    localStorage.removeItem('supabase.auth.token');
-    localStorage.removeItem('sb-session');
-    localStorage.removeItem('supabase-auth-token');
-    localStorage.removeItem('sb-access-token');
-    localStorage.removeItem('sb-refresh-token');
-    localStorage.removeItem('user_is_admin');
-    localStorage.removeItem('csrf_token'); // Remove CSRF token on session clear
-    return;
-  }
-
-  try {
-    // First, standard Supabase key
-    localStorage.setItem('supabase.auth.token', JSON.stringify({
-      currentSession: session,
-      expiresAt: Math.floor(new Date(session.expires_at || new Date().toISOString()).getTime() / 1000),
-    }));
-
-    // Second, backup in our own format for redundancy
-    localStorage.setItem('sb-session', JSON.stringify(session));
-    
-    // Save individual components for triple redundancy
-    if (session.access_token) {
-      localStorage.setItem('sb-access-token', session.access_token);
-    }
-    if (session.refresh_token) {
-      localStorage.setItem('sb-refresh-token', session.refresh_token);
-    }
-    
-    // Handle admin status
-    if (session.user?.app_metadata?.is_admin) {
-      localStorage.setItem('user_is_admin', 'true');
-    }
-    
-    console.log('Session saved to localStorage with triple redundancy');
-  } catch (error) {
-    console.error('Error saving session to localStorage:', error);
-  }
+export const saveSessionToLocalStorage = (_session: any) => {
+  // SECURITY: Removed all localStorage usage for session/auth info
+  // No-op: Do not store tokens or admin flags in localStorage
+  // If session is cleared, Supabase will handle it securely
+  // This function remains for backward compatibility and debugging
+  console.warn('saveSessionToLocalStorage is disabled for security reasons.');
 };
 
 /**
- * Retrieves session data from localStorage (used as fallback if Supabase fails)
+ * Retrieves session data (NO LONGER from localStorage for security)
+ * All sensitive data must be managed by Supabase or secure cookies only.
  */
 export const getSessionFromLocalStorage = (): any => {
-  try {
-    // Try the standard Supabase key first
-    const supabaseToken = localStorage.getItem('supabase.auth.token');
-    if (supabaseToken) {
-      const parsed = JSON.parse(supabaseToken);
-      if (parsed?.currentSession) {
-        console.log('Retrieved session from supabase.auth.token');
-        return parsed.currentSession;
-      }
-    }
-    
-    // Try our backup format
-    const sbSession = localStorage.getItem('sb-session');
-    if (sbSession) {
-      console.log('Retrieved session from sb-session backup');
-      return JSON.parse(sbSession);
-    }
-    
-    // Try to manually reconstruct from components
-    const accessToken = localStorage.getItem('sb-access-token');
-    const refreshToken = localStorage.getItem('sb-refresh-token');
-    
-    if (accessToken && refreshToken) {
-      console.log('Reconstructing session from individual tokens');
-      
-      // Create a basic session object with the tokens
-      const session = {
-        access_token: accessToken,
-        refresh_token: refreshToken,
-        expires_in: 3600,
-        expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
-        token_type: 'bearer',
-        user: {
-          id: '', // Will be populated by Supabase on first API call
-          app_metadata: {
-            provider: 'email',
-            is_admin: localStorage.getItem('user_is_admin') === 'true',
-          },
-          user_metadata: {},
-          aud: 'authenticated',
-          confirmed_at: '',
-          created_at: '',
-          updated_at: '',
-          email: '',
-          phone: '',
-          role: 'authenticated',
-        },
-      };
-      
-      return session;
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error retrieving session from localStorage:', error);
-    return null;
-  }
+  // SECURITY: Removed all localStorage usage for session/auth info
+  // No-op: Do not retrieve tokens or admin flags from localStorage
+  // This function remains for backward compatibility and debugging
+  console.warn('getSessionFromLocalStorage is disabled for security reasons.');
+  return null;
 };
 
 /**
@@ -168,93 +85,47 @@ export const synchronizeSession = async (): Promise<any> => {
     const supabaseSession = data?.session;
     
     if (supabaseSession) {
-      console.log('Found active session in Supabase, saving to localStorage');
-      saveSessionToLocalStorage(supabaseSession);
+      console.log('Found active session in Supabase');
       return supabaseSession;
     }
     
-    // If Supabase doesn't have a session, try to get it from localStorage
-    const localSession = getSessionFromLocalStorage();
+    // If Supabase doesn't have a session, try to get it from other secure storage
+    // NOTE: No longer use localStorage for security reasons
     
-    if (localSession && localSession.access_token && localSession.refresh_token) {
-      console.log('Found session in localStorage, restoring to Supabase');
-      
-      // Set the session in Supabase manually
-      try {
-        const { data, error } = await supabase.auth.setSession({
-          access_token: localSession.access_token,
-          refresh_token: localSession.refresh_token,
-        });
-        
-        if (error) {
-          console.error('Error setting session in Supabase:', error);
-          // Even if setSession fails, we still have the session data
-          return localSession;
-        }
-        
-        if (data?.session) {
-          console.log('Successfully restored session to Supabase');
-          saveSessionToLocalStorage(data.session);
-          return data.session;
-        }
-      } catch (setSessionError) {
-        console.error('Error in setSession:', setSessionError);
-        // Return the local session even if there was an error
-        return localSession;
-      }
-    }
-    
-    console.log('No session found in Supabase or localStorage');
+    console.log('No session found in Supabase');
     return null;
   } catch (error) {
     console.error('Error synchronizing session:', error);
-    
-    // Fallback to localStorage if everything else fails
-    return getSessionFromLocalStorage();
+    return null;
   }
 };
 
 // Consistently manage session manually as an additional layer of persistence
-export const manuallyStoreSession = (session: any) => {
-  if (!session) return;
-  
-  try {
-    // Store session using the correct key format for Supabase
-    const key = `sb-${supabaseUrl.split('//')[1].split('.')[0]}-auth-token`;
-    localStorage.setItem(key, JSON.stringify({
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-      expires_at: session.expires_at,
-      expires_in: session.expires_in,
-      token_type: 'bearer',
-      user: session.user
-    }));
-    
-    // Also store in our own consistent location
-    localStorage.setItem('sb-auth-token', JSON.stringify(session));
-    console.log('Session manually stored in multiple locations for redundancy');
-  } catch (error) {
-    console.error('Error saving session redundantly:', error);
-  }
+export const manuallyStoreSession = (_session: any) => {
+  // SECURITY: Removed all localStorage usage for session/auth info
+  // No-op: Do not store tokens or admin flags in localStorage
+  // This function remains for backward compatibility and debugging
+  console.warn('manuallyStoreSession is disabled for security reasons.');
 };
 
 // Retrieve session from any available storage
-export const getStoredSession = () => {
+export const getStoredSession = async () => {
   try {
     // Try to get the session from the Supabase standard location first
+    const { data } = await supabase.auth.getSession();
+    if (data?.session) {
+      return data.session;
+    }
     const key = `sb-${supabaseUrl.split('//')[1].split('.')[0]}-auth-token`;
     let storedSession = localStorage.getItem(key);
-    
     if (storedSession) {
       return JSON.parse(storedSession);
     }
-    
     // Fall back to our custom storage location
     storedSession = localStorage.getItem('sb-auth-token');
     if (storedSession) {
       return JSON.parse(storedSession);
     }
-    
     return null;
   } catch (error) {
     console.error('Error retrieving session:', error);
@@ -276,19 +147,8 @@ export const signUp = async (email: string, password: string) => {
   }
 };
 
-// Generate a cryptographically secure CSRF token
-function generateCsrfToken() {
-  const array = new Uint8Array(32); // 256 bits of entropy
-  crypto.getRandomValues(array);
-  return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
-}
-
 export const signIn = async (email: string, password: string) => {
   try {
-    // Generate a new CSRF token for this session
-    const csrfToken = generateCsrfToken();
-    localStorage.setItem('csrf_token', csrfToken);
-    
     // Sign in with password
     const result = await supabase.auth.signInWithPassword({ email, password });
     
@@ -299,13 +159,6 @@ export const signIn = async (email: string, password: string) => {
       // Update the global headers with the new CSRF token
       supabase.realtime.setAuth(result.data.session.access_token);
       
-      // Set CSRF token in localStorage for future requests
-      localStorage.setItem('x-csrf-token', csrfToken);
-      
-      // Store CSRF token for future fetch requests
-      // We'll use this in our fetch interceptor
-      localStorage.setItem('csrf_token', csrfToken);
-      
       // For any future API calls
       if (window.fetch) {
         const originalFetch = window.fetch;
@@ -313,15 +166,10 @@ export const signIn = async (email: string, password: string) => {
           // Create proper headers object
           const headers = options.headers || {};
           
-          // Add CSRF token to headers
-          const csrfToken = localStorage.getItem('csrf_token') || '';
-          
           // Create a new Headers object if it's a Headers instance
           if (headers instanceof Headers) {
-            headers.append('x-csrf-token', csrfToken);
           } else if (typeof headers === 'object') {
             // If it's a plain object
-            (headers as Record<string, string>)['x-csrf-token'] = csrfToken;
           }
           
           // Update options with modified headers
@@ -356,15 +204,6 @@ export const signOut = async () => {
     // Get user ID before signing out for activity logging
     const { data: sessionData } = await supabase.auth.getSession();
     const userId = sessionData?.session?.user?.id;
-    
-    // Get CSRF token for secure logout request
-    const csrfToken = localStorage.getItem('csrf_token');
-    
-    // Add CSRF token to headers for this request
-    if (csrfToken) {
-      // We're using the fetch interceptor to add the CSRF token header
-      // No additional action needed here as headers will be added by our fetch interceptor
-    }
     
     // Record logout event before signing out
     if (userId) {
@@ -429,16 +268,13 @@ export const getSession = async () => {
     
     // Try manual fallback if no Supabase session found
     if (!data.session && !error) {
-      const storedSession = getStoredSession();
+      const storedSession = await getStoredSession();
       if (storedSession) {
         console.log('Attempting recovery with stored session');
         
         // Try to restore the session
         try {
-          await supabase.auth.setSession({
-            access_token: storedSession.access_token,
-            refresh_token: storedSession.refresh_token || '',
-          });
+          await supabase.auth.setSession(storedSession);
           
           // Check if session was restored
           const refreshedSession = await supabase.auth.getSession();
@@ -461,15 +297,6 @@ export const getSession = async () => {
 // Add session keepalive function
 export const refreshSession = async (): Promise<boolean> => {
   try {
-    // Get current CSRF token
-    const csrfToken = localStorage.getItem('csrf_token');
-    
-    // Set CSRF token in request headers
-    if (csrfToken) {
-      // We're using the fetch interceptor to add the CSRF token header
-      // No additional action needed here as headers will be added by our fetch interceptor
-    }
-    
     const { data } = await supabase.auth.getSession();
     if (data?.session) {
       // Session exists, refresh it
@@ -481,16 +308,8 @@ export const refreshSession = async (): Promise<boolean> => {
       
       // Store the refreshed session
       if (refreshData?.session) {
-        // Generate a new CSRF token for the refreshed session (token rotation)
-        const newCsrfToken = generateCsrfToken();
-        localStorage.setItem('csrf_token', newCsrfToken);
-        
-        // Update CSRF token for future requests
-        localStorage.setItem('csrf_token', newCsrfToken);
-        // The fetch interceptor will use this updated token automatically
-        
         // Session refreshed successfully
-        console.log('Session refreshed successfully with new CSRF token');
+        console.log('Session refreshed successfully');
         return true;
       }
     }

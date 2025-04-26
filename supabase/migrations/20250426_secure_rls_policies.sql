@@ -49,10 +49,7 @@ CREATE POLICY "Users can view their own profile"
 
 CREATE POLICY "Admins can view all profiles"
   ON public.profiles FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-  ));
+  USING (public.is_authenticated_user_admin());
 
 CREATE POLICY "Users can update their own profile"
   ON public.profiles FOR UPDATE
@@ -60,10 +57,7 @@ CREATE POLICY "Users can update their own profile"
 
 CREATE POLICY "Admins can update all profiles"
   ON public.profiles FOR UPDATE
-  USING (EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-  ));
+  USING (public.is_authenticated_user_admin());
 
 -- BOOKS
 CREATE POLICY "Anyone can read books"
@@ -72,30 +66,15 @@ CREATE POLICY "Anyone can read books"
 
 CREATE POLICY "Only admins can insert books"
   ON public.books FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-    )
-  );
+  WITH CHECK (public.is_authenticated_user_admin());
 
 CREATE POLICY "Only admins can update books"
   ON public.books FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-    )
-  );
+  USING (public.is_authenticated_user_admin());
 
 CREATE POLICY "Only admins can delete books"
   ON public.books FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-    )
-  );
+  USING (public.is_authenticated_user_admin());
 
 -- BOOK REQUESTS
 CREATE POLICY "Users can view their own book requests"
@@ -118,6 +97,23 @@ CREATE POLICY "Service role can do everything with book requests"
   ON public.book_requests TO service_role
   USING (true) WITH CHECK (true);
 
+-- NEW: Admin policies for book requests
+DROP POLICY IF EXISTS "Admins can view all book requests" ON public.book_requests;
+DROP POLICY IF EXISTS "Admins can update any book request" ON public.book_requests;
+DROP POLICY IF EXISTS "Admins can delete any book request" ON public.book_requests;
+
+CREATE POLICY "Admins can view all book requests"
+  ON public.book_requests FOR SELECT
+  USING (public.is_authenticated_user_admin());
+
+CREATE POLICY "Admins can update any book request"
+  ON public.book_requests FOR UPDATE
+  USING (public.is_authenticated_user_admin());
+
+CREATE POLICY "Admins can delete any book request"
+  ON public.book_requests FOR DELETE
+  USING (public.is_authenticated_user_admin());
+
 -- DOWNLOAD LOGS
 CREATE POLICY "Users can view their own download logs"
   ON public.download_logs FOR SELECT
@@ -129,12 +125,7 @@ CREATE POLICY "Users can create their own download logs"
 
 CREATE POLICY "Admins can view all download logs"
   ON public.download_logs FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-    )
-  );
+  USING (public.is_authenticated_user_admin());
 
 -- ACTIVITY LOGS
 CREATE POLICY "Users can view their own activity logs"
@@ -147,12 +138,7 @@ CREATE POLICY "Users can insert their own activity logs"
 
 CREATE POLICY "Admins can view all activity logs"
   ON public.activity_logs FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-    )
-  );
+  USING (public.is_authenticated_user_admin());
 
 -- IP LOGS
 CREATE POLICY "Users can view their own IP logs"
@@ -165,11 +151,6 @@ CREATE POLICY "Users can insert their own IP logs"
 
 CREATE POLICY "Admins can view all IP logs"
   ON public.ip_logs FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-    )
-  );
+  USING (public.is_authenticated_user_admin());
 
 -- End of migration

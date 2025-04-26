@@ -46,11 +46,6 @@ export const bypassRefreshIssue = async (): Promise<boolean> => {
     if (data?.session) {
       console.log("🔄 Bypass: Successfully re-authenticated!");
       
-      // Store admin status if needed
-      if (data.session.user?.app_metadata?.is_admin) {
-        localStorage.setItem('user_is_admin', 'true');
-      }
-      
       // Force page reload to apply the new session
       window.location.reload();
       return true;
@@ -58,20 +53,19 @@ export const bypassRefreshIssue = async (): Promise<boolean> => {
     
     return false;
   } catch (error) {
-    console.error("🔄 Bypass: Fatal error during refresh bypass:", error);
+    console.error(" Bypass: Fatal error during refresh bypass:", error);
     return false;
   }
 };
 
 /**
  * Store credentials in a secure way for later bypass
+ *
+ * Removed for security: Never store passwords or hashes in localStorage!
  */
 export const storeCredentials = (email: string, password: string): void => {
-  // Store email directly
-  localStorage.setItem('auth_email', email);
-  
-  // Store password with base64 encoding (not truly secure but better than plaintext)
-  localStorage.setItem('auth_password_hash', btoa(password));
-  
-  console.log("🔄 Credentials stored for potential bypass");
+  // SECURITY: This function is now a no-op.
+  // Do not store credentials in localStorage or anywhere on the client.
+  // If persistent login is needed, rely on Supabase's secure session management only.
+  console.warn("storeCredentials is disabled for security reasons.");
 };

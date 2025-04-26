@@ -7,15 +7,16 @@ let currentSessionId: string | null = null;
 
 /**
  * Get or create a session ID for the current browser
+ * This is used for anonymous analytics only, never for authentication or authorization.
  */
 export const getSessionId = (): string => {
   if (!currentSessionId) {
-    // Check localStorage first
+    // Check localStorage for analytics session ID only
     const storedSessionId = localStorage.getItem('app_session_id');
     if (storedSessionId) {
       currentSessionId = storedSessionId;
     } else {
-      // Generate new session ID
+      // Generate new session ID for analytics
       currentSessionId = uuidv4();
       localStorage.setItem('app_session_id', currentSessionId);
     }
