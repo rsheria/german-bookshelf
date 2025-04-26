@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase, signUp, signIn } from '../services/supabase';
+import { supabase } from '../services/supabase';
 import { setUserFromSupabase, isLoggedIn as isLocalLoggedIn, getCurrentUser, clearAuthData, initializeLocalAuth } from '../services/localAuth';
 import { logUserActivity, ActivityType } from '../services/activityService';
 
@@ -34,7 +34,6 @@ export const useAuth = () => {
   }
   return context;
 };
-
 interface AuthProviderProps {
   children: React.ReactNode;
 }
@@ -49,42 +48,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authStatusChecked, setAuthStatusChecked] = useState<boolean>(false);
 
   // Initialize auth state with extra reliability to handle refreshes
-  useEffect(() => {
-    // This function uses triple-redundancy session management
-    const initializeAuth = async () => {
-      console.log('Initializing auth state with fail-proof backup system...');
-      setIsLoading(true);
-      setAuthStatusChecked(false);
-      
-      // Helper function to check if user still exists in Supabase
-      const verifyUserExists = async (userId: string): Promise<boolean> => {
-        try {
-          // Try to fetch the user's profile from the database
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', userId)
-            .single();
-            
-          if (error || !data) {
-            console.log('User no longer exists in Supabase:', userId);
-            return false;
-          }
-          return true;
-        } catch (e) {
-          console.error('Error verifying user existence:', e);
-          return false;
-        }
-      };
-      
-      try {
-        // COMPLETELY NEW APPROACH: First check if we have local auth data
+  // Helper: verify user exists
+  const verifyUserExists = useCallback(async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+      if (error || !data) {
+        console.log('User no longer exists in Supabase:', userId);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.error('Error verifying user existence:', e);
+      return false;
+    }
+  }, []);
+
+  // Initialize auth state with extra reliability to handle refreshes
+  const initializeAuth = useCallback(async () => {
+    console.log('Initializing auth state with fail-proof backup system...');
+    setIsLoading(true);
+    setAuthStatusChecked(false);
+    try {
         if (isLocalLoggedIn()) {
           console.log(' LOCAL AUTH: User is already logged in based on local data');
           const localUser = getCurrentUser();
-          
           if (localUser) {
-            // IMPORTANT: Verify the user still exists in Supabase before proceeding
             const userExists = await verifyUserExists(localUser.id);
             if (!userExists) {
               console.log('User was deleted from Supabase, clearing local auth...');
@@ -97,49 +89,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               setAuthStatusChecked(true);
               return;
             }
-            
-            // User exists, we can use local data to prevent loading state
             setIsAdmin(localUser.isAdmin);
-            
-            // Attempt to get Supabase session in the background
             const { data } = await supabase.auth.getSession();
-            if (data?.session) {
-              console.log(' Supabase session synchronized with local auth');
-              setSession(data.session);
-              setUser(data.session.user);
-              
-              // Try to fetch profile data if we have a user
-              try {
-                const { data: profileData } = await supabase
-                  .from('profiles')
-                  .select('*')
-                  .eq('id', data.session.user.id)
-                  .single();
-                  
-                if (profileData) {
-                  setProfile(profileData);
-                }
-              } catch (profileError) {
-                console.error('Error fetching profile:', profileError);
-              }
-            } else {
-              // If Supabase session is gone but we have local data,
-              // create a synthetic user object from local data
-              console.log(' Using synthetic user from local data');
-              setUser({
-                id: localUser.id,
-                email: localUser.email,
-                user_metadata: { username: localUser.username },
-                app_metadata: { is_admin: localUser.isAdmin },
-                aud: 'authenticated',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                role: 'authenticated',
-                confirmed_at: new Date().toISOString()
-              } as unknown as User);
-            }
-            
-            // Important: We've already handled the auth state, so exit early
+            setSession(data.session || null);
+            setUser(data.session?.user || null);
             setIsLoading(false);
             setAuthStatusChecked(true);
             return;
@@ -247,15 +200,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setAuthStatusChecked(true);
         console.log('Auth initialization complete');
       }
-    };
+    }, []);
 
-    // Call the initialization function
-    initializeAuth();
-    
-    // Initialize local auth system
-    console.log('Starting local auth system...');
-    initializeLocalAuth();
-  }, []);
+    useEffect(() => {
+      initializeAuth();
+      // Initialize local auth system
+      console.log('Starting local auth system...');
+      initializeLocalAuth();
+    }, [initializeAuth]);
+
+  // Cross-tab auth state sync
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (
+        event.key === 'sb-session' ||
+        event.key === 'sb-access-token' ||
+        event.key === 'user_is_admin' ||
+        event.key === 'supabase.auth.token'
+      ) {
+        void initializeAuth();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    // Supabase auth state change sync (most robust)
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      void initializeAuth();
+    });
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      authListener?.subscription.unsubscribe();
+    };
+  }, [initializeAuth]);
 
   // Sign out function with enhanced reliability
   const signOut = async () => {
@@ -312,88 +289,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       setSession(null);
       setProfile(null);
-      setIsAdmin(false);
     }
   };
 
-  // Implement the refreshSession function required by the interface
-  const refreshSession = async () => {
-    try {
-      console.log('Manually refreshing session...');
-      const { data } = await supabase.auth.getSession();
-      const refreshedSession = data?.session;
-      
-      if (refreshedSession) {
-        setSession(refreshedSession);
-        setUser(refreshedSession.user);
-        
-        // Try to fetch updated profile
-        if (refreshedSession.user) {
-          try {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', refreshedSession.user.id)
-              .single();
-              
-            if (profileData) {
-              setProfile(profileData);
-            }
-          } catch (profileError) {
-            console.error('Error refreshing profile data:', profileError);
-          }
-        }
-        
-        return { data: { session: refreshedSession }, error: null };
-      } else {
-        console.log('No session found during refresh');
-        return { data: { session: null }, error: null };
-      }
-    } catch (refreshError) {
-      console.error('Error refreshing session:', refreshError);
-      const typedError = refreshError instanceof Error ? refreshError : new Error(String(refreshError));
-      setError(typedError);
-      return { data: { session: null }, error: typedError };
-    }
-  };
 
+  // Login function
   const login = async (email: string, password: string) => {
     try {
-      const { data, error } = await signIn(email, password);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         throw error;
       }
       if (data.session) {
-        // Successfully logged in - set all state immediately
-        setUser(data.session.user);
+        setUser(data.user);
         setSession(data.session);
-        
-        // Set admin status
-        const isUserAdmin = data.session.user?.app_metadata?.is_admin === true;
+        const isUserAdmin = data.user?.app_metadata?.is_admin === true;
         setIsAdmin(isUserAdmin);
-        
-        // Immediately save to local auth system
-        setUserFromSupabase(data.session.user, isUserAdmin);
-        
-        // Log the login activity in our tracking system
+        setUserFromSupabase(data.user, isUserAdmin);
         try {
-          await logUserActivity(data.session.user.id, ActivityType.LOGIN);
-          console.log('Login activity tracked successfully');
+          await logUserActivity(data.user.id, ActivityType.LOGIN);
         } catch (trackError) {
           console.error('Error tracking login:', trackError);
         }
-        
-        // Show success toast or notification here if needed
-        console.log('Login successful - all auth states updated');
-        
-        // Try to fetch profile in the background
         try {
           const { data: profileData } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', data.session.user.id)
+            .eq('id', data.user.id)
             .single();
-            
           if (profileData) {
             setProfile(profileData);
           }
@@ -401,59 +324,70 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.error('Error fetching profile after login:', profileError);
         }
       }
-      return { data, error: null };
+      return { data: { user: data.user, session: data.session }, error: null };
     } catch (loginError) {
       console.error('Error logging in:', loginError);
       const typedError = loginError instanceof Error ? loginError : new Error(String(loginError));
       setError(typedError);
-      return { data: null, error: typedError };
+      return { data: { user: null, session: null }, error: typedError };
     }
   };
 
+  // Signup function
   const signup = async (email: string, password: string) => {
     try {
-      const { data, error } = await signUp(email, password);
+      const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) {
         throw error;
       }
       if (data.session) {
-        setUser(data.session.user);
+        setUser(data.user);
         setSession(data.session);
-        setIsAdmin(data.session.user?.app_metadata?.is_admin === true);
+        setIsAdmin(data.user?.app_metadata?.is_admin === true);
       }
-      return { data, error: null };
+      return { data: { user: data.user, session: data.session }, error: null };
     } catch (signupError) {
       console.error('Error signing up:', signupError);
       const typedError = signupError instanceof Error ? signupError : new Error(String(signupError));
       setError(typedError);
-      return { data: null, error: typedError };
+      return { data: { user: null, session: null }, error: typedError };
     }
   };
 
+  // Logout function
   const logout = async () => {
+    await signOut();
+  };
+
+  // Refresh session function
+  const refreshSession = async () => {
     try {
-      await signOut();
-    } catch (logoutError) {
-      console.error('Error logging out:', logoutError);
-      const typedError = logoutError instanceof Error ? logoutError : new Error(String(logoutError));
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      setSession(data.session || null);
+      setUser(data.session?.user || null);
+      return { data: { session: data.session || null }, error: null };
+    } catch (refreshError) {
+      const typedError = refreshError instanceof Error ? refreshError : new Error(String(refreshError));
       setError(typedError);
+      return { data: { session: null }, error: typedError };
     }
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAdmin, 
-      isLoading, 
-      login, 
-      logout, 
-      signup, 
-      session, 
-      profile, 
-      error, 
-      refreshSession, 
-      signOut, 
-      authStatusChecked 
+    <AuthContext.Provider value={{
+      user,
+      isAdmin,
+      isLoading,
+      login,
+      logout,
+      signup,
+      session,
+      profile,
+      error,
+      refreshSession,
+      signOut,
+      authStatusChecked
     }}>
       {children}
     </AuthContext.Provider>

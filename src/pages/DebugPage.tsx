@@ -62,8 +62,18 @@ const SuccessMessage = styled.div`
   margin-bottom: 1rem;
 `;
 
+// Only admins can access this page in production
+import { useAuth } from '../context/AuthContext'; // Adjust path as needed
+// Only admins can access this page in production
 const DebugPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user, isAdmin } = useAuth(); // Use isAdmin from context
+  useEffect(() => {
+    // Always restrict access to admins only, in all environments
+    if (!user || !isAdmin) {
+      navigate('/'); // Redirect to home if not admin
+    }
+  }, [user, isAdmin, navigate]);
   const [envVars, setEnvVars] = useState<Record<string, string>>({});
   const [authStatus, setAuthStatus] = useState<any>(null);
   const [testResult, setTestResult] = useState<string>("");

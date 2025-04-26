@@ -594,6 +594,12 @@ const Navbar: React.FC = () => {
                   </StyledNavLink>
                 )}
                 
+                {isAdmin && (
+                  <StyledNavLink to="/debug">
+                    <FiSettings /> Debug
+                  </StyledNavLink>
+                )}
+                
                 <StyledNavLink to="#" onClick={handleLogout}>
                   <FiLogOut /> {t('nav.logout')}
                 </StyledNavLink>
@@ -689,6 +695,9 @@ const Navbar: React.FC = () => {
                   <NavItem icon={<FiPlusCircle />} label={t('nav.bookRequests', 'Request Books')} to="/book-requests" onClick={() => setIsOpen(false)} />
                   {isAdmin && (
                     <NavItem icon={<FiSettings />} label={t('nav.admin')} to="/admin" onClick={() => setIsOpen(false)} />
+                  )}
+                  {isAdmin && (
+                    <NavItem icon={<FiSettings />} label="Debug" to="/debug" onClick={() => setIsOpen(false)} />
                   )}
                   <NavItem icon={<FiLogOut />} label={t('nav.logout')} to="#" onClick={async () => { await handleLogout(); setIsOpen(false); }} />
                 </NavSection>

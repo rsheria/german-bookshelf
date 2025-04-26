@@ -111,45 +111,11 @@ const MainContent = styled.main`
   padding-bottom: 150px; /* prevent content hidden under footer */
 `;
 
-// Debug component to show environment variables
-const DebugInfo: React.FC = () => {
-  const [showDebug, setShowDebug] = useState(false);
-  
-  return (
-    <div style={{ position: 'fixed', bottom: '10px', right: '10px', zIndex: 9999 }}>
-      <button onClick={() => setShowDebug(!showDebug)} style={{ padding: '5px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '3px' }}>
-        Debug
-      </button>
-      {showDebug && (
-        <div style={{ backgroundColor: 'rgba(0,0,0,0.8)', color: 'white', padding: '10px', borderRadius: '5px', marginTop: '5px', maxWidth: '500px', overflow: 'auto' }}>
-          <p>VITE_SUPABASE_URL: {import.meta.env.VITE_SUPABASE_URL || 'Not set'}</p>
-          <p>VITE_SUPABASE_ANON_KEY set: {import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Yes' : 'No'}</p>
-          <p>NODE_ENV: {import.meta.env.MODE}</p>
-          <p>Base URL: {import.meta.env.BASE_URL}</p>
-        </div>
-      )}
-    </div>
-  );
-};
+
 
 // Create a context for panic mode
 const PanicModeContext = createContext(false);
 
-// Create a dedicated routes file to avoid hook ordering issues
-const getScrollToTop = () => {
-  // Separate component function to avoid React hooks ordering issues
-  function ScrollToTopComponent() {
-    const { pathname } = useLocation();
-    
-    useEffect(() => {
-      window.scrollTo(0, 0);
-    }, [pathname]);
-    
-    return null;
-  }
-  
-  return <ScrollToTopComponent />;
-};
 
 // Protected route component
 interface ProtectedRouteProps {
@@ -488,7 +454,7 @@ const AppRoutes: React.FC = () => {
             </Routes>
           </MainContent>
           <Footer />
-          <DebugInfo />
+          
         </AppContainer>
       </>
     );
@@ -607,7 +573,7 @@ const AppRoutes: React.FC = () => {
           </Routes>
         </MainContent>
         <Footer />
-        <DebugInfo />
+        
       </AppContainer>
     </ErrorBoundary>
   );

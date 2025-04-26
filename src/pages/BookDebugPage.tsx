@@ -51,7 +51,20 @@ const ActionButton = styled.button`
   }
 `;
 
+// Only admins can access this page in production
+import { useAuth } from '../context/AuthContext'; // Adjust path as needed
+import { useNavigate } from 'react-router-dom';
+
+// Only admins can access this page in production
 const BookDebugPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, isAdmin } = useAuth(); // Use isAdmin from context
+  useEffect(() => {
+    // Use isAdmin instead of user.is_admin for admin check
+    if (process.env.NODE_ENV === 'production' && (!user || !isAdmin)) {
+      navigate('/'); // Redirect to home if not admin
+    }
+  }, [user, isAdmin, navigate]);
   const [books, setBooks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState('');
