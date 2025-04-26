@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase';
-import { setUserFromSupabase, isLoggedIn as isLocalLoggedIn, getCurrentUser, clearAuthData, initializeLocalAuth } from '../services/localAuth';
+// Import only the clearAuthData function from localAuth
+import { clearAuthData } from '../services/localAuth';
 import { logUserActivity, ActivityType } from '../services/activityService';
 
 interface AuthContextType {
@@ -73,164 +74,77 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(true);
     setAuthStatusChecked(false);
     try {
-        if (isLocalLoggedIn()) {
-          console.log(' LOCAL AUTH: User is already logged in based on local data');
-          const localUser = getCurrentUser();
-          if (localUser) {
-            const userExists = await verifyUserExists(localUser.id);
-            if (!userExists) {
-              console.log('User was deleted from Supabase, clearing local auth...');
-              clearAuthData();
-              setUser(null);
-              setSession(null);
-              setProfile(null);
-              setIsAdmin(false);
-              setIsLoading(false);
-              setAuthStatusChecked(true);
-              return;
-            }
-            setIsAdmin(localUser.isAdmin);
-            const { data } = await supabase.auth.getSession();
-            setSession(data.session || null);
-            setUser(data.session?.user || null);
-            setIsLoading(false);
-            setAuthStatusChecked(true);
-            return;
-          }
-        }
+      // SECURITY: No longer using client-side localStorage auth checks
+      // Only using Supabase's secure server-verified session
+      
+      // Regular path - attempt to get session from Supabase
+      const { data } = await supabase.auth.getSession();
+      const sessionData = data?.session;
+      
+      if (sessionData) {
+        console.log('Session synchronized successfully');
         
-        // Regular path - attempt to get session from Supabase
-        const { data } = await supabase.auth.getSession();
-        const sessionData = data?.session;
+        // Set session data
+        setSession(sessionData);
+        setUser(sessionData.user);
         
-        if (sessionData) {
-          console.log('Session synchronized successfully');
-          
-          // Set session data
-          setSession(sessionData);
-          
-          // Set user data - handle potential undefined values
-          if (sessionData.user) {
-            setUser(sessionData.user);
-            
-            // Try to fetch profile data if we have a user
-            try {
-              const { data: profileData } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', sessionData.user.id)
-                .single();
-                
-              if (profileData) {
-                setProfile(profileData);
-              }
-            } catch (profileError) {
-              console.error('Error fetching profile:', profileError);
-            }
-          }
-          
-          // Check if the user is an admin
-          const isUserAdmin = 
-            sessionData.user?.app_metadata?.is_admin === true || 
-            localStorage.getItem('user_is_admin') === 'true';
-            
-          setIsAdmin(!!isUserAdmin);
-          
-          if (isUserAdmin) {
-            console.log('User is an admin');
-            localStorage.setItem('user_is_admin', 'true');
-          }
-          
-          // IMPORTANT: Also save to our local auth system
-          setUserFromSupabase(sessionData.user, !!isUserAdmin);
-        } else {
-          console.log('No active session found');
-          setUser(null);
-          setSession(null);
-          setProfile(null);
-          setIsAdmin(false);
-          
-          // Clear local auth data
-          clearAuthData();
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        setError(error instanceof Error ? error : new Error(String(error)));
+        // SECURITY: Only trust server-verified admin status from JWT token
+        const isUserAdmin = sessionData.user?.app_metadata?.is_admin === true;
+        setIsAdmin(isUserAdmin);
         
-        // LAST RESORT FALLBACK: If we have local auth data, verify user still exists
-        if (isLocalLoggedIn()) {
-          const localUser = getCurrentUser();
-          if (localUser) {
-            // Verify the user still exists in Supabase
-            const userExists = await verifyUserExists(localUser.id);
-            if (!userExists) {
-              console.log('User was deleted from Supabase, clearing local auth...');
-              clearAuthData();
-              setUser(null);
-              setSession(null);
-              setProfile(null);
-              setIsAdmin(false);
-              return;
-            }
-            
-            console.log(' LAST RESORT: Using local auth data after error');
-            setIsAdmin(localUser.isAdmin);
-            setUser({
-              id: localUser.id,
-              email: localUser.email,
-              user_metadata: { username: localUser.username },
-              app_metadata: { is_admin: localUser.isAdmin },
-              aud: 'authenticated',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              role: 'authenticated',
-              confirmed_at: new Date().toISOString()
-            } as unknown as User);
-          }
-        } else {
-          // Reset auth state if no local data
-          console.log('No local auth data available after error');
-          setUser(null);
-          setSession(null);
-          setProfile(null);
-          setIsAdmin(false);
+        if (isUserAdmin) {
+          console.log('User is an admin');
         }
-      } finally {
-        setIsLoading(false);
-        setAuthStatusChecked(true);
-        console.log('Auth initialization complete');
+      } else {
+        console.log('No active session found');
+        // Clear all auth data
+        setUser(null);
+        setSession(null);
+        clearAuthData(); // Just used to remove any lingering data
       }
-    }, []);
+    } catch (error) {
+      console.error('Error initializing auth:', error);
+    } finally {
+      setIsLoading(false);
+      setAuthStatusChecked(true);
+      console.log('Auth initialization complete');
+    }
+  }, [verifyUserExists]);
 
-    useEffect(() => {
-      initializeAuth();
-      // Initialize local auth system
-      console.log('Starting local auth system...');
-      initializeLocalAuth();
-    }, [initializeAuth]);
-
-  // Cross-tab auth state sync
   useEffect(() => {
+    // Check if user session exists
+    initializeAuth();
+    
+    // Set up listener for auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
+      setSession(session);
+      setUser(session?.user || null);
+      
+      // SECURITY: Only use server-verified admin status
+      if (session?.user) {
+        const isUserAdmin = session.user.app_metadata?.is_admin === true;
+        setIsAdmin(isUserAdmin);
+      } else {
+        setIsAdmin(false);
+      }
+    });
+    
+    // Set up listener for manual session storage sync
     const handleStorageChange = (event: StorageEvent) => {
-      if (
-        event.key === 'sb-session' ||
-        event.key === 'sb-access-token' ||
-        event.key === 'user_is_admin' ||
-        event.key === 'supabase.auth.token'
-      ) {
-        void initializeAuth();
+      if (event.key === 'supabase.auth.token' || event.key === 'sb-access-token') {
+        // Session may have changed in another tab
+        initializeAuth();
       }
     };
+    
+    // Listen for storage events
     window.addEventListener('storage', handleStorageChange);
-
-    // Supabase auth state change sync (most robust)
-    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
-      void initializeAuth();
-    });
-
+    
+    // Clean up
     return () => {
+      authListener.subscription.unsubscribe();
       window.removeEventListener('storage', handleStorageChange);
-      authListener?.subscription.unsubscribe();
     };
   }, [initializeAuth]);
 
@@ -305,7 +219,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setSession(data.session);
         const isUserAdmin = data.user?.app_metadata?.is_admin === true;
         setIsAdmin(isUserAdmin);
-        setUserFromSupabase(data.user, isUserAdmin);
+        // No longer storing in localStorage for security reasons
+
         try {
           await logUserActivity(data.user.id, ActivityType.LOGIN);
         } catch (trackError) {
@@ -344,6 +259,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data.user);
         setSession(data.session);
         setIsAdmin(data.user?.app_metadata?.is_admin === true);
+        // No longer storing in localStorage for security reasons
       }
       return { data: { user: data.user, session: data.session }, error: null };
     } catch (signupError) {

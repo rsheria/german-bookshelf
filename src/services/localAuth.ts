@@ -1,4 +1,6 @@
-// localAuth.ts - A completely local authentication implementation that doesn't rely on Supabase
+// localAuth.ts - DISABLED: Client-side authentication has been replaced with secure server validation
+// SECURITY NOTICE: This module has been completely disabled for security reasons.
+// All authentication and admin privilege checks should now use Supabase's secure session management.
 import { User } from '@supabase/supabase-js';
 
 // Store types
@@ -16,14 +18,12 @@ interface LocalStore {
   adminMode: boolean;
 }
 
-// Check if we're in a browser environment
-const isBrowser = typeof window !== 'undefined';
-
-// Local store key
+// Local store key (no longer used for auth, but kept for reference)
 const LOCAL_STORE_KEY = 'german_bookshelf_local_auth';
 
 // Initialize local storage with default values
 const initializeLocalStore = (): LocalStore => {
+  // SECURITY: Removed client-side security control storage
   return {
     user: null,
     loggedIn: false,
@@ -34,103 +34,77 @@ const initializeLocalStore = (): LocalStore => {
 
 // Get the current local store
 export const getLocalStore = (): LocalStore => {
-  if (!isBrowser) return initializeLocalStore();
-  
-  try {
-    const storedData = localStorage.getItem(LOCAL_STORE_KEY);
-    if (!storedData) return initializeLocalStore();
-    
-    return JSON.parse(storedData);
-  } catch (error) {
-    console.error('Error parsing local auth store:', error);
-    return initializeLocalStore();
-  }
+  // SECURITY: No longer use localStorage for authentication data
+  return initializeLocalStore();
 };
 
-// Save the local store
-const saveLocalStore = (store: LocalStore) => {
-  if (!isBrowser) return;
-  
-  try {
-    localStorage.setItem(LOCAL_STORE_KEY, JSON.stringify(store));
-  } catch (error) {
-    console.error('Error saving local auth store:', error);
-  }
+// Save the local store - exported for backward compatibility
+export const saveLocalStore = (_store: LocalStore) => {
+  // SECURITY: No longer store authentication data in localStorage
+  console.warn("Authentication data no longer stored in localStorage for security reasons");
 };
 
 // Update last active timestamp
 export const updateLastActive = () => {
-  const store = getLocalStore();
-  store.lastActive = Date.now();
-  saveLocalStore(store);
+  // Non-sensitive tracking functionality can remain
+  const timestamp = Date.now();
+  // We only set the timestamp, not any auth data
+  try {
+    localStorage.setItem('app_last_active', timestamp.toString());
+  } catch (error) {
+    console.error('Error updating last active timestamp:', error);
+  }
 };
 
 // Set user from Supabase user
-export const setUserFromSupabase = (supabaseUser: User | null, isAdmin: boolean = false) => {
-  if (!isBrowser) return;
-  
-  const store = getLocalStore();
-  
-  if (supabaseUser) {
-    store.user = {
-      id: supabaseUser.id,
-      email: supabaseUser.email || '',
-      username: supabaseUser.user_metadata?.username || supabaseUser.email?.split('@')[0] || 'user',
-      isAdmin: isAdmin || !!supabaseUser.app_metadata?.is_admin
-    };
-    store.loggedIn = true;
-    store.adminMode = store.user.isAdmin;
-  } else {
-    store.user = null;
-    store.loggedIn = false;
-    store.adminMode = false;
-  }
-  
-  store.lastActive = Date.now();
-  saveLocalStore(store);
+export const setUserFromSupabase = (_supabaseUser: User | null, _isAdmin: boolean = false) => {
+  // SECURITY: No longer store authentication data in localStorage
+  // This function is kept for backward compatibility but no longer actually stores any data
+  console.warn("Authentication data no longer stored in localStorage for security reasons");
 };
 
 // Check if user is logged in
 export const isLoggedIn = (): boolean => {
-  const store = getLocalStore();
-  return !!store.loggedIn && !!store.user;
+  // SECURITY: Rely on Supabase session instead of localStorage
+  // This is just a placeholder - the real check should be done using AuthContext
+  return false;
 };
 
 // Get current user
 export const getCurrentUser = (): LocalUser | null => {
-  const store = getLocalStore();
-  return store.user;
+  // SECURITY: No longer use localStorage for authentication data
+  // This is just a placeholder - the real check should be done using AuthContext
+  return null;
 };
 
 // Check if user is admin
 export const isAdmin = (): boolean => {
-  const store = getLocalStore();
-  return !!store.adminMode && !!store.user?.isAdmin;
+  // SECURITY: No longer use localStorage for admin status
+  // This is just a placeholder - the real check should be done using AuthContext and server validation
+  return false;
 };
 
 // Clear all auth data
 export const clearAuthData = () => {
-  if (!isBrowser) return;
-  
-  const emptyStore = initializeLocalStore();
-  saveLocalStore(emptyStore);
-  
-  // Also clear any persisted supabase session
+  // We can keep this function to clear any lingering data
   try {
+    localStorage.removeItem(LOCAL_STORE_KEY);
     localStorage.removeItem('sb-auth-token');
     localStorage.removeItem('supabase.auth.token');
     localStorage.removeItem('user_is_admin');
     sessionStorage.removeItem('supabase.auth.token');
+    
+    // Also remove any other auth-related items
+    localStorage.removeItem('adminMode');
+    localStorage.removeItem('isAdmin');
   } catch (e) {
-    console.error('Error clearing supabase tokens:', e);
+    console.error('Error clearing tokens:', e);
   }
 };
 
 // Set up event listeners to keep auth fresh
 export const initializeLocalAuth = () => {
-  if (!isBrowser) return;
-  
-  // Update last active timestamp on user interaction
+  // Keep the activity tracking part which is not a security issue
   const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
   
   activityEvents.forEach(eventType => {
@@ -144,18 +118,13 @@ export const initializeLocalAuth = () => {
     updateLastActive();
   }, 30000);
   
-  console.log('Local auth system initialized');
+  console.log('Activity tracking initialized');
 };
 
-// Force enable admin mode for testing
+// Force enable admin mode for testing - DISABLED FOR SECURITY
 export const enableAdminMode = () => {
-  const store = getLocalStore();
-  if (store.user) {
-    store.user.isAdmin = true;
-    store.adminMode = true;
-    saveLocalStore(store);
-    return true;
-  }
+  // SECURITY: Disabled client-side admin mode override
+  console.error("SECURITY: Client-side admin mode override has been disabled");
   return false;
 };
 
